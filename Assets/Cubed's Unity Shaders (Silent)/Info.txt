@@ -1,0 +1,4 @@
+* Notes on usage
+The alpha channel of the specular map controls smoothness.
+The alpha channel of shadow masks marks an area to be biased towards light.
+For models with ambient occlusion maps, you should assign them to the shadow mask section and use Smooth (or similar) as a light ramp. 
