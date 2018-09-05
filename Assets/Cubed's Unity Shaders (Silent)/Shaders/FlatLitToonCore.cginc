@@ -29,7 +29,9 @@ uniform float4 _CustomFresnelColor;
 uniform float _outline_width;
 uniform float4 _outline_color;
 uniform sampler2D _AdditiveMatcap; uniform sampler2D _AdditiveMatcap_ST; 
+uniform float _AdditiveMatcapStrength;
 uniform sampler2D _MultiplyMatcap; uniform sampler2D _MultiplyMatcap_ST; 
+uniform float _MultiplyMatcapStrength;
 
 static const float3 grayscale_vector = float3(0, 0.3823529, 0.01845836);
 
@@ -44,7 +46,6 @@ struct v2g
 	float3 normalDir : TEXCOORD3;
 	float3 tangentDir : TEXCOORD4;
 	float3 bitangentDir : TEXCOORD5;
-	float2 matcap : TEXCOORD9;
 	float4 pos : CLIP_POS;
 	SHADOW_COORDS(6)
 	UNITY_FOG_COORDS(7)
@@ -77,7 +78,8 @@ inline half3 VertexLightContribution(float3 posWorld, half3 normalWorld)
 	#endif
 
 	// Threshold to preserve toon shading image as much as possible. 
-	// Which isn't much, because vertexes are interpolated.
+	// Which isn't much, because vertexes are interpolated. 
+	// In other words, artifacts appear. (Thus, disabled.)
 	//vertexLight = max(floor(vertexLight+.5), ceil(frac(vertexLight))*.5);
 
 	return vertexLight;
@@ -107,14 +109,6 @@ v2g vert(appdata_full v) {
 #else
 	o.vertexLight = 0;
 #endif
-
-#if defined(_MATCAP)
-	float3 worldNorm = normalize(unity_WorldToObject[0].xyz * v.normal.x + unity_WorldToObject[1].xyz * v.normal.y + unity_WorldToObject[2].xyz * v.normal.z);
-	worldNorm = mul((float3x3)unity_ObjectToWorld, worldNorm);
-	o.matcap.xy =  worldNorm * 0.5 + 0.5f;
-#else
-	o.matcap.xy = 0;
-#endif
 	return o;
 }
 
@@ -127,7 +121,6 @@ struct VertexOutput
 	float3 normalDir : TEXCOORD3;
 	float3 tangentDir : TEXCOORD4;
 	float3 bitangentDir : TEXCOORD5;
-	float2 matcap : TEXCOORD9;
 	float4 col : COLOR;
 	bool is_outline : IS_OUTLINE;
 	SHADOW_COORDS(6)
@@ -153,8 +146,12 @@ void geom(triangle v2g IN[3], inout TriangleStream<VertexOutput> tristream)
 		o.tangentDir = IN[i].tangentDir;
 		o.bitangentDir = IN[i].bitangentDir;
 		o.is_outline = true;
-		float _outline_width_var = _outline_width * .01;
-		//_outline_width_var *= smoothstep(0.5, 1, distance(o.posWorld,_WorldSpaceCameraPos));
+		float _outline_width_var = _outline_width * .01; // Convert to cm
+		// Scale outlines relative to the distance from the camera. Outlines close up look ugly in VR because
+		// they can have holes, being shells. This is also why it is clamped to not make them bigger.
+		// That looks good at a distance, but not perfect. 
+		_outline_width_var *= min(distance(o.posWorld,_WorldSpaceCameraPos)*4, 1); 
+
 		o.pos = UnityObjectToClipPos(IN[i].vertex + normalize(IN[i].normal) * _outline_width_var);
 		//o.pos = UnityObjectToClipPos(IN[i].vertex + normalize(IN[i].normal) * (_outline_width * .01));
 
@@ -170,8 +167,6 @@ void geom(triangle v2g IN[3], inout TriangleStream<VertexOutput> tristream)
 
 		// Pass-through the vertex light information.
 		o.vertexLight = IN[i].vertexLight;
-
-		o.matcap = IN[i].matcap;
 
 		tristream.Append(o);
 	}
@@ -204,8 +199,6 @@ void geom(triangle v2g IN[3], inout TriangleStream<VertexOutput> tristream)
 
 		// Pass-through the vertex light information.
 		o.vertexLight = IN[ii].vertexLight;
-
-		o.matcap = IN[ii].matcap;
 
 		tristream.Append(o);
 	}
