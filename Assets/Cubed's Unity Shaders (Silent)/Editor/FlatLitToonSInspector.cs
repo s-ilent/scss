@@ -76,8 +76,8 @@ namespace FlatLitToon.Unity
             public static GUIContent depthTest = new GUIContent("Depth Test", "How Should Depth Testing Be Performed.");
             public static GUIContent depthWrite = new GUIContent("Depth Write", "Controls Whether Pixels From This Object Are Written to the Depth Buffer");
             public static GUIContent colorWriteMask = new GUIContent("Color Write Mask", "Color Channel Writing Mask");
-            public static GUIContent cullMode = new GUIContent("Cull Mode", "Triangle Culling Mode");
-            public static GUIContent renderQueueOverride = new GUIContent("Render Queue Override", "Manually Override the Render Queue");
+            public static GUIContent cullMode = new GUIContent("Cull Mode", "Triangle culling mode. Note: Outlines require this to be set to front to work properly.");
+            public static GUIContent renderQueueOverride = new GUIContent("Render Queue Override", "Manually set the Render Queue. Note: VRchat will override this in-game.");
 
             public static GUIContent mainTexture = new GUIContent("Main Texture", "Main Color Texture (RGB)");
             public static GUIContent alphaCutoff = new GUIContent("Alpha Cutoff", "Threshold for transparency cutoff");
@@ -85,10 +85,10 @@ namespace FlatLitToon.Unity
             public static GUIContent normalMap = new GUIContent("Normal Map", "Normal Map (RGB)");
             public static GUIContent specularMap = new GUIContent("Specular Map", "Specular Map (RGB)");
             public static GUIContent emissionMap = new GUIContent("Emission", "Emission (RGB)");
-            public static GUIContent lightingRamp = new GUIContent("Lighting Ramp", "Lighting Ramp (RGB) \nNote: If a Lighting Ramp is not set, the material will have no shading.");
-            public static GUIContent shadowMask = new GUIContent("Shadow Mask (optional)", "Specifies areas of shadow influence. RGB is darkening, Alpha is lightening.");
+            public static GUIContent lightingRamp = new GUIContent("Lighting Ramp", "Specifies the falloff of the lighting. Horizontal only. See also lightwarp textures. \nNote: If a Lighting Ramp is not set, the material will have no shading.");
+            public static GUIContent shadowMask = new GUIContent("Shadow Mask (Occlusion)", "Specifies areas of shadow influence. RGB darkens, alpha lightens.");
 
-            public static GUIContent smoothness = new GUIContent("Smoothness", "Smoothness");
+            public static GUIContent smoothness = new GUIContent("Smoothness", "The smoothness of the material. The specular map's alpha channel is used for this, with this slider being a multiplier.");
             public static GUIContent specularMult = new GUIContent("Specular Multiplier", "Boosts the intensity of specular lights when higher than 1. Going higher than 1 can cause problems.");
             public static GUIContent useFresnel = new GUIContent("Use Ambient Fresnel", "Applies an additional rim lighting effect.");
             public static GUIContent fresnelWidth = new GUIContent("Ambient Fresnel Width", "Sets the width of the ambient fresnel lighting.");
@@ -96,15 +96,19 @@ namespace FlatLitToon.Unity
             public static GUIContent customFresnelColor = new GUIContent("Emissive Fresnel", "RGB sets the colour of the additive fresnel. Alpha controls the power/width of the effect.");
             public static GUIContent shadowLift = new GUIContent("Shadow Lift", "Increasing this warps the lighting received to make more things lit.");
             public static GUIContent indirectLightBoost = new GUIContent("Indirect Lighting Boost", "Replaces the lighting of shadows with the lighting of direct light, making them brighter.");
-            public static GUIContent shadowMaskPow = new GUIContent("Shadow Mask Strength", "Sets the power of the shadow mask.");
+            public static GUIContent shadowMaskPow = new GUIContent("Shadow Mask Lightening", "Sets the power of the shadow mask.");
             public static GUIContent outlineColor = new GUIContent("Outline Colour", "Sets the colour used for outlines. In tint mode, this is multiplied against the texture.");
             public static GUIContent outlineWidth = new GUIContent("Outline Width", "Sets the width of outlines in cm.");
 
-            public static GUIContent useEnergyConservation = new GUIContent("Use Energy Conservation", "Reduces the intensity of the diffuse on specular areas. Technically correct, but not finished yet. ");
+            public static GUIContent useEnergyConservation = new GUIContent("Use Energy Conservation (仮)", "Reduces the intensity of the diffuse on specular areas. Technically correct, but not finished yet. ");
 
             public static GUIContent useMatcap = new GUIContent("Use Matcap", "Enables the use of material capture textures.");
             public static GUIContent additiveMatcap = new GUIContent("Additive Matcap", "Additive Matcap (RGB)");
+            public static GUIContent additiveMatcapStrength = new GUIContent("Additive Matcap Strength", "Power of the additive matcap. Higher is brighter.");
             public static GUIContent multiplyMatcap = new GUIContent("Multiply Matcap", "Multiply Matcap (RGB)");
+            public static GUIContent multiplyMatcapStrength = new GUIContent("Multiply Matcap Strength", "Power of the multiplicative matcap. Higher is darker.");
+
+            public static GUIContent useVerticalLightramp = new GUIContent("Vertical Lightramp", "Uses lightramps that run from bottom to top instead of left to right. For MMD compatibility.");
 
         } 
 
@@ -151,6 +155,10 @@ namespace FlatLitToon.Unity
         protected MaterialProperty useMatcap;
         protected MaterialProperty additiveMatcap;
         protected MaterialProperty multiplyMatcap;
+        protected MaterialProperty additiveMatcapStrength;
+        protected MaterialProperty multiplyMatcapStrength;
+
+        protected MaterialProperty useVerticalLightramp;
 
         protected void FindProperties(MaterialProperty[] props)
             { 
@@ -194,6 +202,10 @@ namespace FlatLitToon.Unity
                 useMatcap = FindProperty("_UseMatcap", props);
                 additiveMatcap = FindProperty("_AdditiveMatcap", props);
                 multiplyMatcap = FindProperty("_MultiplyMatcap", props);
+                additiveMatcapStrength = FindProperty("_AdditiveMatcapStrength", props);
+                multiplyMatcapStrength = FindProperty("_MultiplyMatcapStrength", props);
+
+                useVerticalLightramp = FindProperty("_UseVerticalLightramp", props);
             }
 
         public override void OnGUI(MaterialEditor materialEditor, MaterialProperty[] props)
@@ -349,7 +361,9 @@ namespace FlatLitToon.Unity
                 if (PropertyEnabled(useMatcap))
                 {
                     materialEditor.TexturePropertySingleLine(Styles.additiveMatcap, additiveMatcap);
+                    materialEditor.ShaderProperty(additiveMatcapStrength, Styles.additiveMatcapStrength);
                     materialEditor.TexturePropertySingleLine(Styles.multiplyMatcap, multiplyMatcap);
+                    materialEditor.ShaderProperty(multiplyMatcapStrength, Styles.multiplyMatcapStrength);
                 }
             } 
             EditorGUI.EndChangeCheck();
@@ -363,7 +377,7 @@ namespace FlatLitToon.Unity
                 EditorGUI.BeginChangeCheck();
                 EditorGUILayout.LabelField(Styles.outlineOptionsTitle, EditorStyles.boldLabel);
                 oMode = (OutlineMode)EditorGUILayout.Popup("Outline Mode", (int)oMode, Enum.GetNames(typeof(OutlineMode)));
-                
+                 
                 if (EditorGUI.EndChangeCheck())
                 {
                     materialEditor.RegisterPropertyChangeUndo("Outline Mode");
@@ -392,6 +406,8 @@ namespace FlatLitToon.Unity
         {
             EditorGUILayout.Space();
             GUILayout.Label(Styles.advancedOptionsTitle, EditorStyles.boldLabel, new GUILayoutOption[0]);
+
+            materialEditor.ShaderProperty(useVerticalLightramp, Styles.useVerticalLightramp);
 
             EditorGUI.BeginChangeCheck();
 
