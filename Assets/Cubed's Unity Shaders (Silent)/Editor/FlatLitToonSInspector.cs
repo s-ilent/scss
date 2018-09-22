@@ -93,6 +93,7 @@ namespace FlatLitToon.Unity
             public static GUIContent useFresnel = new GUIContent("Use Ambient Fresnel", "Applies an additional rim lighting effect.");
             public static GUIContent fresnelWidth = new GUIContent("Ambient Fresnel Width", "Sets the width of the ambient fresnel lighting.");
             public static GUIContent fresnelStrength = new GUIContent("Ambient Fresnel Softness", "Sets the sharpness of the fresnel. ");
+            public static GUIContent fresnelTint = new GUIContent("Ambient Fresnel Tint", "Tints the colours of the ambient fresnel. To make it brighter, change the brightness to a valur higher than 1.");
             public static GUIContent customFresnelColor = new GUIContent("Emissive Fresnel", "RGB sets the colour of the additive fresnel. Alpha controls the power/width of the effect.");
             public static GUIContent shadowLift = new GUIContent("Shadow Lift", "Increasing this warps the lighting received to make more things lit.");
             public static GUIContent indirectLightBoost = new GUIContent("Indirect Lighting Boost", "Replaces the lighting of shadows with the lighting of direct light, making them brighter.");
@@ -147,6 +148,7 @@ namespace FlatLitToon.Unity
         protected MaterialProperty useFresnel;
         protected MaterialProperty fresnelWidth;
         protected MaterialProperty fresnelStrength;
+        protected MaterialProperty fresnelTint;
 
         protected MaterialProperty alphaCutoff;
 
@@ -194,6 +196,7 @@ namespace FlatLitToon.Unity
                 useFresnel = FindProperty("_UseFresnel", props);
                 fresnelWidth = FindProperty("_FresnelWidth", props);
                 fresnelStrength = FindProperty("_FresnelStrength", props);
+                fresnelTint = FindProperty("_FresnelTint", props);
                 normalMap = FindProperty("_BumpMap", props);
                 alphaCutoff = FindProperty("_Cutoff", props);
 
@@ -333,6 +336,7 @@ namespace FlatLitToon.Unity
                 {
                     materialEditor.ShaderProperty(fresnelWidth, Styles.fresnelWidth);
                     materialEditor.ShaderProperty(fresnelStrength, Styles.fresnelStrength);
+                    materialEditor.ShaderProperty(fresnelTint, Styles.fresnelTint, 2);         
                 }
                 EditorGUILayout.Space();
 
@@ -377,7 +381,7 @@ namespace FlatLitToon.Unity
                 EditorGUI.BeginChangeCheck();
                 EditorGUILayout.LabelField(Styles.outlineOptionsTitle, EditorStyles.boldLabel);
                 oMode = (OutlineMode)EditorGUILayout.Popup("Outline Mode", (int)oMode, Enum.GetNames(typeof(OutlineMode)));
-                 
+                
                 if (EditorGUI.EndChangeCheck())
                 {
                     materialEditor.RegisterPropertyChangeUndo("Outline Mode");

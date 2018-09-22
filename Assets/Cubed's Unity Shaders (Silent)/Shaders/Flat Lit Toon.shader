@@ -23,6 +23,7 @@ Shader "CubedParadox/Flat Lit Toon (Silent)"
 		[Toggle(_FRESNEL)] _UseFresnel ("Use Fresnel", Float) = 0.0
 		_FresnelWidth ("Fresnel Strength", Range(0, 20)) = .5
 		_FresnelStrength ("Fresnel Softness", Range(0.1, 0.9999)) = 0.5
+		[HDR]_FresnelTint("Fresnel Tint", Color) = (1,1,1,1)
 		_BumpMap("BumpMap", 2D) = "bump" {}
 		_Cutoff("Alpha cutoff", Range(0,1)) = 0.5
 		[HideInInspector] _OutlineMode("__outline_mode", Float) = 0.0
@@ -157,6 +158,7 @@ Shader "CubedParadox/Flat Lit Toon (Silent)"
 					fresnelEffect *= _FresnelWidth;
 					float2 fresStep_var = lerp(float2(0.0, 1.0), fresStep, 1-_FresnelStrength);
 					fresnelEffect = smoothstep(fresStep_var.x, fresStep_var.y, fresnelEffect);
+					fresnelEffect *= _FresnelTint.rgb * _FresnelTint.a;
 				#endif
 
 				// Customisable fresnel for a user-defined glow
@@ -326,8 +328,6 @@ Shader "CubedParadox/Flat Lit Toon (Silent)"
 				float3 finalColor = directContribution + (emissive + indirectContribution + tertiaryContribution) * !i.is_outline;
 
 				finalColor *= 1+fresnelEffect;
-
-				//finalColor = float3(i.matcap.x, i.matcap.y, 0.5);
 
 				fixed4 finalRGBA = fixed4(finalColor * lightmap, baseColor.a);
 				UNITY_APPLY_FOG(i.fogCoord, finalRGBA);
