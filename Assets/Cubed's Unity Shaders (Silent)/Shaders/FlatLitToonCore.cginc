@@ -24,6 +24,7 @@ uniform float _Smoothness;
 uniform float _SpecularMult;
 uniform float _FresnelWidth;
 uniform float _FresnelStrength;
+uniform float4 _FresnelTint;
 uniform float4 _EmissionColor;
 uniform float4 _CustomFresnelColor;
 uniform float _outline_width;
@@ -211,10 +212,10 @@ void geom(triangle v2g IN[3], inout TriangleStream<VertexOutput> tristream)
 // Reducing the intensity of the incoming indirect light by two
 // In testing this, I noticed the intensity of directly lit objects 
 // isn't the same as with standard shader comparing by eye.
-// Removed for review.
-float3 ShadeSH9_mod(half4 normalDirection)
+// Enabled for review.
+inline float3 ShadeSH9_mod(half4 normalDirection)
 {
-	return ShadeSH9(normalDirection);//*.5;
+	return ShadeSH9(normalDirection) * .5;
 }
 
 float grayscaleSH9(float3 normalDirection)
