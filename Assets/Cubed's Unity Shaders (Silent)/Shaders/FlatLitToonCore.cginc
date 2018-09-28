@@ -212,10 +212,10 @@ void geom(triangle v2g IN[3], inout TriangleStream<VertexOutput> tristream)
 // Reducing the intensity of the incoming indirect light by two
 // In testing this, I noticed the intensity of directly lit objects 
 // isn't the same as with standard shader comparing by eye.
-// Enabled for review.
+// Disabled for review.
 inline float3 ShadeSH9_mod(half4 normalDirection)
 {
-	return ShadeSH9(normalDirection) * .5;
+	return ShadeSH9(normalDirection);
 }
 
 float grayscaleSH9(float3 normalDirection)
@@ -245,6 +245,70 @@ float interleaved_gradient(float2 uv : SV_POSITION) : SV_Target
 float max3 (float3 x) 
 {
 	return max(x.x, max(x.y, x.z));
+}
+
+// BRDF based on implementation in Filament.
+// https://github.com/google/filament
+
+float D_Ashikhmin(float linearRoughness, float NoH) {
+    // Ashikhmin 2007, "Distribution-based BRDFs"
+	float a2 = linearRoughness * linearRoughness;
+	float cos2h = NoH * NoH;
+	float sin2h = max(1.0 - cos2h, 0.0078125); // 2^(-14/2), so sin2h^2 > 0 in fp16
+	float sin4h = sin2h * sin2h;
+	float cot2 = -cos2h / (a2 * sin2h);
+	return 1.0 / (UNITY_PI * (4.0 * a2 + 1.0) * sin4h) * (4.0 * exp(cot2) + sin4h);
+}
+
+float D_Charlie(float linearRoughness, float NoH) {
+    // Estevez and Kulla 2017, "Production Friendly Microfacet Sheen BRDF"
+    float invAlpha  = 1.0 / linearRoughness;
+    float cos2h = NoH * NoH;
+    float sin2h = max(1.0 - cos2h, 0.0078125); // 2^(-14/2), so sin2h^2 > 0 in fp16
+    return (2.0 + invAlpha) * pow(sin2h, invAlpha * 0.5) / (2.0 * UNITY_PI);
+}
+
+float V_Neubelt(float NoV, float NoL) {
+    // Neubelt and Pettineo 2013, "Crafting a Next-gen Material Pipeline for The Order: 1886"
+    return saturate(1.0 / (4.0 * (NoL + NoV - NoL * NoV)));
+}
+
+float D_GGX_Anisotropic(float NoH, const float3 h,
+        const float3 t, const float3 b, float at, float ab) {
+    float ToH = dot(t, h);
+    float BoH = dot(b, h);
+    float a2 = at * ab;
+    float3 v = float3(ab * ToH, at * BoH, a2 * NoH);
+    float v2 = dot(v, v);
+    float w2 = a2 / v2;
+    return a2 * w2 * w2 * (1.0 / UNITY_PI);
+}
+
+UnityGI GetUnityGI(float3 lightColor, float3 lightDirection, float3 normalDirection,float3 viewDirection, 
+float3 viewReflectDirection, float attenuation, float roughness, float3 worldPos){
+    UnityLight light;
+    light.color = lightColor;
+    light.dir = lightDirection;
+    light.ndotl = max(0.0h,dot( normalDirection, lightDirection));
+    UnityGIInput d;
+    d.light = light;
+    d.worldPos = worldPos;
+    d.worldViewDir = viewDirection;
+    d.atten = attenuation;
+    d.ambient = 0.0h;
+    d.boxMax[0] = unity_SpecCube0_BoxMax;
+    d.boxMin[0] = unity_SpecCube0_BoxMin;
+    d.probePosition[0] = unity_SpecCube0_ProbePosition;
+    d.probeHDR[0] = unity_SpecCube0_HDR;
+    d.boxMax[1] = unity_SpecCube1_BoxMax;
+    d.boxMin[1] = unity_SpecCube1_BoxMin;
+    d.probePosition[1] = unity_SpecCube1_ProbePosition;
+    d.probeHDR[1] = unity_SpecCube1_HDR;
+    Unity_GlossyEnvironmentData ugls_en_data;
+    ugls_en_data.roughness = roughness;
+    ugls_en_data.reflUVW = viewReflectDirection;
+    UnityGI gi = UnityGlobalIllumination(d, 1.0h, normalDirection, ugls_en_data );
+    return gi;
 }
 
 #endif
