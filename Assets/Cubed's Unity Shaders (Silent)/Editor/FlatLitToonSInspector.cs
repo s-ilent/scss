@@ -47,6 +47,14 @@ namespace FlatLitToon.Unity
             On
         }
 
+        public enum SpecularType
+        {
+            Standard,
+            Cloth,
+            Anisotropic,
+            Disable
+        }
+
         public static class Styles
         {
             public static string mainOptionsTitle = "Main Options";
@@ -88,8 +96,8 @@ namespace FlatLitToon.Unity
             public static GUIContent lightingRamp = new GUIContent("Lighting Ramp", "Specifies the falloff of the lighting. Horizontal only. See also lightwarp textures. \nNote: If a Lighting Ramp is not set, the material will have no shading.");
             public static GUIContent shadowMask = new GUIContent("Shadow Mask (Occlusion)", "Specifies areas of shadow influence. RGB darkens, alpha lightens.");
 
+            public static GUIContent specularType = new GUIContent("Specular Style", "Allows you to set the shading used for specular. ");
             public static GUIContent smoothness = new GUIContent("Smoothness", "The smoothness of the material. The specular map's alpha channel is used for this, with this slider being a multiplier.");
-            public static GUIContent specularMult = new GUIContent("Specular Multiplier", "Boosts the intensity of specular lights when higher than 1. Going higher than 1 can cause problems.");
             public static GUIContent useFresnel = new GUIContent("Use Ambient Fresnel", "Applies an additional rim lighting effect.");
             public static GUIContent fresnelWidth = new GUIContent("Ambient Fresnel Width", "Sets the width of the ambient fresnel lighting.");
             public static GUIContent fresnelStrength = new GUIContent("Ambient Fresnel Softness", "Sets the sharpness of the fresnel. ");
@@ -101,8 +109,8 @@ namespace FlatLitToon.Unity
             public static GUIContent outlineColor = new GUIContent("Outline Colour", "Sets the colour used for outlines. In tint mode, this is multiplied against the texture.");
             public static GUIContent outlineWidth = new GUIContent("Outline Width", "Sets the width of outlines in cm.");
 
-            public static GUIContent useEnergyConservation = new GUIContent("Use Energy Conservation (仮)", "Reduces the intensity of the diffuse on specular areas. Technically correct, but not finished yet. ");
-
+            public static GUIContent useEnergyConservation = new GUIContent("Use Energy Conservation (仮)", "Reduces the intensity of the diffuse on specular areas, to realistically conserve energy.");
+            public static GUIContent useMetallic = new GUIContent("Use as Metalness", "Metalness maps are greyscale maps that contain the metalness of a surface. This is different to specular maps, which are RGB (colour) maps that contain the specular parts of a surface.");
             public static GUIContent useMatcap = new GUIContent("Use Matcap", "Enables the use of material capture textures.");
             public static GUIContent additiveMatcap = new GUIContent("Additive Matcap", "Additive Matcap (RGB)");
             public static GUIContent additiveMatcapStrength = new GUIContent("Additive Matcap Strength", "Power of the additive matcap. Higher is brighter.");
@@ -143,7 +151,7 @@ namespace FlatLitToon.Unity
         protected MaterialProperty normalMap;
         protected MaterialProperty specularMap;
         protected MaterialProperty smoothness;
-        protected MaterialProperty specularMult;
+        protected MaterialProperty useMetallic;
 
         protected MaterialProperty useFresnel;
         protected MaterialProperty fresnelWidth;
@@ -153,6 +161,7 @@ namespace FlatLitToon.Unity
         protected MaterialProperty alphaCutoff;
 
         protected MaterialProperty useEnergyConservation;
+        protected MaterialProperty specularType;
 
         protected MaterialProperty useMatcap;
         protected MaterialProperty additiveMatcap;
@@ -192,7 +201,7 @@ namespace FlatLitToon.Unity
                 customFresnelColor = FindProperty("_CustomFresnelColor", props);
                 specularMap = FindProperty("_SpecularMap", props);
                 smoothness = FindProperty("_Smoothness", props);
-                specularMult = FindProperty("_SpecularMult", props);
+                useMetallic = FindProperty("_UseMetallic", props);
                 useFresnel = FindProperty("_UseFresnel", props);
                 fresnelWidth = FindProperty("_FresnelWidth", props);
                 fresnelStrength = FindProperty("_FresnelStrength", props);
@@ -201,6 +210,7 @@ namespace FlatLitToon.Unity
                 alphaCutoff = FindProperty("_Cutoff", props);
 
                 useEnergyConservation = FindProperty("_UseEnergyConservation", props);
+                specularType = FindProperty("_SpecularType", props);
 
                 useMatcap = FindProperty("_UseMatcap", props);
                 additiveMatcap = FindProperty("_AdditiveMatcap", props);
@@ -318,18 +328,12 @@ namespace FlatLitToon.Unity
 
         protected void RenderingOptions(MaterialEditor materialEditor, Material material)
         { 
-            EditorGUILayout.Space();
-            
-            EditorGUI.BeginChangeCheck();
-            {
-
-                EditorGUILayout.LabelField(Styles.renderingOptionsTitle, EditorStyles.boldLabel);
-                materialEditor.TexturePropertySingleLine(Styles.specularMap, specularMap);
-                materialEditor.ShaderProperty(smoothness, Styles.smoothness);
-                //materialEditor.ShaderProperty(specularMult, Styles.specularMult);
-                materialEditor.ShaderProperty(useEnergyConservation, Styles.useEnergyConservation);
                 EditorGUILayout.Space();
+                EditorGUILayout.LabelField(Styles.renderingOptionsTitle, EditorStyles.boldLabel);
 
+                SpecularOptions(materialEditor, material);
+                
+                EditorGUI.BeginChangeCheck();
                 materialEditor.ShaderProperty(useFresnel, Styles.useFresnel);
 
                 if (PropertyEnabled(useFresnel))
@@ -350,8 +354,50 @@ namespace FlatLitToon.Unity
                 materialEditor.ShaderProperty(indirectLightBoost, Styles.indirectLightBoost);
                 materialEditor.TexturePropertySingleLine(Styles.shadowMask, shadowMask);
                 materialEditor.ShaderProperty(shadowMaskPow, Styles.shadowMaskPow); 
-            }
+            
             EditorGUI.EndChangeCheck();
+        }
+
+        protected void SpecularOptions(MaterialEditor materialEditor, Material material)
+        {             
+            var sMode = (SpecularType)specularType.floatValue;
+            EditorGUI.BeginChangeCheck();
+            
+                sMode = (SpecularType)EditorGUILayout.Popup("Specular Style", (int)sMode, Enum.GetNames(typeof(SpecularType)));
+
+                if (EditorGUI.EndChangeCheck())
+                {
+                    materialEditor.RegisterPropertyChangeUndo("Specular Style");
+                    specularType.floatValue = (float)sMode;
+
+                    foreach (var obj in specularType.targets)
+                    {
+                        SetupMaterialWithSpecularType((Material)obj, (SpecularType)material.GetFloat("_SpecularType"));
+                    }
+
+                } 
+
+                switch (sMode)
+                {
+                    case SpecularType.Standard:
+                    case SpecularType.Cloth:
+                        materialEditor.TexturePropertySingleLine(Styles.specularMap, specularMap);
+                        materialEditor.ShaderProperty(smoothness, Styles.smoothness);
+                        materialEditor.ShaderProperty(useMetallic, Styles.useMetallic);
+                        materialEditor.ShaderProperty(useEnergyConservation, Styles.useEnergyConservation);
+                        break;
+                    case SpecularType.Anisotropic:
+                        materialEditor.TexturePropertySingleLine(Styles.specularMap, specularMap);
+                        materialEditor.ShaderProperty(smoothness, Styles.smoothness);
+                        materialEditor.ShaderProperty(useMetallic, Styles.useMetallic);
+                        materialEditor.ShaderProperty(useEnergyConservation, Styles.useEnergyConservation);
+                        break;
+                    case SpecularType.Disable:
+                    default:
+                        break;
+                }   
+
+                EditorGUILayout.Space();
         }
 
         protected void MatcapOptions(MaterialEditor materialEditor, Material material)
@@ -572,6 +618,35 @@ namespace FlatLitToon.Unity
                     material.DisableKeyword("NO_OUTLINE");
                     material.DisableKeyword("TINTED_OUTLINE");
                     material.EnableKeyword("COLORED_OUTLINE");
+                    break;
+                default:
+                    break;
+            }
+        }
+
+        public static void SetupMaterialWithSpecularType(Material material, SpecularType specularType)
+        {
+            switch ((SpecularType)material.GetFloat("_SpecularType"))
+            {
+                case SpecularType.Standard:
+                    material.EnableKeyword("_SPECULAR_GGX");
+                    material.DisableKeyword("_SPECULAR_CHARLIE");
+                    material.DisableKeyword("_SPECULAR_GGX_ANISO");
+                    break;
+                case SpecularType.Cloth:
+                    material.DisableKeyword("_SPECULAR_GGX");
+                    material.EnableKeyword("_SPECULAR_CHARLIE");
+                    material.DisableKeyword("_SPECULAR_GGX_ANISO");
+                    break;
+                case SpecularType.Anisotropic:
+                    material.DisableKeyword("_SPECULAR_GGX");
+                    material.DisableKeyword("_SPECULAR_CHARLIE");
+                    material.EnableKeyword("_SPECULAR_GGX_ANISO");
+                    break;
+                case SpecularType.Disable:
+                    material.DisableKeyword("_SPECULAR_GGX");
+                    material.DisableKeyword("_SPECULAR_CHARLIE");
+                    material.DisableKeyword("_SPECULAR_GGX_ANISO");
                     break;
                 default:
                     break;
