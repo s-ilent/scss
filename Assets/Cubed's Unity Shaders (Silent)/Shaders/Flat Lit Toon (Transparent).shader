@@ -1,4 +1,4 @@
-Shader "CubedParadox/Flat Lit Toon (Silent)"
+Shader "CubedParadox/Flat Lit Toon (Silent) (Transparent)"
 {
 	Properties
 	{
@@ -58,7 +58,7 @@ Shader "CubedParadox/Flat Lit Toon (Silent)"
 	{
 		Tags
 		{
-			"RenderType" = "Opaque"
+			"Queue"="Transparent" "RenderType" = "Transparent" "IgnoreProjector"="True"
 		}
 
 		Pass
@@ -91,7 +91,7 @@ Shader "CubedParadox/Flat Lit Toon (Silent)"
 			#pragma geometry geom
 			#pragma fragment frag
 
-			#pragma multi_compile_fwdbase
+			#pragma multi_compile_fwdbase nolightmap 
 			#pragma multi_compile_fog
 
 			#if defined(_SPECULAR_GGX) | defined(_SPECULAR_CHARLIE) | defined(_SPECULAR_GGX_ANISO)
@@ -118,7 +118,7 @@ Shader "CubedParadox/Flat Lit Toon (Silent)"
 			#pragma geometry geom
 			#pragma fragment frag
 
-			#pragma multi_compile_fwdadd_fullshadows
+			#pragma multi_compile_fwdadd nolightmap 
 			#pragma multi_compile_fog
 
 			#include "FlatLitToonForwardDelta.cginc"
@@ -128,7 +128,7 @@ Shader "CubedParadox/Flat Lit Toon (Silent)"
 
 		Pass
 		{
-			Name "SHADOW_CASTER"
+			Name "SHADOW_CASTER" 
 			Tags{ "LightMode" = "ShadowCaster" }
 
 			ZWrite On ZTest LEqual

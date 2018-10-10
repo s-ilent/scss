@@ -8,20 +8,19 @@
 
 uniform sampler2D _MainTex; uniform float4 _MainTex_ST;
 uniform sampler2D _ColorMask; uniform float4 _ColorMask_ST;
-uniform sampler2D _ShadowMask; uniform float4 _ShadowMask_ST;
-uniform sampler2D _LightingRamp; uniform float4 _LightingRamp_ST;
+uniform sampler2D _BumpMap; uniform float4 _BumpMap_ST;
 uniform sampler2D _EmissionMap; uniform float4 _EmissionMap_ST;
 uniform sampler2D _SpecularMap; uniform float4 _SpecularMap_ST;
-uniform sampler2D _BumpMap; uniform float4 _BumpMap_ST;
+uniform sampler2D _Ramp; uniform float4 _Ramp_ST;
+uniform sampler2D _ShadowMask; uniform float4 _ShadowMask_ST;
 
 uniform float4 _Color;
 uniform float _Shadow;
 uniform float _ShadowLift;
 uniform float _IndirectLightingBoost;
 uniform float _Cutoff;
-//uniform float _Fresnel;
 uniform float _Smoothness;
-uniform float _SpecularMult;
+uniform float _Anisotropy;
 uniform float _FresnelWidth;
 uniform float _FresnelStrength;
 uniform float4 _FresnelTint;
@@ -29,10 +28,15 @@ uniform float4 _EmissionColor;
 uniform float4 _CustomFresnelColor;
 uniform float _outline_width;
 uniform float4 _outline_color;
-uniform sampler2D _AdditiveMatcap; uniform sampler2D _AdditiveMatcap_ST; 
+
+uniform sampler2D _AdditiveMatcap; uniform float4 _AdditiveMatcap_ST; 
 uniform float _AdditiveMatcapStrength;
-uniform sampler2D _MultiplyMatcap; uniform sampler2D _MultiplyMatcap_ST; 
+uniform sampler2D _MultiplyMatcap; uniform float4 _MultiplyMatcap_ST; 
 uniform float _MultiplyMatcapStrength;
+uniform sampler2D _MatcapMask; uniform float4 _MatcapMask_ST; 
+
+uniform sampler2D _SpecularDetailMask; uniform float4 _SpecularDetailMask_ST;
+uniform float _SpecularDetailStrength;
 
 static const float3 grayscale_vector = float3(0, 0.3823529, 0.01845836);
 
@@ -48,7 +52,7 @@ struct v2g
 	float3 tangentDir : TEXCOORD4;
 	float3 bitangentDir : TEXCOORD5;
 	float4 pos : CLIP_POS;
-	SHADOW_COORDS(6)
+	UNITY_SHADOW_COORDS(6)
 	UNITY_FOG_COORDS(7)
 
 	//Since ifdef won't work in geom we must always pass this
@@ -124,7 +128,7 @@ struct VertexOutput
 	float3 bitangentDir : TEXCOORD5;
 	float4 col : COLOR;
 	bool is_outline : IS_OUTLINE;
-	SHADOW_COORDS(6)
+	UNITY_SHADOW_COORDS(6)
 	UNITY_FOG_COORDS(7)
 
 	//Since ifdef won't work in frag we must always pass this
@@ -157,7 +161,7 @@ void geom(triangle v2g IN[3], inout TriangleStream<VertexOutput> tristream)
 		//o.pos = UnityObjectToClipPos(IN[i].vertex + normalize(IN[i].normal) * (_outline_width * .01));
 
 		// Pass-through the shadow coordinates if this pass has shadows.
-		#if defined (SHADOWS_SCREEN) || ( defined (SHADOWS_DEPTH) && defined (SPOT) ) || defined (SHADOWS_CUBE)
+		#if defined (SHADOWS_SCREEN) || ( defined (SHADOWS_DEPTH) && defined (SPOT) ) || defined (SHADOWS_CUBE) || defined (UNITY_LIGHT_PROBE_PROXY_VOLUME)
 		o._ShadowCoord = IN[i]._ShadowCoord;
 		#endif
 
@@ -189,7 +193,7 @@ void geom(triangle v2g IN[3], inout TriangleStream<VertexOutput> tristream)
 		o.is_outline = false;
 
 		// Pass-through the shadow coordinates if this pass has shadows.
-		#if defined (SHADOWS_SCREEN) || ( defined (SHADOWS_DEPTH) && defined (SPOT) ) || defined (SHADOWS_CUBE)
+		#if defined (SHADOWS_SCREEN) || ( defined (SHADOWS_DEPTH) && defined (SPOT) ) || defined (SHADOWS_CUBE) || defined (UNITY_LIGHT_PROBE_PROXY_VOLUME)
 		o._ShadowCoord = IN[ii]._ShadowCoord;
 		#endif
 
@@ -231,7 +235,7 @@ float3 UnitySpecularSimplified(float3 specColor, float smoothness, float2 rlPow4
 		// Todo: IFDEF SpecularByLightramp?
 		// But it causes issues where, for example, a lightramp with a wide middle section will cause extra
 		// brightness in areas where specularity is weak, but present. 
-		// specular = tex2D(_LightingRamp, saturate(float2( specular, 0.0)) );
+		// specular = tex2D(_Ramp, saturate(float2( specular, 0.0)) );
 	return specular * specColor; // Return specular colour multiplied by specular  
 	//return specular * specColor * nDotL; // Return specular colour multiplied by specular  
 }
@@ -309,6 +313,20 @@ float3 viewReflectDirection, float attenuation, float roughness, float3 worldPos
     ugls_en_data.reflUVW = viewReflectDirection;
     UnityGI gi = UnityGlobalIllumination(d, 1.0h, normalDirection, ugls_en_data );
     return gi;
+}
+
+// Get the maximum SH contribution
+// synqark's Arktoon shader's shading method
+half3 GetSHLength ()
+{
+    half3 x, x1;
+    x.r = length(unity_SHAr);
+    x.g = length(unity_SHAg);
+    x.b = length(unity_SHAb);
+    x1.r = length(unity_SHBr);
+    x1.g = length(unity_SHBg);
+    x1.b = length(unity_SHBb);
+    return x + x1;
 }
 
 #endif

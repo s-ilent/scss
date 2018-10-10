@@ -55,6 +55,13 @@ namespace FlatLitToon.Unity
             Disable
         }
 
+        public enum LightingCalculationType
+        {
+            Cubed,
+            Standard,
+            Arktoon
+        }
+
         public static class Styles
         {
             public static string mainOptionsTitle = "Main Options";
@@ -87,22 +94,28 @@ namespace FlatLitToon.Unity
             public static GUIContent cullMode = new GUIContent("Cull Mode", "Triangle culling mode. Note: Outlines require this to be set to front to work properly.");
             public static GUIContent renderQueueOverride = new GUIContent("Render Queue Override", "Manually set the Render Queue. Note: VRchat will override this in-game.");
 
-            public static GUIContent mainTexture = new GUIContent("Main Texture", "Main Color Texture (RGB)");
+            public static GUIContent mainTexture = new GUIContent("Main Texture", "Main Color Texture (RGBA)");
             public static GUIContent alphaCutoff = new GUIContent("Alpha Cutoff", "Threshold for transparency cutoff");
             public static GUIContent colorMask = new GUIContent("Tint Mask", "Masks Color Tinting (G)");
             public static GUIContent normalMap = new GUIContent("Normal Map", "Normal Map (RGB)");
-            public static GUIContent specularMap = new GUIContent("Specular Map", "Specular Map (RGB)");
+            public static GUIContent specularMap = new GUIContent("Specular Map", "Specular Map (RGBA, RGB: Specular/Metalness, A: Smoothness)");
             public static GUIContent emissionMap = new GUIContent("Emission", "Emission (RGB)");
             public static GUIContent lightingRamp = new GUIContent("Lighting Ramp", "Specifies the falloff of the lighting. Horizontal only. See also lightwarp textures. \nNote: If a Lighting Ramp is not set, the material will have no shading.");
             public static GUIContent shadowMask = new GUIContent("Shadow Mask (Occlusion)", "Specifies areas of shadow influence. RGB darkens, alpha lightens.");
-
             public static GUIContent specularType = new GUIContent("Specular Style", "Allows you to set the shading used for specular. ");
             public static GUIContent smoothness = new GUIContent("Smoothness", "The smoothness of the material. The specular map's alpha channel is used for this, with this slider being a multiplier.");
+            public static GUIContent anisotropy = new GUIContent("Anisotropy", "Direction of the anisotropic specular highlights.");
+
+            public static GUIContent useSpecularDetailMask = new GUIContent("Use Specular Detail Mask", "Applies a detail pattern to the specular map.");
+            public static GUIContent specularDetailMask = new GUIContent("Specular Detail Mask", "The detail pattern to use over the specular map.");
+            public static GUIContent specularDetailStrength = new GUIContent("Specular Detail Strength", "The strength of the detail pattern applied to the specular.");
+
             public static GUIContent useFresnel = new GUIContent("Use Ambient Fresnel", "Applies an additional rim lighting effect.");
             public static GUIContent fresnelWidth = new GUIContent("Ambient Fresnel Width", "Sets the width of the ambient fresnel lighting.");
             public static GUIContent fresnelStrength = new GUIContent("Ambient Fresnel Softness", "Sets the sharpness of the fresnel. ");
             public static GUIContent fresnelTint = new GUIContent("Ambient Fresnel Tint", "Tints the colours of the ambient fresnel. To make it brighter, change the brightness to a valur higher than 1.");
             public static GUIContent customFresnelColor = new GUIContent("Emissive Fresnel", "RGB sets the colour of the additive fresnel. Alpha controls the power/width of the effect.");
+
             public static GUIContent shadowLift = new GUIContent("Shadow Lift", "Increasing this warps the lighting received to make more things lit.");
             public static GUIContent indirectLightBoost = new GUIContent("Indirect Lighting Boost", "Replaces the lighting of shadows with the lighting of direct light, making them brighter.");
             public static GUIContent shadowMaskPow = new GUIContent("Shadow Mask Lightening", "Sets the power of the shadow mask.");
@@ -116,8 +129,10 @@ namespace FlatLitToon.Unity
             public static GUIContent additiveMatcapStrength = new GUIContent("Additive Matcap Strength", "Power of the additive matcap. Higher is brighter.");
             public static GUIContent multiplyMatcap = new GUIContent("Multiply Matcap", "Multiply Matcap (RGB)");
             public static GUIContent multiplyMatcapStrength = new GUIContent("Multiply Matcap Strength", "Power of the multiplicative matcap. Higher is darker.");
+            public static GUIContent matcapMask = new GUIContent("Matcap Mask", "Matcap Mask (RGBA, G: Additive strength, A: Multiplicative strength)");
 
             public static GUIContent useVerticalLightramp = new GUIContent("Vertical Lightramp", "Uses lightramps that run from bottom to top instead of left to right. For MMD compatibility.");
+            public static GUIContent lightingCalculationType = new GUIContent("Lighting Calculation", "Changes how the direct/indirect lighting calculation is performed.");
 
         } 
 
@@ -151,6 +166,7 @@ namespace FlatLitToon.Unity
         protected MaterialProperty normalMap;
         protected MaterialProperty specularMap;
         protected MaterialProperty smoothness;
+        protected MaterialProperty anisotropy;
         protected MaterialProperty useMetallic;
 
         protected MaterialProperty useFresnel;
@@ -162,14 +178,19 @@ namespace FlatLitToon.Unity
 
         protected MaterialProperty useEnergyConservation;
         protected MaterialProperty specularType;
+        protected MaterialProperty useSpecularDetailMask;
+        protected MaterialProperty specularDetailMask;
+        protected MaterialProperty specularDetailStrength;
 
         protected MaterialProperty useMatcap;
         protected MaterialProperty additiveMatcap;
         protected MaterialProperty multiplyMatcap;
         protected MaterialProperty additiveMatcapStrength;
         protected MaterialProperty multiplyMatcapStrength;
+        protected MaterialProperty matcapMask;
 
         protected MaterialProperty useVerticalLightramp;
+        protected MaterialProperty lightingCalculationType;
 
         protected void FindProperties(MaterialProperty[] props)
             { 
@@ -187,7 +208,7 @@ namespace FlatLitToon.Unity
                 mainTexture = FindProperty("_MainTex", props);
                 color = FindProperty("_Color", props);
                 colorMask = FindProperty("_ColorMask", props);
-                lightingRamp = FindProperty("_LightingRamp", props);
+                lightingRamp = FindProperty("_Ramp", props);
                 shadowMaskPow = FindProperty("_Shadow", props);
                 shadowLift = FindProperty("_ShadowLift", props);
                 indirectLightBoost = FindProperty("_IndirectLightingBoost", props);
@@ -201,6 +222,7 @@ namespace FlatLitToon.Unity
                 customFresnelColor = FindProperty("_CustomFresnelColor", props);
                 specularMap = FindProperty("_SpecularMap", props);
                 smoothness = FindProperty("_Smoothness", props);
+                anisotropy = FindProperty("_Anisotropy", props);
                 useMetallic = FindProperty("_UseMetallic", props);
                 useFresnel = FindProperty("_UseFresnel", props);
                 fresnelWidth = FindProperty("_FresnelWidth", props);
@@ -212,13 +234,19 @@ namespace FlatLitToon.Unity
                 useEnergyConservation = FindProperty("_UseEnergyConservation", props);
                 specularType = FindProperty("_SpecularType", props);
 
+                useSpecularDetailMask = FindProperty("_UseSpecularDetailMask", props);
+                specularDetailMask = FindProperty("_SpecularDetailMask", props);
+                specularDetailStrength = FindProperty("_SpecularDetailStrength", props);
+
                 useMatcap = FindProperty("_UseMatcap", props);
                 additiveMatcap = FindProperty("_AdditiveMatcap", props);
                 multiplyMatcap = FindProperty("_MultiplyMatcap", props);
                 additiveMatcapStrength = FindProperty("_AdditiveMatcapStrength", props);
                 multiplyMatcapStrength = FindProperty("_MultiplyMatcapStrength", props);
+                matcapMask = FindProperty("_MatcapMask", props);
 
                 useVerticalLightramp = FindProperty("_UseVerticalLightramp", props);
+                lightingCalculationType = FindProperty("_LightingCalculationType", props);
             }
 
         public override void OnGUI(MaterialEditor materialEditor, MaterialProperty[] props)
@@ -385,12 +413,15 @@ namespace FlatLitToon.Unity
                         materialEditor.ShaderProperty(smoothness, Styles.smoothness);
                         materialEditor.ShaderProperty(useMetallic, Styles.useMetallic);
                         materialEditor.ShaderProperty(useEnergyConservation, Styles.useEnergyConservation);
+                        SpecularMaskOptions(materialEditor, material);
                         break;
                     case SpecularType.Anisotropic:
                         materialEditor.TexturePropertySingleLine(Styles.specularMap, specularMap);
                         materialEditor.ShaderProperty(smoothness, Styles.smoothness);
+                        materialEditor.ShaderProperty(anisotropy, Styles.anisotropy);
                         materialEditor.ShaderProperty(useMetallic, Styles.useMetallic);
                         materialEditor.ShaderProperty(useEnergyConservation, Styles.useEnergyConservation);
+                        SpecularMaskOptions(materialEditor, material);
                         break;
                     case SpecularType.Disable:
                     default:
@@ -398,6 +429,23 @@ namespace FlatLitToon.Unity
                 }   
 
                 EditorGUILayout.Space();
+        }
+
+        protected void SpecularMaskOptions(MaterialEditor materialEditor, Material material)
+        {     
+
+                EditorGUI.BeginChangeCheck();
+                {
+                    materialEditor.ShaderProperty(useSpecularDetailMask, Styles.useSpecularDetailMask);
+
+                    if (PropertyEnabled(useSpecularDetailMask))
+                    {
+                        materialEditor.TexturePropertySingleLine(Styles.specularDetailMask, specularDetailMask);
+                        materialEditor.TextureScaleOffsetProperty(specularDetailMask);
+                        materialEditor.ShaderProperty(specularDetailStrength, Styles.specularDetailStrength);
+                    }
+                } 
+                EditorGUI.EndChangeCheck();    
         }
 
         protected void MatcapOptions(MaterialEditor materialEditor, Material material)
@@ -414,6 +462,7 @@ namespace FlatLitToon.Unity
                     materialEditor.ShaderProperty(additiveMatcapStrength, Styles.additiveMatcapStrength);
                     materialEditor.TexturePropertySingleLine(Styles.multiplyMatcap, multiplyMatcap);
                     materialEditor.ShaderProperty(multiplyMatcapStrength, Styles.multiplyMatcapStrength);
+                    materialEditor.TexturePropertySingleLine(Styles.matcapMask, matcapMask);
                 }
             } 
             EditorGUI.EndChangeCheck();
@@ -455,9 +504,27 @@ namespace FlatLitToon.Unity
         protected void AdvancedOptions(MaterialEditor materialEditor, Material material)
         {
             EditorGUILayout.Space();
+            var lcMode = (LightingCalculationType)lightingCalculationType.floatValue;
+
             GUILayout.Label(Styles.advancedOptionsTitle, EditorStyles.boldLabel, new GUILayoutOption[0]);
 
+            EditorGUI.BeginChangeCheck();
+
             materialEditor.ShaderProperty(useVerticalLightramp, Styles.useVerticalLightramp);
+
+            lcMode = (LightingCalculationType)EditorGUILayout.Popup("Lighting Calculation", (int)lcMode, Enum.GetNames(typeof(LightingCalculationType)));
+
+            if (EditorGUI.EndChangeCheck())
+                {
+                    materialEditor.RegisterPropertyChangeUndo("Lighting Calculation");
+                    lightingCalculationType.floatValue = (float)lcMode;
+
+                    foreach (var obj in lightingCalculationType.targets)
+                    {
+                        SetupMaterialWithLightingCalculationType((Material)obj, (LightingCalculationType)material.GetFloat("_LightingCalculationType"));
+                    }
+
+                } 
 
             EditorGUI.BeginChangeCheck();
 
@@ -647,6 +714,30 @@ namespace FlatLitToon.Unity
                     material.DisableKeyword("_SPECULAR_GGX");
                     material.DisableKeyword("_SPECULAR_CHARLIE");
                     material.DisableKeyword("_SPECULAR_GGX_ANISO");
+                    break;
+                default:
+                    break;
+            }
+        }
+            
+        public static void SetupMaterialWithLightingCalculationType(Material material, LightingCalculationType LightingCalculationType)
+        {
+            switch ((LightingCalculationType)material.GetFloat("_LightingCalculationType"))
+            {   
+                case LightingCalculationType.Cubed:
+                    material.EnableKeyword("_LIGHTINGTYPE_CUBED");
+                    material.DisableKeyword("_LIGHTINGTYPE_ARKTOON");
+                    material.DisableKeyword("_LIGHTINGTYPE_STANDARD");
+                    break;
+                case LightingCalculationType.Standard:
+                    material.DisableKeyword("_LIGHTINGTYPE_CUBED");
+                    material.DisableKeyword("_LIGHTINGTYPE_ARKTOON");
+                    material.EnableKeyword("_LIGHTINGTYPE_STANDARD");
+                    break;
+                case LightingCalculationType.Arktoon:
+                    material.DisableKeyword("_LIGHTINGTYPE_CUBED");
+                    material.EnableKeyword("_LIGHTINGTYPE_ARKTOON");
+                    material.DisableKeyword("_LIGHTINGTYPE_STANDARD");
                     break;
                 default:
                     break;
