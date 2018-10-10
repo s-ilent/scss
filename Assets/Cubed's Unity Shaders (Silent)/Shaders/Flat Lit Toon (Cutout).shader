@@ -1,4 +1,4 @@
-Shader "CubedParadox/Flat Lit Toon (Silent)"
+Shader "CubedParadox/Flat Lit Toon (Silent) (Cutout)"
 {
 	Properties
 	{
@@ -58,7 +58,7 @@ Shader "CubedParadox/Flat Lit Toon (Silent)"
 	{
 		Tags
 		{
-			"RenderType" = "Opaque"
+			"Queue"="AlphaTest" "RenderType" = "TransparentCutout" "IgnoreProjector"="True"
 		}
 
 		Pass
