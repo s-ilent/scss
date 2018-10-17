@@ -44,7 +44,7 @@ float4 frag(VertexOutput i) : COLOR
 	float2 rlPow4 = Pow4(float2(dot(reflDir, lightDirection), 1 - NdotV));  // "use R.L instead of N.H to save couple of instructions"
 
 	// Ambient fresnel	
-	float fresnelEffect = 0.0;
+	float3 fresnelEffect = 0.0;
 
 	#if defined(_FRESNEL)
 		fresnelEffect = rlPow4.y;
