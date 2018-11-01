@@ -64,20 +64,31 @@ void vertShadowCaster(VertexInput v,
     #endif
 }
 
+float interleaved_gradient(float2 uv : SV_POSITION) : SV_Target
+{
+    float3 magic = float3(0.06711056, 0.00583715, 52.9829189);
+    return frac(magic.z * frac(dot(uv, magic.xy)));
+}
+
 
 half4 fragShadowCaster(
     #if !defined(V2F_SHADOW_CASTER_NOPOS_IS_EMPTY) || defined(UNITY_STANDARD_USE_SHADOW_UVS)
-        VertexOutputShadowCaster i
+        VertexOutputShadowCaster i, UNITY_VPOS_TYPE vpos : VPOS
     #endif
+    /*
     #ifdef UNITY_STANDARD_USE_DITHER_MASK
         , UNITY_VPOS_TYPE vpos : VPOS
     #endif
+    */
 ) : SV_Target
 {
     #if defined(UNITY_STANDARD_USE_SHADOW_UVS)
         half alpha = tex2D(_MainTex, i.tex).a * _Color.a;
     #if defined(_ALPHATEST_ON)
-        clip(alpha - _Cutoff);
+        //clip(alpha - _Cutoff);
+        float mask = saturate(interleaved_gradient(vpos.xy)); 
+        mask = saturate(_Cutoff + _Cutoff*mask);
+        clip (alpha - mask);
     #endif
     #if defined(_ALPHABLEND_ON) || defined(_ALPHAPREMULTIPLY_ON)
         #if defined(UNITY_STANDARD_USE_DITHER_MASK)
@@ -86,7 +97,10 @@ half4 fragShadowCaster(
             half alphaRef = tex3D(_DitherMaskLOD, float3(vpos.xy*0.25,alpha*0.9375)).a;
             clip(alphaRef - 0.01);
             #else
-                clip(alpha - _Cutoff);
+            //clip(alpha - _Cutoff);
+            float mask = saturate(interleaved_gradient(vpos.xy)); 
+            mask = saturate(_Cutoff + _Cutoff*mask);
+            clip (alpha - mask);
             #endif
         #endif
     #endif

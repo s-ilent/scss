@@ -40,6 +40,14 @@ Shader "CubedParadox/Flat Lit Toon (Silent) (Transparent)"
 		[Enum(SpecularType)] _SpecularType ("Specular Type", Float) = 0.0
 		[Toggle(_SPECULAR_DETAIL)] _UseSpecularDetailMask ("Use Specular Detail Mask", Float) = 0.0
 		[Enum(LightingCalculationType)] _LightingCalculationType ("Lighting Calculation Type", Float) = 0.0
+		[Toggle(_SUBSURFACE)] _UseSubsurfaceScattering ("Use Subsurface Scattering", Float) = 0.0
+		_ThicknessMap("Thickness Map", 2D) = "black" {}
+		[Toggle]_ThicknessMapInvert("Invert Thickness", Float) = 0.0
+		_ThicknessMapPower ("Thickness Map Power", Range(0.01, 10)) = 1
+		_SSSCol ("Scattering Color", Color) = (1,1,1,1)
+		_SSSIntensity ("Scattering Intensity", Range(0, 10)) = 1
+		_SSSPow ("Scattering Power", Range(0.01, 10)) = 1
+		_SSSDist ("Scattering Distance", Range(0, 10)) = 1
 
         // Advanced options.
         [Enum(RenderingMode)] _Mode("Rendering Mode", Float) = 0                                     // "Opaque"
@@ -87,6 +95,7 @@ Shader "CubedParadox/Flat Lit Toon (Silent) (Transparent)"
 			#pragma shader_feature _LIGHTRAMP_VERTICAL
 			#pragma shader_feature _ _SPECULAR_GGX _SPECULAR_CHARLIE _SPECULAR_GGX_ANISO
 			#pragma shader_feature _LIGHTINGTYPE_CUBED _LIGHTINGTYPE_ARKTOON _LIGHTINGTYPE_STANDARD
+			#pragma shader_feature _SUBSURFACE
 			#pragma vertex vert
 			#pragma geometry geom
 			#pragma fragment frag
@@ -113,6 +122,11 @@ Shader "CubedParadox/Flat Lit Toon (Silent) (Transparent)"
 			CGPROGRAM
 			#pragma shader_feature NO_OUTLINE TINTED_OUTLINE COLORED_OUTLINE
 			#pragma shader_feature _ _ALPHATEST_ON _ALPHABLEND_ON _ALPHAPREMULTIPLY_ON
+			#pragma shader_feature _ENERGY_CONSERVE
+			#pragma shader_feature _METALLIC
+			#pragma shader_feature _SPECULAR_DETAIL
+			#pragma shader_feature _ _SPECULAR_GGX _SPECULAR_CHARLIE _SPECULAR_GGX_ANISO
+			#pragma shader_feature _SUBSURFACE
 			#include "FlatLitToonCore.cginc"
 			#pragma vertex vert
 			#pragma geometry geom
@@ -120,6 +134,10 @@ Shader "CubedParadox/Flat Lit Toon (Silent) (Transparent)"
 
 			#pragma multi_compile_fwdadd nolightmap 
 			#pragma multi_compile_fog
+
+			#if defined(_SPECULAR_GGX) | defined(_SPECULAR_CHARLIE) | defined(_SPECULAR_GGX_ANISO)
+			#define USE_SPECULAR true
+			#endif
 
 			#include "FlatLitToonForwardDelta.cginc"
 
