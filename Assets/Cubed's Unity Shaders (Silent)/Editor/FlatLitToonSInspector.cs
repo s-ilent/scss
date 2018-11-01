@@ -131,6 +131,15 @@ namespace FlatLitToon.Unity
             public static GUIContent multiplyMatcapStrength = new GUIContent("Multiply Matcap Strength", "Power of the multiplicative matcap. Higher is darker.");
             public static GUIContent matcapMask = new GUIContent("Matcap Mask", "Matcap Mask (RGBA, G: Additive strength, A: Multiplicative strength)");
 
+            public static GUIContent useSubsurfaceScattering = new GUIContent("Use Subsurface Scattering", "Enables a light scattering effect useful for cloth and skin.");
+            public static GUIContent thicknessMap = new GUIContent("Thickness Map", "Thickness Map (RGB)");
+            public static GUIContent thicknessMapPower = new GUIContent("Thickness Map Power", "Boosts the intensity of the thickness map.");
+            public static GUIContent thicknessInvert = new GUIContent("Invert Thickness", "Inverts the map used for thickness from a scale where 1 produces an effect, to a scale where 0 produces an effect.");
+            public static GUIContent scatteringColor = new GUIContent("Scattering Color", "The colour used for the subsurface scattering effect.");
+            public static GUIContent scatteringIntensity = new GUIContent("Scattering Intensity", "Strength of the subsurface scattering effect.");
+            public static GUIContent scatteringPower = new GUIContent("Scattering Power", "Controls the power of the scattering effect.");
+            public static GUIContent scatteringDistortion = new GUIContent("Scattering Distortion", "Controls the level of distortion light receives when passing through the material.");
+
             public static GUIContent useVerticalLightramp = new GUIContent("Vertical Lightramp", "Uses lightramps that run from bottom to top instead of left to right. For MMD compatibility.");
             public static GUIContent lightingCalculationType = new GUIContent("Lighting Calculation", "Changes how the direct/indirect lighting calculation is performed.");
 
@@ -189,6 +198,15 @@ namespace FlatLitToon.Unity
         protected MaterialProperty multiplyMatcapStrength;
         protected MaterialProperty matcapMask;
 
+        protected MaterialProperty useSubsurfaceScattering;
+        protected MaterialProperty thicknessMap;
+        protected MaterialProperty thicknessMapPower;
+        protected MaterialProperty thicknessInvert;
+        protected MaterialProperty scatteringColor;
+        protected MaterialProperty scatteringIntensity;
+        protected MaterialProperty scatteringPower;
+        protected MaterialProperty scatteringDistortion;
+
         protected MaterialProperty useVerticalLightramp;
         protected MaterialProperty lightingCalculationType;
 
@@ -245,6 +263,15 @@ namespace FlatLitToon.Unity
                 multiplyMatcapStrength = FindProperty("_MultiplyMatcapStrength", props);
                 matcapMask = FindProperty("_MatcapMask", props);
 
+                useSubsurfaceScattering = FindProperty("_UseSubsurfaceScattering", props);
+                thicknessMap = FindProperty("_ThicknessMap", props);
+                thicknessMapPower = FindProperty("_ThicknessMapPower", props);
+                thicknessInvert = FindProperty("_ThicknessMapInvert", props);
+                scatteringColor = FindProperty("_SSSCol", props);
+                scatteringIntensity = FindProperty("_SSSIntensity", props);
+                scatteringPower = FindProperty("_SSSPow", props);
+                scatteringDistortion = FindProperty("_SSSDist", props);
+
                 useVerticalLightramp = FindProperty("_UseVerticalLightramp", props);
                 lightingCalculationType = FindProperty("_LightingCalculationType", props);
             }
@@ -261,6 +288,7 @@ namespace FlatLitToon.Unity
             MainOptions(materialEditor, material);
             RenderingOptions(materialEditor, material);
             MatcapOptions(materialEditor, material);
+            SubsurfaceOptions(materialEditor, material);
             OutlineOptions(materialEditor, material);
             AdvancedOptions(materialEditor, material);
 
@@ -463,6 +491,28 @@ namespace FlatLitToon.Unity
                     materialEditor.TexturePropertySingleLine(Styles.multiplyMatcap, multiplyMatcap);
                     materialEditor.ShaderProperty(multiplyMatcapStrength, Styles.multiplyMatcapStrength);
                     materialEditor.TexturePropertySingleLine(Styles.matcapMask, matcapMask);
+                }
+            } 
+            EditorGUI.EndChangeCheck();
+        }
+
+        protected void SubsurfaceOptions(MaterialEditor materialEditor, Material material)
+        { 
+            EditorGUILayout.Space();
+            
+            EditorGUI.BeginChangeCheck();
+            {
+                materialEditor.ShaderProperty(useSubsurfaceScattering, Styles.useSubsurfaceScattering);
+
+                if (PropertyEnabled(useSubsurfaceScattering))
+                {
+                    materialEditor.TexturePropertySingleLine(Styles.thicknessMap, thicknessMap);
+                    materialEditor.ShaderProperty(thicknessMapPower, Styles.thicknessMapPower);
+                    materialEditor.ShaderProperty(thicknessInvert, Styles.thicknessInvert);
+                    materialEditor.ShaderProperty(scatteringColor, Styles.scatteringColor);
+                    materialEditor.ShaderProperty(scatteringIntensity, Styles.scatteringIntensity);
+                    materialEditor.ShaderProperty(scatteringPower, Styles.scatteringPower);
+                    materialEditor.ShaderProperty(scatteringDistortion, Styles.scatteringDistortion);
                 }
             } 
             EditorGUI.EndChangeCheck();

@@ -38,6 +38,14 @@ uniform sampler2D _MatcapMask; uniform float4 _MatcapMask_ST;
 uniform sampler2D _SpecularDetailMask; uniform float4 _SpecularDetailMask_ST;
 uniform float _SpecularDetailStrength;
 
+uniform sampler2D _ThicknessMap; uniform float4 _ThicknessMap_ST;
+uniform float _ThicknessMapPower;
+uniform float _ThicknessMapInvert;
+uniform float3 _SSSCol;
+uniform float _SSSIntensity;
+uniform float _SSSPow;
+uniform float _SSSDist;
+
 static const float3 grayscale_vector = float3(0, 0.3823529, 0.01845836);
 
 struct v2g
@@ -327,6 +335,19 @@ half3 GetSHLength ()
     x1.g = length(unity_SHBg);
     x1.b = length(unity_SHBb);
     return x + x1;
+}
+
+//SSS method from GDC 2011 conference by Colin Barre-Bresebois & Marc Bouchard and modified by Xiexe
+float3 getSubsurfaceScatteringLight (float3 lightColor, float3 lightDirection, float3 normalDirection, float3 viewDirection, 
+	float attenuation, float3 thickness, float3 indirectLight)
+{
+	float3 vSSLight = lightDirection + normalDirection * _SSSDist; // Distortion
+	float3 vdotSS = pow(saturate(dot(viewDirection, -vSSLight)), _SSSPow) * _SSSIntensity * abs(_ThicknessMapInvert-thickness); 
+	
+	return lerp(1, attenuation, float(any(_WorldSpaceLightPos0.xyz))) 
+				* (vdotSS * _SSSCol) 
+				* (lightColor + indirectLight);
+				
 }
 
 #endif

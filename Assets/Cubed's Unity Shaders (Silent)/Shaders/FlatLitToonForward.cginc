@@ -30,7 +30,8 @@ float4 frag(VertexOutput i) : COLOR
 	#if defined(_ALPHATEST_ON)
 		float mask = saturate(interleaved_gradient(i.pos.xy)); 
 		//float mask = (float((9*int(i.pos.x)+5*int(i.pos.y))%11) + 0.5) / 11.0;
-		mask = (1-_Cutoff) * (mask + _Cutoff);
+		//mask = (1-_Cutoff) * (mask + _Cutoff);
+		mask = saturate(_Cutoff + _Cutoff*mask);
 		clip (baseColor.a - mask);
 	#endif
 
@@ -236,32 +237,39 @@ float4 frag(VertexOutput i) : COLOR
 		//lightContribution = DisneyDiffuse(NdotV, NdotL, LdotH, roughness) * NdotL;
 
 		#if defined(_LIGHTINGTYPE_STANDARD)
+			float3 indirectLighting = gi.indirect.diffuse.rgb;
 			float3 directContribution = diffuseColor * (gi.indirect.diffuse.rgb + _LightColor0.rgb * lightContribution);
 		#else
 			float3 directContribution = diffuseColor * 
 			lerp(indirectLighting, directLighting, lightContribution);
 		#endif
 
-		directContribution += i.vertexLight;
+		directContribution += min(i.vertexLight, i.vertexLight * shadowMask);
 
 		#if defined(_FRESNEL)
 			directContribution *= 1+fresnelEffect;
 		#endif
 
 		float3 finalColor = emissive + directContribution +
-		specularTerm * gi.light.color * FresnelTerm(specColor, LdotH) +
-		surfaceReduction * gi.indirect.specular.rgb * FresnelLerp(specColor, grazingTerm, NdotV);
+		specularTerm * (gi.light.color + i.vertexLight) * FresnelTerm(specColor, LdotH) +
+		surfaceReduction * (gi.indirect.specular.rgb + i.vertexLight) * FresnelLerp(specColor, grazingTerm, NdotV);
 	#else
 		float3 directContribution = diffuseColor * 
 		lerp(indirectLighting, directLighting, lightContribution);
 
-		directContribution += i.vertexLight;
+		directContribution += min(i.vertexLight, i.vertexLight * shadowMask + 0.1);
 
 		#if defined(_FRESNEL)
 			directContribution *= 1+fresnelEffect;
 		#endif
 
 		float3 finalColor = directContribution + emissive;
+	#endif
+
+	#if defined(_SUBSURFACE)
+	float3 thicknessMap_var = pow(tex2D(_ThicknessMap, TRANSFORM_TEX(i.uv0, _MainTex)), _ThicknessMapPower);
+	finalColor += diffuseColor * getSubsurfaceScatteringLight(_LightColor0, lightDirection, normalDirection, viewDirection,
+		attenuation, thicknessMap_var, indirectLighting);
 	#endif
 
 	fixed4 finalRGBA = fixed4(finalColor * lightmap, baseColor.a);
