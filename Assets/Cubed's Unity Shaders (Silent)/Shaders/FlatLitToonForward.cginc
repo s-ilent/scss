@@ -47,15 +47,15 @@ float4 frag(VertexOutput i) : COLOR
 	// Ambient fresnel	
 	float3 fresnelEffect = 0.0;
 
-	#if defined(_FRESNEL)
-		fresnelEffect = rlPow4.y;
-		float2 fresStep = .5 + float2(-1, 1) * fwidth(rlPow4.y);
-		// Sharper rim lighting for the anime look.
-		fresnelEffect *= _FresnelWidth;
-		float2 fresStep_var = lerp(float2(0.0, 1.0), fresStep, 1-_FresnelStrength);
-		fresnelEffect = smoothstep(fresStep_var.x, fresStep_var.y, fresnelEffect);
-		fresnelEffect *= _FresnelTint.rgb * _FresnelTint.a;
-	#endif
+	
+	fresnelEffect = rlPow4.y;
+	float2 fresStep = .5 + float2(-1, 1) * fwidth(rlPow4.y);
+	// Sharper rim lighting for the anime look.
+	fresnelEffect *= _FresnelWidth;
+	float2 fresStep_var = lerp(float2(0.0, 1.0), fresStep, 1-_FresnelStrength);
+	fresnelEffect = smoothstep(fresStep_var.x, fresStep_var.y, fresnelEffect);
+	fresnelEffect *= _FresnelTint.rgb * _FresnelTint.a * _UseFresnel;
+	
 
 	// Customisable fresnel for a user-defined glow
 	emissive += _CustomFresnelColor.xyz * (pow(rlPow4.y, rcp(_CustomFresnelColor.w+0.0001)));
@@ -246,9 +246,8 @@ float4 frag(VertexOutput i) : COLOR
 
 		directContribution += min(i.vertexLight, i.vertexLight * shadowMask);
 
-		#if defined(_FRESNEL)
-			directContribution *= 1+fresnelEffect;
-		#endif
+		directContribution *= 1+fresnelEffect;
+		
 
 		float3 finalColor = emissive + directContribution +
 		specularTerm * (gi.light.color + i.vertexLight) * FresnelTerm(specColor, LdotH) +
@@ -258,10 +257,8 @@ float4 frag(VertexOutput i) : COLOR
 		lerp(indirectLighting, directLighting, lightContribution);
 
 		directContribution += min(i.vertexLight, i.vertexLight * shadowMask + 0.1);
-
-		#if defined(_FRESNEL)
-			directContribution *= 1+fresnelEffect;
-		#endif
+		
+		directContribution *= 1+fresnelEffect;
 
 		float3 finalColor = directContribution + emissive;
 	#endif

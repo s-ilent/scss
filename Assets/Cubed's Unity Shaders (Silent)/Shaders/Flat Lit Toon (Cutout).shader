@@ -22,7 +22,7 @@ Shader "CubedParadox/Flat Lit Toon (Silent) (Cutout)"
 		[Toggle(_ENERGY_CONSERVE)] _UseEnergyConservation ("Energy Conservation", Float) = 0.0
 		_Smoothness ("Smoothness", Range(0, 1)) = 0.5
 		_Anisotropy("Anisotropy", Range(-1,1)) = 0.8
-		[Toggle(_FRESNEL)] _UseFresnel ("Use Fresnel", Float) = 0.0
+		[Toggle]_UseFresnel ("Use Fresnel", Float) = 0.0
 		_FresnelWidth ("Fresnel Strength", Range(0, 20)) = .5
 		_FresnelStrength ("Fresnel Softness", Range(0.1, 0.9999)) = 0.5
 		[HDR]_FresnelTint("Fresnel Tint", Color) = (1,1,1,1)
@@ -90,7 +90,6 @@ Shader "CubedParadox/Flat Lit Toon (Silent) (Cutout)"
 			#pragma shader_feature _ENERGY_CONSERVE
 			#pragma shader_feature _METALLIC
 			#pragma shader_feature _SPECULAR_DETAIL
-			#pragma shader_feature _FRESNEL
 			#pragma shader_feature _MATCAP
 			#pragma shader_feature _LIGHTRAMP_VERTICAL
 			#pragma shader_feature _ _SPECULAR_GGX _SPECULAR_CHARLIE _SPECULAR_GGX_ANISO
@@ -163,5 +162,5 @@ Shader "CubedParadox/Flat Lit Toon (Silent) (Cutout)"
 		}
 	}
 	FallBack "Diffuse"
-	CustomEditor "FlatLitToon.Unity.Inspector"
+	CustomEditor "FlatLitToonS.Unity.Inspector"
 }

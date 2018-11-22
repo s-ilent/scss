@@ -29,6 +29,8 @@ uniform float4 _CustomFresnelColor;
 uniform float _outline_width;
 uniform float4 _outline_color;
 
+uniform float _UseFresnel;
+
 uniform sampler2D _AdditiveMatcap; uniform float4 _AdditiveMatcap_ST; 
 uniform float _AdditiveMatcapStrength;
 uniform sampler2D _MultiplyMatcap; uniform float4 _MultiplyMatcap_ST; 
@@ -169,7 +171,7 @@ void geom(triangle v2g IN[3], inout TriangleStream<VertexOutput> tristream)
 		//o.pos = UnityObjectToClipPos(IN[i].vertex + normalize(IN[i].normal) * (_outline_width * .01));
 
 		// Pass-through the shadow coordinates if this pass has shadows.
-		#if defined (SHADOWS_SCREEN) || ( defined (SHADOWS_DEPTH) && defined (SPOT) ) || defined (SHADOWS_CUBE) || defined (UNITY_LIGHT_PROBE_PROXY_VOLUME)
+		#if defined (SHADOWS_SCREEN) || ( defined (SHADOWS_DEPTH) && defined (SPOT) ) || defined (SHADOWS_CUBE)
 		o._ShadowCoord = IN[i]._ShadowCoord;
 		#endif
 
@@ -201,7 +203,7 @@ void geom(triangle v2g IN[3], inout TriangleStream<VertexOutput> tristream)
 		o.is_outline = false;
 
 		// Pass-through the shadow coordinates if this pass has shadows.
-		#if defined (SHADOWS_SCREEN) || ( defined (SHADOWS_DEPTH) && defined (SPOT) ) || defined (SHADOWS_CUBE) || defined (UNITY_LIGHT_PROBE_PROXY_VOLUME)
+		#if defined (SHADOWS_SCREEN) || ( defined (SHADOWS_DEPTH) && defined (SPOT) ) || defined (SHADOWS_CUBE)
 		o._ShadowCoord = IN[ii]._ShadowCoord;
 		#endif
 
