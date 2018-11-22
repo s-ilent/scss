@@ -5,7 +5,7 @@ using System;
 // Parts of this file are based on https://github.com/Microsoft/MixedRealityToolkit-Unity/
 // licensed under the MIT license. 
 
-namespace FlatLitToon.Unity
+namespace FlatLitToonS.Unity
 {
     public class Inspector : ShaderGUI
     {
@@ -49,17 +49,17 @@ namespace FlatLitToon.Unity
 
         public enum SpecularType
         {
+            Disable,
             Standard,
             Cloth,
-            Anisotropic,
-            Disable
+            Anisotropic
         }
 
         public enum LightingCalculationType
         {
+            Arktoon,
             Cubed,
-            Standard,
-            Arktoon
+            Standard
         }
 
         public static class Styles
