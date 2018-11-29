@@ -107,14 +107,22 @@ float4 frag(VertexOutput i) : COLOR
 		#endif
 	#endif
 
-	float grayscalelightcolor 	 = dot(_LightColor0.rgb, grayscale_vector);
-	float bottomIndirectLighting = grayscaleSH9(float3(0.0, -1.0, 0.0));
-	float topIndirectLighting 	 = grayscaleSH9(float3(0.0, 1.0, 0.0));
-
-	float grayscaleDirectLighting = NdotL * grayscalelightcolor * attenuation + grayscaleSH9(normalDirection);
-
-	float lightDifference = topIndirectLighting + grayscalelightcolor - bottomIndirectLighting;
-	float remappedLight   = (grayscaleDirectLighting - bottomIndirectLighting) / lightDifference;
+    #if defined(DIRECTIONAL)
+    	lightDirection = lightDirection; // Do nothing.
+    #else
+    	// Get the dominant light direction from light probes
+	    lightDirection = normalize(unity_SHAr.xyz + unity_SHAg.xyz + unity_SHAb.xyz);
+	    #if !defined(POINT) && !defined(SPOT) 
+	    if(length(unity_SHAr.xyz*unity_SHAr.w + unity_SHAg.xyz*unity_SHAg.w + unity_SHAb.xyz*unity_SHAb.w) == 0)
+	    {
+	        lightDirection = normalize(float4(1, 1, 1, 0));
+	    }
+	    #endif
+    #endif
+    #if !defined(DIRECTIONAL) || !defined(POINT) || !defined(SPOT)
+    	attenuation = 1;
+	#endif
+	float remappedLight = (dot(normalDirection, lightDirection) * 0.5 + 0.5) * attenuation;
 
 	// Todo: Only if shadow mask is selected?
 	#if 1
@@ -189,17 +197,17 @@ float4 frag(VertexOutput i) : COLOR
 		float3 MultiplyMatcap = tex2D(_MultiplyMatcap, matcapUV);
 		float4 _MatcapMask_var = tex2D(_MatcapMask,TRANSFORM_TEX(i.uv0, _MainTex));
 		diffuseColor.xyz = lerp(diffuseColor.xyz, diffuseColor.xyz*MultiplyMatcap, _MultiplyMatcapStrength * _MatcapMask_var.w);
-		diffuseColor.xyz += grayscaleDirectLighting*AdditiveMatcap*_AdditiveMatcapStrength*_MatcapMask_var.g;
+		diffuseColor.xyz += (ShadeSH9_mod(half4(0.0,  0.0, 0.0, 1.0))+_LightColor0)*AdditiveMatcap*_AdditiveMatcapStrength*_MatcapMask_var.g;
 	#endif
 	//float horizon = min(1.0 + dot(reflDir, normalDirection), 1.0);
 
 	#if defined(_LIGHTINGTYPE_CUBED)
-		float3 indirectLighting = ((ShadeSH9_mod(half4(0.0, -1.0, 0.0, 1.0)))); 
 		float3 directLighting   = ((ShadeSH9_mod(half4(0.0,  1.0, 0.0, 1.0)) + _LightColor0.rgb)) ;
+		float3 indirectLighting = ((ShadeSH9_mod(half4(0.0, -1.0, 0.0, 1.0)))); 
 	#endif
 	#if defined(_LIGHTINGTYPE_ARKTOON)
 		float3 directLighting   = ((GetSHLength() + _LightColor0.rgb)) ;
-		float3 indirectLighting = ((ShadeSH9_mod(half4(0.0,  0.0, 0.0, 1.0)))); 
+		float3 indirectLighting = ((ShadeSH9_mod(half4(0.0, 0.0, 0.0, 1.0)))); 
 	#endif
 
 	// Physically based specular

@@ -48,7 +48,9 @@ uniform float _SSSIntensity;
 uniform float _SSSPow;
 uniform float _SSSDist;
 
-static const float3 grayscale_vector = float3(0, 0.3823529, 0.01845836);
+static const float3 grayscale_vector = 1.0/3.0; 
+// When operating in non-perceptual space, treat greyscale as an equal distribution.
+// Previously float3(0, 0.3823529, 0.01845836);
 
 struct v2g
 {
