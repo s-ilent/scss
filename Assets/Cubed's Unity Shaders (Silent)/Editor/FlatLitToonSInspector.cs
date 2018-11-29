@@ -784,12 +784,11 @@ namespace FlatLitToonS.Unity
                     material.DisableKeyword("_LIGHTINGTYPE_ARKTOON");
                     material.EnableKeyword("_LIGHTINGTYPE_STANDARD");
                     break;
+                default:
                 case LightingCalculationType.Arktoon:
                     material.DisableKeyword("_LIGHTINGTYPE_CUBED");
                     material.EnableKeyword("_LIGHTINGTYPE_ARKTOON");
                     material.DisableKeyword("_LIGHTINGTYPE_STANDARD");
-                    break;
-                default:
                     break;
             }
         }
