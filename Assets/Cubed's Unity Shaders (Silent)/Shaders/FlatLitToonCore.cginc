@@ -9,12 +9,14 @@
 uniform sampler2D _MainTex; uniform float4 _MainTex_ST;
 uniform sampler2D _ColorMask; uniform float4 _ColorMask_ST;
 uniform sampler2D _BumpMap; uniform float4 _BumpMap_ST;
+uniform sampler2D _DetailNormalMap; uniform float4 _DetailNormalMap_ST;
 uniform sampler2D _EmissionMap; uniform float4 _EmissionMap_ST;
 uniform sampler2D _SpecularMap; uniform float4 _SpecularMap_ST;
 uniform sampler2D _Ramp; uniform float4 _Ramp_ST;
 uniform sampler2D _ShadowMask; uniform float4 _ShadowMask_ST;
 
 uniform float4 _Color;
+uniform float _DetailNormalMapScale;
 uniform float _Shadow;
 uniform float _ShadowLift;
 uniform float _IndirectLightingBoost;
@@ -30,6 +32,9 @@ uniform float _outline_width;
 uniform float4 _outline_color;
 
 uniform float _UseFresnel;
+uniform float _UseEnergyConservation;
+uniform float _UseVerticalLightramp;
+uniform float _UseMetallic;
 
 uniform sampler2D _AdditiveMatcap; uniform float4 _AdditiveMatcap_ST; 
 uniform float _AdditiveMatcapStrength;
@@ -68,15 +73,46 @@ struct v2g
 	UNITY_FOG_COORDS(7)
 
 	//Since ifdef won't work in geom we must always pass this
-	half3 vertexLight : TEXCOORD8;
+	half4 vertexLight : TEXCOORD8;
 };
 
-// HelloKitty's vertex lighting implementation. See:
-// https://github.com/cubedparadox/Cubeds-Unity-Shaders/pull/40
-//Based on Standard Shader's forwardbase vertex lighting calculations in VertexGIForward
-inline half3 VertexLightContribution(float3 posWorld, half3 normalWorld)
+// Shade4PointLights from UnityCG.cginc but only returns their attenuation.
+float4 Shade4PointLightsAtten (
+    float4 lightPosX, float4 lightPosY, float4 lightPosZ,
+    float4 lightAttenSq,
+    float3 pos, float3 normal)
 {
-	half3 vertexLight = 0;
+    // to light vectors
+    float4 toLightX = lightPosX - pos.x;
+    float4 toLightY = lightPosY - pos.y;
+    float4 toLightZ = lightPosZ - pos.z;
+    // squared lengths
+    float4 lengthSq = 0;
+    lengthSq += toLightX * toLightX;
+    lengthSq += toLightY * toLightY;
+    lengthSq += toLightZ * toLightZ;
+    // don't produce NaNs if some vertex position overlaps with the light
+    lengthSq = max(lengthSq, 0.000001);
+
+    // NdotL
+    float4 ndotl = 0;
+    ndotl += toLightX * normal.x;
+    ndotl += toLightY * normal.y;
+    ndotl += toLightZ * normal.z;
+    // correct NdotL
+    float4 corr = rsqrt(lengthSq);
+    ndotl = max (float4(0,0,0,0), ndotl * corr);
+    // attenuation
+    float4 atten = 1.0 / (1.0 + lengthSq * lightAttenSq);
+    float4 diff = ndotl * atten;
+    return diff;
+}
+
+// Based on Standard Shader's forwardbase vertex lighting calculations in VertexGIForward
+// This revision does not pass the light values themselves, but only their attenuation.
+inline half4 VertexLightContribution(float3 posWorld, half3 normalWorld)
+{
+	half4 vertexLight = 0;
 
 	// Static lightmaps
 	#ifdef LIGHTMAP_ON
@@ -84,20 +120,13 @@ inline half3 VertexLightContribution(float3 posWorld, half3 normalWorld)
 	#elif UNITY_SHOULD_SAMPLE_SH
 		#ifdef VERTEXLIGHT_ON
 			// Approximated illumination from non-important point lights
-			vertexLight = Shade4PointLights(
+			vertexLight = Shade4PointLightsAtten(
 				unity_4LightPosX0, unity_4LightPosY0, unity_4LightPosZ0,
-				unity_LightColor[0].rgb, unity_LightColor[1].rgb, unity_LightColor[2].rgb, unity_LightColor[3].rgb,
 				unity_4LightAtten0, posWorld, normalWorld);
 		#endif
 		// (Shouldn't SH already be handled in the main shader?)
-		// Re-enabled pending evidence of this breaking something. 
-		vertexLight = ShadeSHPerVertex(normalWorld, vertexLight);
+		//vertexLight = ShadeSHPerVertex(normalWorld, vertexLight);
 	#endif
-
-	// Threshold to preserve toon shading image as much as possible. 
-	// Which isn't much, because vertexes are interpolated. 
-	// In other words, artifacts appear. (Thus, disabled.)
-	//vertexLight = max(floor(vertexLight+.5), ceil(frac(vertexLight))*.5);
 
 	return vertexLight;
 }
@@ -119,10 +148,10 @@ v2g vert(appdata_full v) {
 	TRANSFER_SHADOW(o);
 	UNITY_TRANSFER_FOG(o, o.pos);
 #if VERTEXLIGHT_ON
-	//o.vertexLight = VertexLightContribution(o.posWorld, o.normal);
+	o.vertexLight = VertexLightContribution(o.posWorld, o.normalDir);
 	// As suggested by netri.
 	// https://github.com/cubedparadox/Cubeds-Unity-Shaders/pull/40
-	o.vertexLight = VertexLightContribution(o.posWorld, UnityObjectToWorldNormal(normalize(v.vertex)));
+	//o.vertexLight = VertexLightContribution(o.posWorld, UnityObjectToWorldNormal(normalize(v.vertex)));
 #else
 	o.vertexLight = 0;
 #endif
@@ -144,7 +173,7 @@ struct VertexOutput
 	UNITY_FOG_COORDS(7)
 
 	//Since ifdef won't work in frag we must always pass this
-	half3 vertexLight : TEXCOORD8;
+	half4 vertexLight : TEXCOORD8;
 };
 
 [maxvertexcount(6)]
@@ -173,7 +202,7 @@ void geom(triangle v2g IN[3], inout TriangleStream<VertexOutput> tristream)
 		//o.pos = UnityObjectToClipPos(IN[i].vertex + normalize(IN[i].normal) * (_outline_width * .01));
 
 		// Pass-through the shadow coordinates if this pass has shadows.
-		#if defined (SHADOWS_SCREEN) || ( defined (SHADOWS_DEPTH) && defined (SPOT) ) || defined (SHADOWS_CUBE)
+		#if defined (SHADOWS_SCREEN) || ( defined (SHADOWS_DEPTH) && defined (SPOT) ) || defined (SHADOWS_CUBE) || defined (UNITY_LIGHT_PROBE_PROXY_VOLUME) &&UNITY_VERSION<600 
 		o._ShadowCoord = IN[i]._ShadowCoord;
 		#endif
 
@@ -205,7 +234,7 @@ void geom(triangle v2g IN[3], inout TriangleStream<VertexOutput> tristream)
 		o.is_outline = false;
 
 		// Pass-through the shadow coordinates if this pass has shadows.
-		#if defined (SHADOWS_SCREEN) || ( defined (SHADOWS_DEPTH) && defined (SPOT) ) || defined (SHADOWS_CUBE)
+		#if defined (SHADOWS_SCREEN) || ( defined (SHADOWS_DEPTH) && defined (SPOT) ) || defined (SHADOWS_CUBE) || defined (UNITY_LIGHT_PROBE_PROXY_VOLUME) &&UNITY_VERSION<600 
 		o._ShadowCoord = IN[ii]._ShadowCoord;
 		#endif
 
@@ -297,7 +326,16 @@ float D_GGX_Anisotropic(float NoH, const float3 h,
     float3 v = float3(ab * ToH, at * BoH, a2 * NoH);
     float v2 = dot(v, v);
     float w2 = a2 / v2;
-    return a2 * w2 * w2 * (1.0 / UNITY_PI);
+    return a2 * w2 * w2 * UNITY_INV_PI;
+}
+
+float V_SmithGGXCorrelated_Anisotropic(float at, float ab, float ToV, float BoV,
+        float ToL, float BoL, float NoV, float NoL) {
+    // Heitz 2014, "Understanding the Masking-Shadowing Function in Microfacet-Based BRDFs"
+    float lambdaV = NoL * length(float3(at * ToV, ab * BoV, NoV));
+    float lambdaL = NoV * length(float3(at * ToL, ab * BoL, NoL));
+    float v = 0.5 / (lambdaV + lambdaL + 1e-7f);
+    return v;
 }
 
 UnityGI GetUnityGI(float3 lightColor, float3 lightDirection, float3 normalDirection,float3 viewDirection, 
@@ -353,5 +391,38 @@ float3 getSubsurfaceScatteringLight (float3 lightColor, float3 lightDirection, f
 				* (lightColor + indirectLight);
 				
 }
+
+float3 sampleRampWithOptions(float rampPosition) 
+{
+	float2 rampUV = float2(rampPosition*(1-_UseVerticalLightramp), rampPosition*_UseVerticalLightramp);
+	return tex2D(_Ramp, saturate(rampUV));
+}
+
+inline float3 BlendNormalsPD(float3 n1, float3 n2) {
+	return normalize(float3(n1.xy*n2.z + n2.xy*n1.z, n1.z*n2.z));
+}
+
+// Based on NormalInTangentSpace from UnityStandardInput
+inline float3 NormalInTangentSpace(float2 texcoords, half mask)
+{
+	float3 normalTangent = UnpackNormal(tex2D(_BumpMap,TRANSFORM_TEX(texcoords.xy, _MainTex)));
+#if _DETAIL 
+    half3 detailNormalTangent = UnpackScaleNormal(tex2D (_DetailNormalMap, TRANSFORM_TEX(texcoords.xy, _DetailNormalMap)), _DetailNormalMapScale);
+    #if _DETAIL_LERP
+        normalTangent = lerp(
+            normalTangent,
+            detailNormalTangent,
+            mask);
+    #else
+        normalTangent = lerp(
+            normalTangent,
+            BlendNormalsPD(normalTangent, detailNormalTangent),
+            mask);
+    #endif
+#endif
+
+    return normalTangent;
+}
+
 
 #endif

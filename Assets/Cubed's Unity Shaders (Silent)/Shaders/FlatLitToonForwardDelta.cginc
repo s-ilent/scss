@@ -3,15 +3,18 @@ float4 frag(VertexOutput i) : COLOR
 	float4 objPos = mul(unity_ObjectToWorld, float4(0,0,0,1));
 	i.normalDir = normalize(i.normalDir);
 	float3x3 tangentTransform = float3x3(i.tangentDir, i.bitangentDir, i.normalDir);
-	float3 _BumpMap_var = UnpackNormal(tex2D(_BumpMap,TRANSFORM_TEX(i.uv0, _BumpMap)));
+
+	// Colour and detail mask. Green is colour tint, while alpha is normal detail mask.
+	float4 _ColorMask_var = tex2D(_ColorMask,TRANSFORM_TEX(i.uv0, _MainTex));
+	float3 _BumpMap_var = NormalInTangentSpace(i.uv0, _ColorMask_var.a);
+
 	float3 normalDirection = normalize(mul(_BumpMap_var.rgb, tangentTransform)); // Perturbed normals
-	float4 _MainTex_var = tex2D(_MainTex,TRANSFORM_TEX(i.uv0, _MainTex));
+	float4 _MainTex_var = tex2D(_MainTex,TRANSFORM_TEX(i.uv0.xy, _MainTex));
 	
 	float3 lightDirection = normalize(_WorldSpaceLightPos0.xyz);
 	UNITY_LIGHT_ATTENUATION(attenuation, i, i.posWorld.xyz);
 	float3 viewDirection = normalize(_WorldSpaceCameraPos.xyz - i.posWorld.xyz);
 
-	float4 _ColorMask_var = tex2D(_ColorMask,TRANSFORM_TEX(i.uv0, _ColorMask));
 	float4 baseColor = lerp((_MainTex_var.rgba*_Color.rgba),_MainTex_var.rgba,_ColorMask_var.r);
 	baseColor *= float4(i.col.rgb, 1);
 
@@ -51,13 +54,7 @@ float4 frag(VertexOutput i) : COLOR
 	// Cel transition between light steps
 	#if 1
 	// Apply lightramp to lighting
-	float3 directContribution = tex2D(_Ramp, saturate(
-		#if _LIGHTRAMP_VERTICAL
-		float2( 0.0, lightContribution)
-		#else
-		float2( lightContribution, 0.0)
-		#endif
-		) );
+	float3 directContribution = sampleRampWithOptions(lightContribution);
 	#else
 	float3 directContribution =  smoothstep(0.30, 0.36, frac(lightContribution))+floor(lightContribution);
 	//float3 directContribution = floor(saturate(lightContribution) * 2.0); // Original
@@ -88,6 +85,12 @@ float4 frag(VertexOutput i) : COLOR
 
 		// Perceptual roughness transformation...
 		float roughness = SmoothnessToRoughness(_Smoothness_var);
+
+		if (_UseMetallic == 1)
+		{
+			// From DiffuseAndSpecularFromMetallic
+			specColor = lerp (unity_ColorSpaceDielectricSpec.rgb, diffuseColor, specColor);
+		}
 		
 		// Specular energy converservation. From EnergyConservationBetweenDiffuseAndSpecular in UnityStandardUtils.cginc
 		half oneMinusReflectivity = 1 - max3(specColor);
@@ -95,14 +98,12 @@ float4 frag(VertexOutput i) : COLOR
 		// oneMinusRoughness + (1 - oneMinusReflectivity)
 		float grazingTerm = saturate(1-roughness + (1-oneMinusReflectivity));
 
-		#if defined(_METALLIC)
-			specColor *= diffuseColor.rgb; // For metallic maps
-		#endif
-		#if defined(_ENERGY_CONSERVE)
+		if (_UseEnergyConservation == 1)
+		{
 			diffuseColor.xyz = diffuseColor.xyz * (oneMinusReflectivity); 
 			// Unity's boost to diffuse power to accomodate rougher metals.
 			diffuseColor.xyz += specColor.xyz * (1 - _Smoothness_var) * 0.5;
-		#endif
+		}
 	#endif
 
 	// Physically based specular

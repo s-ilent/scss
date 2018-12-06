@@ -96,11 +96,16 @@ namespace FlatLitToonS.Unity
 
             public static GUIContent mainTexture = new GUIContent("Main Texture", "Main Color Texture (RGBA)");
             public static GUIContent alphaCutoff = new GUIContent("Alpha Cutoff", "Threshold for transparency cutoff");
-            public static GUIContent colorMask = new GUIContent("Tint Mask", "Masks Color Tinting (G)");
+            public static GUIContent colorMask = new GUIContent("Tint Mask", "Masks material colour tinting (G) and detail normal map (A).");
             public static GUIContent normalMap = new GUIContent("Normal Map", "Normal Map (RGB)");
+
+            public static GUIContent useDetailNormalMap = new GUIContent("Use Detail Normal Map", "Enable a normal map combined with the main normal map to add extra detail.");
+            public static GUIContent detailNormalMap = new GUIContent("Detail Normal Map", "Detail Normal Map (RGB)");
+            public static GUIContent detailNormalMapScale = new GUIContent("Detail Normal Map Scale", "Strength of the detail normal map.");
+
             public static GUIContent specularMap = new GUIContent("Specular Map", "Specular Map (RGBA, RGB: Specular/Metalness, A: Smoothness)");
             public static GUIContent emissionMap = new GUIContent("Emission", "Emission (RGB)");
-            public static GUIContent lightingRamp = new GUIContent("Lighting Ramp", "Specifies the falloff of the lighting. Horizontal only. See also lightwarp textures. \nNote: If a Lighting Ramp is not set, the material will have no shading.");
+            public static GUIContent lightingRamp = new GUIContent("Lighting Ramp", "Specifies the falloff of the lighting. In other words, it controls how light affects your model and how soft or sharp the transition between light and shadow is. \nNote: If a Lighting Ramp is not set, the material will have no shading.");
             public static GUIContent shadowMask = new GUIContent("Shadow Mask (Occlusion)", "Specifies areas of shadow influence. RGB darkens, alpha lightens.");
             public static GUIContent specularType = new GUIContent("Specular Style", "Allows you to set the shading used for specular. ");
             public static GUIContent smoothness = new GUIContent("Smoothness", "The smoothness of the material. The specular map's alpha channel is used for this, with this slider being a multiplier.");
@@ -172,7 +177,12 @@ namespace FlatLitToonS.Unity
         protected MaterialProperty emissionMap;
         protected MaterialProperty emissionColor;
         protected MaterialProperty customFresnelColor;
+
         protected MaterialProperty normalMap;
+        protected MaterialProperty useDetailNormalMap;
+        protected MaterialProperty detailNormalMap;
+        protected MaterialProperty detailNormalMapScale;
+
         protected MaterialProperty specularMap;
         protected MaterialProperty smoothness;
         protected MaterialProperty anisotropy;
@@ -247,6 +257,9 @@ namespace FlatLitToonS.Unity
                 fresnelStrength = FindProperty("_FresnelStrength", props);
                 fresnelTint = FindProperty("_FresnelTint", props);
                 normalMap = FindProperty("_BumpMap", props);
+                useDetailNormalMap = FindProperty("_UseDetailNormal", props);
+                detailNormalMap = FindProperty("_DetailNormalMap", props);
+                detailNormalMapScale = FindProperty("_DetailNormalMapScale", props);
                 alphaCutoff = FindProperty("_Cutoff", props);
 
                 useEnergyConservation = FindProperty("_UseEnergyConservation", props);
@@ -373,13 +386,25 @@ namespace FlatLitToonS.Unity
                 EditorGUI.indentLevel -= 2;
                 materialEditor.TexturePropertySingleLine(Styles.normalMap, normalMap);
                 EditorGUILayout.Space();
+                    }
+                EditorGUI.EndChangeCheck();
 
                 EditorGUI.BeginChangeCheck();
                 materialEditor.TextureScaleOffsetProperty(mainTexture);
                 if (EditorGUI.EndChangeCheck())
                     emissionMap.textureScaleAndOffset = mainTexture.textureScaleAndOffset;          
-            }
-            EditorGUI.EndChangeCheck();
+                EditorGUILayout.Space();
+
+                EditorGUI.BeginChangeCheck();
+                materialEditor.ShaderProperty(useDetailNormalMap, Styles.useDetailNormalMap);
+
+                    if (PropertyEnabled(useDetailNormalMap)) 
+                    {
+                        materialEditor.TexturePropertySingleLine(Styles.detailNormalMap, detailNormalMap);
+                        materialEditor.TextureScaleOffsetProperty(detailNormalMap);
+                        materialEditor.ShaderProperty(detailNormalMapScale, Styles.detailNormalMapScale);
+                }
+                EditorGUI.EndChangeCheck();
         }
 
         protected void RenderingOptions(MaterialEditor materialEditor, Material material)

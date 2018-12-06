@@ -4,14 +4,17 @@ float4 frag(VertexOutput i) : COLOR
 	float4 objPos = mul(unity_ObjectToWorld, float4(0,0,0,1));
 	i.normalDir = normalize(i.normalDir);
 	float3x3 tangentTransform = float3x3(i.tangentDir, i.bitangentDir, i.normalDir);
-	float3 _BumpMap_var = UnpackNormal(tex2D(_BumpMap,TRANSFORM_TEX(i.uv0, _MainTex)));
+
+	// Colour and detail mask. Green is colour tint, while alpha is normal detail mask.
+	float4 _ColorMask_var = tex2D(_ColorMask,TRANSFORM_TEX(i.uv0, _MainTex));
+	float3 _BumpMap_var = NormalInTangentSpace(i.uv0, _ColorMask_var.a);
+
 	float3 normalDirection = normalize(mul(_BumpMap_var.rgb, tangentTransform)); // Perturbed normals
 	float4 _MainTex_var = tex2D(_MainTex,TRANSFORM_TEX(i.uv0, _MainTex));
 
 	float4 _EmissionMap_var = tex2D(_EmissionMap,TRANSFORM_TEX(i.uv0, _MainTex));
 	float3 emissive = (_EmissionMap_var.rgb*_EmissionColor.rgb);
-	float4 _ColorMask_var = tex2D(_ColorMask,TRANSFORM_TEX(i.uv0, _MainTex));
-	float4 baseColor = lerp((_MainTex_var.rgba*_Color.rgba),_MainTex_var.rgba,_ColorMask_var.r);
+	float4 baseColor = lerp(_MainTex_var.rgba,(_MainTex_var.rgba*_Color.rgba),_ColorMask_var.g);
 	baseColor *= float4(i.col.rgb, 1); // Could vertex alpha be used, ever? Let's hope not.
 
 	float3 lightDirection = normalize(_WorldSpaceLightPos0.xyz + 0.0000001); // Offset to avoid error in lightless worlds.
@@ -31,13 +34,15 @@ float4 frag(VertexOutput i) : COLOR
 		float mask = saturate(interleaved_gradient(i.pos.xy)); 
 		//float mask = (float((9*int(i.pos.x)+5*int(i.pos.y))%11) + 0.5) / 11.0;
 		//mask = (1-_Cutoff) * (mask + _Cutoff);
-		mask = saturate(_Cutoff + _Cutoff*mask);
-		clip (baseColor.a - mask);
+		//mask = saturate(_Cutoff + _Cutoff*mask);
+		//clip (baseColor.a - mask);
+		baseColor.a += baseColor.a * mask; 
+		clip (baseColor.a - _Cutoff);
 	#endif
 
 	// Lighting parameters
 	float3 halfDir = Unity_SafeNormalize (lightDirection + viewDirection);
-	float3 reflDir = reflect(viewDirection, normalDirection); // Calculate reflection vector
+	float3 reflDir = reflect(-viewDirection, normalDirection); // Calculate reflection vector
 	float NdotL = saturate(dot(lightDirection, normalDirection)); // Calculate NdotL
 	float NdotV = saturate(dot(viewDirection,  normalDirection)); // Calculate NdotV
 	float LdotH = saturate(dot(lightDirection, halfDir));
@@ -47,15 +52,16 @@ float4 frag(VertexOutput i) : COLOR
 	// Ambient fresnel	
 	float3 fresnelEffect = 0.0;
 
-	
+	if (_UseFresnel == 1)
+	{
 	fresnelEffect = rlPow4.y;
 	float2 fresStep = .5 + float2(-1, 1) * fwidth(rlPow4.y);
 	// Sharper rim lighting for the anime look.
 	fresnelEffect *= _FresnelWidth;
 	float2 fresStep_var = lerp(float2(0.0, 1.0), fresStep, 1-_FresnelStrength);
 	fresnelEffect = smoothstep(fresStep_var.x, fresStep_var.y, fresnelEffect);
-	fresnelEffect *= _FresnelTint.rgb * _FresnelTint.a * _UseFresnel;
-	
+	fresnelEffect *= _FresnelTint.rgb * _FresnelTint.a;
+	}
 
 	// Customisable fresnel for a user-defined glow
 	emissive += _CustomFresnelColor.xyz * (pow(rlPow4.y, rcp(_CustomFresnelColor.w+0.0001)));
@@ -90,6 +96,12 @@ float4 frag(VertexOutput i) : COLOR
 
 		// Perceptual roughness transformation...
 		float roughness = SmoothnessToRoughness(_Smoothness_var);
+
+		if (_UseMetallic == 1)
+		{
+			// From DiffuseAndSpecularFromMetallic
+			specColor = lerp (unity_ColorSpaceDielectricSpec.rgb, diffuseColor, specColor);
+		}
 		
 		// Specular energy converservation. From EnergyConservationBetweenDiffuseAndSpecular in UnityStandardUtils.cginc
 		half oneMinusReflectivity = 1 - max3(specColor);
@@ -97,16 +109,15 @@ float4 frag(VertexOutput i) : COLOR
 		// oneMinusRoughness + (1 - oneMinusReflectivity)
 		float grazingTerm = saturate(1-roughness + (1-oneMinusReflectivity));
 
-		#if defined(_METALLIC)
-			specColor *= diffuseColor.rgb; // For metallic maps
-		#endif
-		#if defined(_ENERGY_CONSERVE)
+		if (_UseEnergyConservation == 1)
+		{
 			diffuseColor.xyz = diffuseColor.xyz * (oneMinusReflectivity); 
 			// Unity's boost to diffuse power to accomodate rougher metals.
 			diffuseColor.xyz += specColor.xyz * (1 - _Smoothness_var) * 0.5;
-		#endif
+		}
 	#endif
 
+	// Derive the direction of incoming light from either the direction or the ambient probes.
     #if defined(DIRECTIONAL)
     	lightDirection = lightDirection; // Do nothing.
     #else
@@ -153,13 +164,7 @@ float4 frag(VertexOutput i) : COLOR
 	float3 lightContribution = 1;
 	#if 1
 		// Apply lightramp to lighting
-		lightContribution = tex2D(_Ramp, saturate(
-			#if _LIGHTRAMP_VERTICAL
-			float2( 0.0, remappedLight)
-			#else
-			float2( remappedLight, 0.0)
-			#endif
-			) );
+		lightContribution = sampleRampWithOptions(remappedLight);
 	#else
 		// Lighting without lightramp
 		#if 1
@@ -210,6 +215,22 @@ float4 frag(VertexOutput i) : COLOR
 		float3 indirectLighting = ((ShadeSH9_mod(half4(0.0, 0.0, 0.0, 1.0)))); 
 	#endif
 
+	// Vertex lighting based on Shade4PointLights
+	float4 vertexAttenuation = i.vertexLight;
+	vertexAttenuation = min(vertexAttenuation, (vertexAttenuation * shadowMask)+_Shadow);
+	vertexAttenuation = max(vertexAttenuation, (vertexAttenuation * (1+1-shadowMask.w)));
+	vertexAttenuation = saturate(vertexAttenuation);
+
+	// Cheaper, but less aethetically correct.
+	//vertexAttenuation = smoothstep(UNITY_PI/10-0.025,UNITY_PI/10+0.025, 
+	//	 frac(vertexAttenuation))+floor(vertexAttenuation);
+
+	float3 vertexContribution = 0;
+    vertexContribution += unity_LightColor[0] * sampleRampWithOptions(vertexAttenuation.x) * vertexAttenuation.x;
+    vertexContribution += unity_LightColor[1] * sampleRampWithOptions(vertexAttenuation.y) * vertexAttenuation.y;
+    vertexContribution += unity_LightColor[2] * sampleRampWithOptions(vertexAttenuation.z) * vertexAttenuation.z;
+    vertexContribution += unity_LightColor[3] * sampleRampWithOptions(vertexAttenuation.w) * vertexAttenuation.w;
+
 	// Physically based specular
 	#if defined(USE_SPECULAR) || defined(_LIGHTINGTYPE_STANDARD)
 		half nh = saturate(dot(normalDirection, halfDir));
@@ -225,6 +246,14 @@ float4 frag(VertexOutput i) : COLOR
 		    float anisotropy = _Anisotropy;
 		    float at = max(roughness * (1.0 + anisotropy), 0.001);
 		    float ab = max(roughness * (1.0 - anisotropy), 0.001);
+
+		    float TdotL = dot(i.tangentDir, lightDirection);
+		    float BdotL = dot(i.bitangentDir, lightDirection);
+		    float TdotV = dot(i.tangentDir, viewDirection);
+		    float BdotV = dot(i.bitangentDir, lightDirection);
+
+		    // Accurate but probably expensive
+			//float V = V_SmithGGXCorrelated_Anisotropic (at, ab, TdotV, BdotV, TdotL, BdotL, NdotV, NdotL);
 			half V = SmithJointGGXVisibilityTerm (NdotL, NdotV, roughness);
 		    half D = D_GGX_Anisotropic(nh, halfDir, i.tangentDir, i.bitangentDir, at, ab);
 	    #endif
@@ -236,6 +265,8 @@ float4 frag(VertexOutput i) : COLOR
 
 	    half specularTerm = V*D * UNITY_PI; // Torrance-Sparrow model, Fresnel is applied later
 	    specularTerm = max(0, specularTerm * NdotL);
+	    // We could match the falloff of specular to the light ramp, but it causes artifacts.
+	    //specularTerm = max(0, specularTerm * (lightContribution * 2 - 1));
 
 		half surfaceReduction = 1.0 / (roughness*roughness + 1);
 
@@ -252,19 +283,18 @@ float4 frag(VertexOutput i) : COLOR
 			lerp(indirectLighting, directLighting, lightContribution);
 		#endif
 
-		directContribution += min(i.vertexLight, i.vertexLight * shadowMask);
-
+		directContribution += vertexContribution;
+	
 		directContribution *= 1+fresnelEffect;
-		
 
 		float3 finalColor = emissive + directContribution +
-		specularTerm * (gi.light.color + i.vertexLight) * FresnelTerm(specColor, LdotH) +
-		surfaceReduction * (gi.indirect.specular.rgb + i.vertexLight) * FresnelLerp(specColor, grazingTerm, NdotV);
+		specularTerm * (gi.light.color + vertexContribution) * FresnelTerm(specColor, LdotH) +
+		surfaceReduction * (gi.indirect.specular.rgb + vertexContribution) * FresnelLerp(specColor, grazingTerm, NdotV);
 	#else
 		float3 directContribution = diffuseColor * 
 		lerp(indirectLighting, directLighting, lightContribution);
 
-		directContribution += min(i.vertexLight, i.vertexLight * shadowMask + 0.1);
+		directContribution += vertexContribution;
 		
 		directContribution *= 1+fresnelEffect;
 

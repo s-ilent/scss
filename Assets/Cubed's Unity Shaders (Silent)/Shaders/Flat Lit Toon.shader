@@ -4,7 +4,7 @@ Shader "CubedParadox/Flat Lit Toon (Silent)"
 	{
 		_MainTex("MainTex", 2D) = "white" {}
 		_Color("Color", Color) = (1,1,1,1)
-		_ColorMask("ColorMask", 2D) = "black" {}
+		_ColorMask("ColorMask", 2D) = "white" {}
 		_Shadow("Shadow Mask Power", Range(0, 1)) = 0.5
 		_ShadowLift("Shadow Offset", Range(0, 1)) = 0.0
 		_IndirectLightingBoost("Indirect Lighting Boost", Range(0, 1)) = 0.0
@@ -19,7 +19,7 @@ Shader "CubedParadox/Flat Lit Toon (Silent)"
 		_SpecularMap ("Specular Map", 2D) = "black" {}
 		_SpecularDetailMask ("Specular Detail Mask", 2D) = "white" {}
 		_SpecularDetailStrength ("Specular Detail Strength", Range(0, 1)) = 1.0
-		[Toggle(_ENERGY_CONSERVE)] _UseEnergyConservation ("Energy Conservation", Float) = 0.0
+		[Toggle]_UseEnergyConservation ("Energy Conservation", Float) = 0.0
 		_Smoothness ("Smoothness", Range(0, 1)) = 0.5
 		_Anisotropy("Anisotropy", Range(-1,1)) = 0.8
 		[Toggle]_UseFresnel ("Use Fresnel", Float) = 0.0
@@ -27,6 +27,9 @@ Shader "CubedParadox/Flat Lit Toon (Silent)"
 		_FresnelStrength ("Fresnel Softness", Range(0.1, 0.9999)) = 0.5
 		[HDR]_FresnelTint("Fresnel Tint", Color) = (1,1,1,1)
 		_BumpMap("BumpMap", 2D) = "bump" {}
+		[Toggle(_DETAIL)]_UseDetailNormal("Enable Detail Normal Map", Float ) = 0.0
+		_DetailNormalMap("Detail Normal Map", 2D) = "bump" {}
+		_DetailNormalMapScale("Detail Normal Map Scale", Float) = 1.0
 		_Cutoff("Alpha cutoff", Range(0,1)) = 0.5
 		[HideInInspector] _OutlineMode("__outline_mode", Float) = 0.0
 		[Toggle(_MATCAP)] _UseMatcap ("Use Matcap", Float) = 0.0
@@ -35,8 +38,8 @@ Shader "CubedParadox/Flat Lit Toon (Silent)"
 		_MultiplyMatcap("MultiplyMatcapTex", 2D) = "white" {}
 		_MultiplyMatcapStrength("Multiply Matcap Strength", Range(0, 2)) = 1.0
 		_MatcapMask("Matcap Mask", 2D) = "white" {}
-		[Toggle(_LIGHTRAMP_VERTICAL)] _UseVerticalLightramp ("Use Vertical Lightramp", Float) = 0.0
-		[Toggle(_METALLIC)] _UseMetallic ("Use Metallic", Float) = 0.0
+		[Toggle]_UseVerticalLightramp ("Use Vertical Lightramp", Float) = 0.0
+		[Toggle]_UseMetallic ("Use Metallic", Float) = 0.0
 		[Enum(SpecularType)] _SpecularType ("Specular Type", Float) = 0.0
 		[Toggle(_SPECULAR_DETAIL)] _UseSpecularDetailMask ("Use Specular Detail Mask", Float) = 0.0
 		[Enum(LightingCalculationType)] _LightingCalculationType ("Lighting Calculation Type", Float) = 0.0
@@ -88,12 +91,10 @@ Shader "CubedParadox/Flat Lit Toon (Silent)"
 
 			#pragma shader_feature NO_OUTLINE TINTED_OUTLINE COLORED_OUTLINE
 			#pragma shader_feature _ _ALPHATEST_ON _ALPHABLEND_ON _ALPHAPREMULTIPLY_ON
-			#pragma shader_feature _ENERGY_CONSERVE
-			#pragma shader_feature _METALLIC
+			#pragma shader_feature _DETAIL
 			#pragma shader_feature _SPECULAR_DETAIL
 			#pragma shader_feature _ _SPECULAR_GGX _SPECULAR_CHARLIE _SPECULAR_GGX_ANISO
 			#pragma shader_feature _MATCAP
-			#pragma shader_feature _LIGHTRAMP_VERTICAL
 			#pragma shader_feature _LIGHTINGTYPE_CUBED _LIGHTINGTYPE_ARKTOON _LIGHTINGTYPE_STANDARD
 			#pragma shader_feature _SUBSURFACE
 			#pragma vertex vert
@@ -122,8 +123,7 @@ Shader "CubedParadox/Flat Lit Toon (Silent)"
 			CGPROGRAM
 			#pragma shader_feature NO_OUTLINE TINTED_OUTLINE COLORED_OUTLINE
 			#pragma shader_feature _ _ALPHATEST_ON _ALPHABLEND_ON _ALPHAPREMULTIPLY_ON
-			#pragma shader_feature _ENERGY_CONSERVE
-			#pragma shader_feature _METALLIC
+			#pragma shader_feature _DETAIL
 			#pragma shader_feature _SPECULAR_DETAIL
 			#pragma shader_feature _ _SPECULAR_GGX _SPECULAR_CHARLIE _SPECULAR_GGX_ANISO
 			#pragma shader_feature _SUBSURFACE
