@@ -69,7 +69,7 @@ Shader "CubedParadox/Flat Lit Toon (Silent) (Transparent)"
 	{
 		Tags
 		{
-			"Queue"="Transparent" "RenderType" = "Transparent" "IgnoreProjector"="True"
+			"Queue"="Transparent+100" "RenderType" = "Transparent" "IgnoreProjector"="True"
 		}
 
 		Pass

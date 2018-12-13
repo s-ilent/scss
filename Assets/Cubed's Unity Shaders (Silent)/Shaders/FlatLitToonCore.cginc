@@ -145,7 +145,13 @@ v2g vert(appdata_full v) {
 	float3 lightColor = _LightColor0.rgb;
 	o.vertex = v.vertex;
 	o.pos = UnityObjectToClipPos(v.vertex);
+
+	#if (UNITY_VERSION<600)
 	TRANSFER_SHADOW(o);
+	#else
+	UNITY_TRANSFER_SHADOW(o, v.texcoord1);
+	#endif
+	
 	UNITY_TRANSFER_FOG(o, o.pos);
 #if VERTEXLIGHT_ON
 	o.vertexLight = VertexLightContribution(o.posWorld, o.normalDir);
@@ -202,11 +208,11 @@ void geom(triangle v2g IN[3], inout TriangleStream<VertexOutput> tristream)
 		//o.pos = UnityObjectToClipPos(IN[i].vertex + normalize(IN[i].normal) * (_outline_width * .01));
 
 		// Pass-through the shadow coordinates if this pass has shadows.
-		#if defined (SHADOWS_SCREEN) || ( defined (SHADOWS_DEPTH) && defined (SPOT) ) || defined (SHADOWS_CUBE) || defined (UNITY_LIGHT_PROBE_PROXY_VOLUME) &&UNITY_VERSION<600 
+		#if defined (SHADOWS_SCREEN) || ( defined (SHADOWS_DEPTH) && defined (SPOT) ) || defined (SHADOWS_CUBE) || (defined (UNITY_LIGHT_PROBE_PROXY_VOLUME) && UNITY_VERSION<600)
 		o._ShadowCoord = IN[i]._ShadowCoord;
 		#endif
 
-		// Pass-through the fog coordinates if this pass has shadows.
+		// Pass-through the fog coordinates if this pass has fog.
 		#if defined(FOG_LINEAR) || defined(FOG_EXP) || defined(FOG_EXP2)
 		o.fogCoord = IN[i].fogCoord;
 		#endif
@@ -234,11 +240,11 @@ void geom(triangle v2g IN[3], inout TriangleStream<VertexOutput> tristream)
 		o.is_outline = false;
 
 		// Pass-through the shadow coordinates if this pass has shadows.
-		#if defined (SHADOWS_SCREEN) || ( defined (SHADOWS_DEPTH) && defined (SPOT) ) || defined (SHADOWS_CUBE) || defined (UNITY_LIGHT_PROBE_PROXY_VOLUME) &&UNITY_VERSION<600 
+		#if defined (SHADOWS_SCREEN) || ( defined (SHADOWS_DEPTH) && defined (SPOT) ) || defined (SHADOWS_CUBE) || (defined (UNITY_LIGHT_PROBE_PROXY_VOLUME) && UNITY_VERSION<600)
 		o._ShadowCoord = IN[ii]._ShadowCoord;
 		#endif
 
-		// Pass-through the fog coordinates if this pass has shadows.
+		// Pass-through the fog coordinates if this pass has fog.
 		#if defined(FOG_LINEAR) || defined(FOG_EXP) || defined(FOG_EXP2)
 		o.fogCoord = IN[ii].fogCoord;
 		#endif
