@@ -36,7 +36,7 @@ float4 frag(VertexOutput i) : COLOR
 		//mask = (1-_Cutoff) * (mask + _Cutoff);
 		//mask = saturate(_Cutoff + _Cutoff*mask);
 		//clip (baseColor.a - mask);
-		baseColor.a += baseColor.a * mask; 
+		baseColor.a = saturate(baseColor.a + baseColor.a * mask); 
 		clip (baseColor.a - _Cutoff);
 	#endif
 
@@ -130,7 +130,7 @@ float4 frag(VertexOutput i) : COLOR
 	    }
 	    #endif
     #endif
-    #if !defined(DIRECTIONAL) || !defined(POINT) || !defined(SPOT)
+    #if !defined(DIRECTIONAL) && !defined(POINT) && !defined(SPOT)
     	attenuation = 1;
 	#endif
 	float remappedLight = (dot(normalDirection, lightDirection) * 0.5 + 0.5) * attenuation;
@@ -265,6 +265,7 @@ float4 frag(VertexOutput i) : COLOR
 
 	    half specularTerm = V*D * UNITY_PI; // Torrance-Sparrow model, Fresnel is applied later
 	    specularTerm = max(0, specularTerm * NdotL);
+
 	    // We could match the falloff of specular to the light ramp, but it causes artifacts.
 	    //specularTerm = max(0, specularTerm * (lightContribution * 2 - 1));
 
@@ -283,7 +284,7 @@ float4 frag(VertexOutput i) : COLOR
 			lerp(indirectLighting, directLighting, lightContribution);
 		#endif
 
-		directContribution += vertexContribution;
+		directContribution += vertexContribution*diffuseColor;
 	
 		directContribution *= 1+fresnelEffect;
 
