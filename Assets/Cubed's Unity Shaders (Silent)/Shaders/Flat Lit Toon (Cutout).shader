@@ -69,7 +69,7 @@ Shader "CubedParadox/Flat Lit Toon (Silent) (Cutout)"
 	{
 		Tags
 		{
-			"Queue"="AlphaTest" "RenderType" = "TransparentCutout" "IgnoreProjector"="True"
+			"Queue"="AlphaTest+10" "RenderType" = "TransparentCutout" "IgnoreProjector"="True"
 		}
 
 		Pass
@@ -84,7 +84,7 @@ Shader "CubedParadox/Flat Lit Toon (Silent) (Cutout)"
             ZWrite[_ZWrite]
             Cull[_CullMode]
             ColorMask[_ColorWriteMask]
-            //AlphaToMask On
+            AlphaToMask On
 
 			CGPROGRAM
 			#include "FlatLitToonCore.cginc"
@@ -119,6 +119,7 @@ Shader "CubedParadox/Flat Lit Toon (Silent) (Cutout)"
 			Name "FORWARD_DELTA"
 			Tags { "LightMode" = "ForwardAdd" }
 			Blend [_SrcBlend] One
+            AlphaToMask On
 
 			CGPROGRAM
 			#pragma shader_feature NO_OUTLINE TINTED_OUTLINE COLORED_OUTLINE

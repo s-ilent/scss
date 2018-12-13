@@ -1,3 +1,4 @@
+// For pass "FORWARDADD"
 float4 frag(VertexOutput i) : COLOR
 {
 	float4 objPos = mul(unity_ObjectToWorld, float4(0,0,0,1));
