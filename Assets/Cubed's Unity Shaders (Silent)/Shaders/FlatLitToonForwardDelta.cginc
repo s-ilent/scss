@@ -33,7 +33,7 @@ float4 frag(VertexOutput i) : COLOR
 
 	// Lighting parameters
 	float3 halfDir = Unity_SafeNormalize (lightDirection + viewDirection);
-	float3 reflDir = reflect(viewDirection, normalDirection); // Calculate reflection vector
+	float3 reflDir = reflect(-viewDirection, normalDirection); // Calculate reflection vector
 	float NdotL = saturate(dot(lightDirection, normalDirection)); // Calculate NdotL
 	float NdotV = saturate(dot(viewDirection,  normalDirection)); // Calculate NdotV
 	float LdotH = saturate(dot(lightDirection, halfDir));
@@ -51,6 +51,7 @@ float4 frag(VertexOutput i) : COLOR
 	lightContribution = max(lightContribution, (lightContribution * (1+1-shadowMask.w)));
 	lightContribution = saturate(lightContribution);
 	#endif
+	lightContribution = saturate(_ShadowLift + lightContribution * (1-_ShadowLift));
 
 	// Cel transition between light steps
 	#if 1
@@ -61,6 +62,7 @@ float4 frag(VertexOutput i) : COLOR
 	//float3 directContribution = floor(saturate(lightContribution) * 2.0); // Original
 	#endif
 
+	directContribution = directContribution*(1-_IndirectLightingBoost)+_IndirectLightingBoost;
 	// Seperate energy conserved and original value for later.
 	float3 diffuseColor = baseColor.xyz;
 
