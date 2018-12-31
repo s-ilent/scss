@@ -35,7 +35,9 @@ uniform float _UseFresnel;
 uniform float _UseEnergyConservation;
 uniform float _UseVerticalLightramp;
 uniform float _UseMetallic;
+uniform float _ShadowMaskType;
 
+uniform float _UseMatcap;
 uniform sampler2D _AdditiveMatcap; uniform float4 _AdditiveMatcap_ST; 
 uniform float _AdditiveMatcapStrength;
 uniform sampler2D _MultiplyMatcap; uniform float4 _MultiplyMatcap_ST; 
@@ -45,6 +47,7 @@ uniform sampler2D _MatcapMask; uniform float4 _MatcapMask_ST;
 uniform sampler2D _SpecularDetailMask; uniform float4 _SpecularDetailMask_ST;
 uniform float _SpecularDetailStrength;
 
+uniform float _UseSubsurfaceScattering;
 uniform sampler2D _ThicknessMap; uniform float4 _ThicknessMap_ST;
 uniform float _ThicknessMapPower;
 uniform float _ThicknessMapInvert;
@@ -151,7 +154,7 @@ v2g vert(appdata_full v) {
 	#else
 	UNITY_TRANSFER_SHADOW(o, v.texcoord1);
 	#endif
-	
+
 	UNITY_TRANSFER_FOG(o, o.pos);
 #if VERTEXLIGHT_ON
 	o.vertexLight = VertexLightContribution(o.posWorld, o.normalDir);
@@ -430,5 +433,13 @@ inline float3 NormalInTangentSpace(float2 texcoords, half mask)
     return normalTangent;
 }
 
+float2 sharpSample( float2 texResolution , float2 p )
+{
+	p = p*texResolution;
+	float2 i = floor(p);
+	p = i + smoothstep(0, max(0.0001, fwidth(p)), frac(p));
+	p = (p - 0.5)/texResolution;
+	return p;
+}
 
 #endif

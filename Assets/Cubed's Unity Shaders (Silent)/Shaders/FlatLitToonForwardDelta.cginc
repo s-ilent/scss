@@ -40,17 +40,25 @@ float4 frag(VertexOutput i) : COLOR
 
 	float lightContribution = dot(normalize(_WorldSpaceLightPos0.xyz - i.posWorld.xyz),normalDirection);
 
-	#if 1
-	float4 shadowMask = tex2D(_ShadowMask,TRANSFORM_TEX(i.uv0, _MainTex));
-	#endif
 	// Shadow mask handling
-	#if 1
+	float4 shadowMask = tex2D(_ShadowMask,TRANSFORM_TEX(i.uv0, _MainTex));
+	
+	if (_ShadowMaskType == 0) 
+	{
 	// RGB will boost shadow range. Raising _Shadow reduces its influence.
 	// Alpha will boost light range. Raising _Shadow reduces its influence.
 	lightContribution = min(lightContribution, (lightContribution * shadowMask)+_Shadow);
 	lightContribution = max(lightContribution, (lightContribution * (1+1-shadowMask.w)));
+	}
+	if (_ShadowMaskType == 1) 
+	{
+	// RGB will boost shadow range. Raising _Shadow reduces its influence.
+	// Alpha will boost light range. Raising _Shadow reduces its influence.
+	lightContribution = min(lightContribution, (lightContribution * shadowMask.w)+_Shadow);
+	//lightContribution = max(lightContribution, (lightContribution * (1+1-shadowMask.w)));
+	}
+	
 	lightContribution = saturate(lightContribution);
-	#endif
 	lightContribution = saturate(_ShadowLift + lightContribution * (1-_ShadowLift));
 
 	// Cel transition between light steps
@@ -62,7 +70,16 @@ float4 frag(VertexOutput i) : COLOR
 	//float3 directContribution = floor(saturate(lightContribution) * 2.0); // Original
 	#endif
 
+	if (_ShadowMaskType == 1) 
+	{
+		// Implementation A
+		// Not used because it requires lots of tweaking.
+		//diffuseColor = lerp(diffuseColor * shadowMask.rgb, diffuseColor, lightContribution);
+		directContribution += (1 - lightContribution) * shadowMask;
+	}
+	
 	directContribution = directContribution*(1-_IndirectLightingBoost)+_IndirectLightingBoost;
+
 	// Seperate energy conserved and original value for later.
 	float3 diffuseColor = baseColor.xyz;
 
