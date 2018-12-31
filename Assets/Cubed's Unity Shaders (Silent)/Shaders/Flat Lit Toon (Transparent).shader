@@ -8,6 +8,7 @@ Shader "CubedParadox/Flat Lit Toon (Silent) (Transparent)"
 		_Shadow("Shadow Mask Power", Range(0, 1)) = 0.5
 		_ShadowLift("Shadow Offset", Range(0, 1)) = 0.0
 		_IndirectLightingBoost("Indirect Lighting Boost", Range(0, 1)) = 0.0
+		[Enum(ShadowMaskType)] _ShadowMaskType ("Shadow Mask Type", Float) = 0.0
 		_ShadowMask("ShadowMask", 2D) = "white" {}
 		_Ramp ("Lighting Ramp", 2D) = "white" {}
 		_outline_width("outline_width", Float) = 0.2
@@ -32,7 +33,7 @@ Shader "CubedParadox/Flat Lit Toon (Silent) (Transparent)"
 		_DetailNormalMapScale("Detail Normal Map Scale", Float) = 1.0
 		_Cutoff("Alpha cutoff", Range(0,1)) = 0.5
 		[HideInInspector] _OutlineMode("__outline_mode", Float) = 0.0
-		[Toggle(_MATCAP)] _UseMatcap ("Use Matcap", Float) = 0.0
+		[Toggle]_UseMatcap ("Use Matcap", Float) = 0.0
 		_AdditiveMatcap("AdditiveMatcapTex", 2D) = "black" {}
 		_AdditiveMatcapStrength("Additive Matcap Strength", Range(0, 2)) = 1.0
 		_MultiplyMatcap("MultiplyMatcapTex", 2D) = "white" {}
@@ -43,7 +44,7 @@ Shader "CubedParadox/Flat Lit Toon (Silent) (Transparent)"
 		[Enum(SpecularType)] _SpecularType ("Specular Type", Float) = 0.0
 		[Toggle(_SPECULAR_DETAIL)] _UseSpecularDetailMask ("Use Specular Detail Mask", Float) = 0.0
 		[Enum(LightingCalculationType)] _LightingCalculationType ("Lighting Calculation Type", Float) = 0.0
-		[Toggle(_SUBSURFACE)] _UseSubsurfaceScattering ("Use Subsurface Scattering", Float) = 0.0
+		[Toggle]_UseSubsurfaceScattering ("Use Subsurface Scattering", Float) = 0.0
 		_ThicknessMap("Thickness Map", 2D) = "black" {}
 		[Toggle]_ThicknessMapInvert("Invert Thickness", Float) = 0.0
 		_ThicknessMapPower ("Thickness Map Power", Range(0.01, 10)) = 1

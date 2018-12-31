@@ -10,6 +10,7 @@ float4 frag(VertexOutput i) : COLOR
 	float3 _BumpMap_var = NormalInTangentSpace(i.uv0, _ColorMask_var.a);
 
 	float3 normalDirection = normalize(mul(_BumpMap_var.rgb, tangentTransform)); // Perturbed normals
+
 	float4 _MainTex_var = tex2D(_MainTex,TRANSFORM_TEX(i.uv0, _MainTex));
 
 	float4 _EmissionMap_var = tex2D(_EmissionMap,TRANSFORM_TEX(i.uv0, _MainTex));
@@ -137,26 +138,25 @@ float4 frag(VertexOutput i) : COLOR
     	attenuation = 1;
 	#endif
 	float remappedLight = (dot(normalDirection, lightDirection) * 0.5 + 0.5) * attenuation;
-
-	// Todo: Only if shadow mask is selected?
-	#if 1
-	float4 shadowMask = tex2D(_ShadowMask,TRANSFORM_TEX(i.uv0, _MainTex));
-	#endif
+	
 	// Shadow mask handling
-	#if 1
+	float4 shadowMask = tex2D(_ShadowMask,TRANSFORM_TEX(i.uv0, _MainTex));
+	
+	if (_ShadowMaskType == 0) 
+	{
 	// RGB will boost shadow range. Raising _Shadow reduces its influence.
 	// Alpha will boost light range. Raising _Shadow reduces its influence.
 	remappedLight = min(remappedLight, (remappedLight * shadowMask)+_Shadow);
 	remappedLight = max(remappedLight, (remappedLight * (1+1-shadowMask.w)));
+	}
+	if (_ShadowMaskType == 1) 
+	{
+	// RGB will boost shadow range. Raising _Shadow reduces its influence.
+	// Alpha will boost light range. Raising _Shadow reduces its influence.
+	remappedLight = min(remappedLight, (remappedLight * shadowMask.w)+_Shadow);
+	//remappedLight = max(remappedLight, (remappedLight * (1+1-shadowMask.w)));
+	}
 	remappedLight = saturate(remappedLight);
-	#endif
-	#if 0
-	remappedLight = lerp(
-		remappedLight * shadowMask.xyz * (1-shadowMask.w+1),
-		remappedLight,
-		_Shadow
-		);
-	#endif
 
 	// Shadow appearance setting
 	remappedLight = saturate(_ShadowLift + remappedLight * (1-_ShadowLift));
@@ -191,10 +191,19 @@ float4 frag(VertexOutput i) : COLOR
 		#endif
 	#endif
 
+	if (_ShadowMaskType == 1) 
+	{
+		// Implementation A
+		// Not used because it requires lots of tweaking.
+		//diffuseColor = lerp(diffuseColor * shadowMask.rgb, diffuseColor, lightContribution);
+		lightContribution += (1 - lightContribution) * shadowMask;
+	}
+
 	// Apply indirect lighting shift.
 	lightContribution = lightContribution*(1-_IndirectLightingBoost)+_IndirectLightingBoost;
 
-	#if defined(_MATCAP)
+	if (_UseMatcap == 1) 
+	{
 		// Based on Masataka SUMI's implementation
 	    half3 worldUp = float3(0, 1, 0);
 	    half3 worldViewUp = normalize(worldUp - viewDirection * dot(viewDirection, worldUp));
@@ -206,7 +215,7 @@ float4 frag(VertexOutput i) : COLOR
 		float4 _MatcapMask_var = tex2D(_MatcapMask,TRANSFORM_TEX(i.uv0, _MainTex));
 		diffuseColor.xyz = lerp(diffuseColor.xyz, diffuseColor.xyz*MultiplyMatcap, _MultiplyMatcapStrength * _MatcapMask_var.w);
 		diffuseColor.xyz += (ShadeSH9_mod(half4(0.0,  0.0, 0.0, 1.0))+_LightColor0)*AdditiveMatcap*_AdditiveMatcapStrength*_MatcapMask_var.g;
-	#endif
+	}
 	//float horizon = min(1.0 + dot(reflDir, normalDirection), 1.0);
 
 	#if defined(_LIGHTINGTYPE_CUBED)
@@ -305,11 +314,12 @@ float4 frag(VertexOutput i) : COLOR
 		float3 finalColor = directContribution + emissive;
 	#endif
 
-	#if defined(_SUBSURFACE)
+	if (_UseSubsurfaceScattering == 1)
+	{
 	float3 thicknessMap_var = pow(tex2D(_ThicknessMap, TRANSFORM_TEX(i.uv0, _MainTex)), _ThicknessMapPower);
 	finalColor += diffuseColor * getSubsurfaceScatteringLight(_LightColor0, lightDirection, normalDirection, viewDirection,
 		attenuation, thicknessMap_var, indirectLighting);
-	#endif
+	}
 
 	fixed4 finalRGBA = fixed4(finalColor * lightmap, baseColor.a);
 	UNITY_APPLY_FOG(i.fogCoord, finalRGBA);

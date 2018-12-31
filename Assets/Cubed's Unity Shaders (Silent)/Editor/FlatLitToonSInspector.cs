@@ -62,6 +62,12 @@ namespace FlatLitToonS.Unity
             Standard
         }
 
+        public enum ShadowMaskType
+        {
+            Occlusion,
+            Tone
+        }
+
         public static class Styles
         {
             public static string mainOptionsTitle = "Main Options";
@@ -106,7 +112,7 @@ namespace FlatLitToonS.Unity
             public static GUIContent specularMap = new GUIContent("Specular Map", "Specular Map (RGBA, RGB: Specular/Metalness, A: Smoothness)");
             public static GUIContent emissionMap = new GUIContent("Emission", "Emission (RGB)");
             public static GUIContent lightingRamp = new GUIContent("Lighting Ramp", "Specifies the falloff of the lighting. In other words, it controls how light affects your model and how soft or sharp the transition between light and shadow is. \nNote: If a Lighting Ramp is not set, the material will have no shading.");
-            public static GUIContent shadowMask = new GUIContent("Shadow Mask (Occlusion)", "Specifies areas of shadow influence. RGB darkens, alpha lightens.");
+            public static GUIContent shadowMask = new GUIContent("Shadow Mask", "In Occlusion mode, specifies areas of shadow influence. RGB darkens, alpha lightens. In Tone mode, specifies colour of shading to use. RGB tints, alpha darkens.");
             public static GUIContent specularType = new GUIContent("Specular Style", "Allows you to set the shading used for specular. ");
             public static GUIContent smoothness = new GUIContent("Smoothness", "The smoothness of the material. The specular map's alpha channel is used for this, with this slider being a multiplier.");
             public static GUIContent anisotropy = new GUIContent("Anisotropy", "Direction of the anisotropic specular highlights.");
@@ -122,7 +128,7 @@ namespace FlatLitToonS.Unity
             public static GUIContent customFresnelColor = new GUIContent("Emissive Fresnel", "RGB sets the colour of the additive fresnel. Alpha controls the power/width of the effect.");
 
             public static GUIContent shadowLift = new GUIContent("Shadow Lift", "Increasing this warps the lighting received to make more things lit.");
-            public static GUIContent indirectLightBoost = new GUIContent("Indirect Lighting Boost", "Replaces the lighting of shadows with the lighting of direct light, making them brighter.");
+            public static GUIContent indirectLightBoost = new GUIContent("Indirect Lighting Boost", "Blends the lighting of shadows with the lighting of direct light, making them brighter.");
             public static GUIContent shadowMaskPow = new GUIContent("Shadow Mask Lightening", "Sets the power of the shadow mask.");
             public static GUIContent outlineColor = new GUIContent("Outline Colour", "Sets the colour used for outlines. In tint mode, this is multiplied against the texture.");
             public static GUIContent outlineWidth = new GUIContent("Outline Width", "Sets the width of outlines in cm.");
@@ -147,6 +153,7 @@ namespace FlatLitToonS.Unity
 
             public static GUIContent useVerticalLightramp = new GUIContent("Vertical Lightramp", "Uses lightramps that run from bottom to top instead of left to right. For MMD compatibility.");
             public static GUIContent lightingCalculationType = new GUIContent("Lighting Calculation", "Changes how the direct/indirect lighting calculation is performed.");
+            public static GUIContent shadowMaskType = new GUIContent("Shadow Mask Style", "Changes how the shadow mask is used.");
 
         } 
 
@@ -219,6 +226,7 @@ namespace FlatLitToonS.Unity
 
         protected MaterialProperty useVerticalLightramp;
         protected MaterialProperty lightingCalculationType;
+        protected MaterialProperty shadowMaskType;
 
         protected void FindProperties(MaterialProperty[] props)
             { 
@@ -287,6 +295,7 @@ namespace FlatLitToonS.Unity
 
                 useVerticalLightramp = FindProperty("_UseVerticalLightramp", props);
                 lightingCalculationType = FindProperty("_LightingCalculationType", props);
+                shadowMaskType = FindProperty("_ShadowMaskType", props);
             }
 
         public override void OnGUI(MaterialEditor materialEditor, MaterialProperty[] props)
@@ -433,7 +442,27 @@ namespace FlatLitToonS.Unity
                 materialEditor.TexturePropertySingleLine(Styles.lightingRamp, lightingRamp);
                 materialEditor.ShaderProperty(shadowLift, Styles.shadowLift);
                 materialEditor.ShaderProperty(indirectLightBoost, Styles.indirectLightBoost);
+                EditorGUILayout.Space();
+
                 materialEditor.TexturePropertySingleLine(Styles.shadowMask, shadowMask);
+
+                var sMode = (ShadowMaskType)shadowMaskType.floatValue;
+                EditorGUI.BeginChangeCheck();
+            
+                sMode = (ShadowMaskType)EditorGUILayout.Popup("Shadow Mask Style", (int)sMode, Enum.GetNames(typeof(ShadowMaskType)));
+
+                if (EditorGUI.EndChangeCheck())
+                {
+                    materialEditor.RegisterPropertyChangeUndo("Shadow Mask Style");
+                    shadowMaskType.floatValue = (float)sMode;
+
+                    foreach (var obj in shadowMaskType.targets)
+                    {
+                        SetupMaterialWithShadowMaskType((Material)obj, (ShadowMaskType)material.GetFloat("_ShadowMaskType"));
+                    }
+
+                } 
+
                 materialEditor.ShaderProperty(shadowMaskPow, Styles.shadowMaskPow); 
             
             EditorGUI.EndChangeCheck();
@@ -789,6 +818,21 @@ namespace FlatLitToonS.Unity
                     material.DisableKeyword("_SPECULAR_GGX");
                     material.DisableKeyword("_SPECULAR_CHARLIE");
                     material.DisableKeyword("_SPECULAR_GGX_ANISO");
+                    break;
+                default:
+                    break;
+            }
+        }
+
+        public static void SetupMaterialWithShadowMaskType(Material material, ShadowMaskType shadowMaskType)
+        {
+            switch ((ShadowMaskType)material.GetFloat("_ShadowMaskType"))
+            {
+                case ShadowMaskType.Occlusion:
+                    material.SetFloat("_ShadowMaskType", 0);
+                    break;
+                case ShadowMaskType.Tone:
+                    material.SetFloat("_ShadowMaskType", 1);
                     break;
                 default:
                     break;
