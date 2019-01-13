@@ -102,6 +102,7 @@ namespace FlatLitToonS.Unity
 
             public static GUIContent mainTexture = new GUIContent("Main Texture", "Main Color Texture (RGBA)");
             public static GUIContent alphaCutoff = new GUIContent("Alpha Cutoff", "Threshold for transparency cutoff");
+            public static GUIContent alphaSharp = new GUIContent("Disable Dithering", "Treats transparency cutoff as a hard edge, instead of a soft dithered one.");
             public static GUIContent colorMask = new GUIContent("Tint Mask", "Masks material colour tinting (G) and detail normal map (A).");
             public static GUIContent normalMap = new GUIContent("Normal Map", "Normal Map (RGB)");
 
@@ -155,6 +156,10 @@ namespace FlatLitToonS.Unity
             public static GUIContent lightingCalculationType = new GUIContent("Lighting Calculation", "Changes how the direct/indirect lighting calculation is performed.");
             public static GUIContent shadowMaskType = new GUIContent("Shadow Mask Style", "Changes how the shadow mask is used.");
 
+            public static GUIContent lightSkew = new GUIContent("Light Skew", "Skews the direction of the received lighting. The default is (1, 0.1, 1, 0), which corresponds to normal strength on the X and Z axis, while reducing the effect of the Y axis. This essentially stops you from getting those harsh lights from above or below that look so weird on cel shaded models. But that's just a default...");
+
+            public static GUIContent manualButton = new GUIContent("This shader has a manual. Check it out!","For information on new features, old features, and just how to use the shader in general, check out the manual on the shader wiki!");
+
         } 
 
         protected bool initialised;
@@ -201,6 +206,7 @@ namespace FlatLitToonS.Unity
         protected MaterialProperty fresnelTint;
 
         protected MaterialProperty alphaCutoff;
+        protected MaterialProperty alphaSharp;
 
         protected MaterialProperty useEnergyConservation;
         protected MaterialProperty specularType;
@@ -227,6 +233,8 @@ namespace FlatLitToonS.Unity
         protected MaterialProperty useVerticalLightramp;
         protected MaterialProperty lightingCalculationType;
         protected MaterialProperty shadowMaskType;
+
+        protected MaterialProperty lightSkew;
 
         protected void FindProperties(MaterialProperty[] props)
             { 
@@ -269,6 +277,7 @@ namespace FlatLitToonS.Unity
                 detailNormalMap = FindProperty("_DetailNormalMap", props);
                 detailNormalMapScale = FindProperty("_DetailNormalMapScale", props);
                 alphaCutoff = FindProperty("_Cutoff", props);
+                alphaSharp = FindProperty("_AlphaSharp", props);
 
                 useEnergyConservation = FindProperty("_UseEnergyConservation", props);
                 specularType = FindProperty("_SpecularType", props);
@@ -296,6 +305,8 @@ namespace FlatLitToonS.Unity
                 useVerticalLightramp = FindProperty("_UseVerticalLightramp", props);
                 lightingCalculationType = FindProperty("_LightingCalculationType", props);
                 shadowMaskType = FindProperty("_ShadowMaskType", props);
+
+                lightSkew = FindProperty("_LightSkew", props);
             }
 
         public override void OnGUI(MaterialEditor materialEditor, MaterialProperty[] props)
@@ -390,6 +401,7 @@ namespace FlatLitToonS.Unity
                 if ((RenderingMode)renderingMode.floatValue == RenderingMode.TransparentCutout)
                 {
                     materialEditor.ShaderProperty(alphaCutoff, Styles.alphaCutoff.text);
+                    materialEditor.ShaderProperty(alphaSharp, Styles.alphaSharp.text);
                 }
                 materialEditor.TexturePropertySingleLine(Styles.colorMask, colorMask);
                 EditorGUI.indentLevel -= 2;
@@ -608,6 +620,12 @@ namespace FlatLitToonS.Unity
         protected void AdvancedOptions(MaterialEditor materialEditor, Material material)
         {
             EditorGUILayout.Space();
+            if (GUILayout.Button(Styles.manualButton, "button"))
+            {
+               Application.OpenURL("https://gitlab.com/s-ilent/SCSS/wikis/Manual/Setting-Overview");
+            }
+            EditorGUILayout.Space();
+
             var lcMode = (LightingCalculationType)lightingCalculationType.floatValue;
 
             GUILayout.Label(Styles.advancedOptionsTitle, EditorStyles.boldLabel, new GUILayoutOption[0]);
@@ -629,6 +647,8 @@ namespace FlatLitToonS.Unity
                     }
 
                 } 
+
+            materialEditor.ShaderProperty(lightSkew, Styles.lightSkew);
 
             EditorGUI.BeginChangeCheck();
 

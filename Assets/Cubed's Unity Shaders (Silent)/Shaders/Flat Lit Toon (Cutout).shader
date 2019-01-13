@@ -32,6 +32,7 @@ Shader "CubedParadox/Flat Lit Toon (Silent) (Cutout)"
 		_DetailNormalMap("Detail Normal Map", 2D) = "bump" {}
 		_DetailNormalMapScale("Detail Normal Map Scale", Float) = 1.0
 		_Cutoff("Alpha cutoff", Range(0,1)) = 0.5
+		[Toggle]_AlphaSharp("Disable Dithering", Float) = 0.0
 		[HideInInspector] _OutlineMode("__outline_mode", Float) = 0.0
 		[Toggle]_UseMatcap ("Use Matcap", Float) = 0.0
 		_AdditiveMatcap("AdditiveMatcapTex", 2D) = "black" {}
@@ -52,6 +53,7 @@ Shader "CubedParadox/Flat Lit Toon (Silent) (Cutout)"
 		_SSSIntensity ("Scattering Intensity", Range(0, 10)) = 1
 		_SSSPow ("Scattering Power", Range(0.01, 10)) = 1
 		_SSSDist ("Scattering Distance", Range(0, 10)) = 1
+		_LightSkew ("Light Skew", Vector) = (1, 0.1, 1, 0)
 
         // Advanced options.
         [Enum(RenderingMode)] _Mode("Rendering Mode", Float) = 0                                     // "Opaque"
@@ -120,7 +122,6 @@ Shader "CubedParadox/Flat Lit Toon (Silent) (Cutout)"
 			Name "FORWARD_DELTA"
 			Tags { "LightMode" = "ForwardAdd" }
 			Blend [_SrcBlend] One
-            AlphaToMask On
 
 			CGPROGRAM
 			#pragma shader_feature NO_OUTLINE TINTED_OUTLINE COLORED_OUTLINE

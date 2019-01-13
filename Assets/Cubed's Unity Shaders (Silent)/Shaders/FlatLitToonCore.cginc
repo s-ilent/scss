@@ -21,6 +21,7 @@ uniform float _Shadow;
 uniform float _ShadowLift;
 uniform float _IndirectLightingBoost;
 uniform float _Cutoff;
+uniform float _AlphaSharp;
 uniform float _Smoothness;
 uniform float _Anisotropy;
 uniform float _FresnelWidth;
@@ -55,6 +56,8 @@ uniform float3 _SSSCol;
 uniform float _SSSIntensity;
 uniform float _SSSPow;
 uniform float _SSSDist;
+
+uniform float4 _LightSkew;
 
 static const float3 grayscale_vector = 1.0/3.0; 
 // When operating in non-perceptual space, treat greyscale as an equal distribution.
