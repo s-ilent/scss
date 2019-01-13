@@ -32,13 +32,15 @@ float4 frag(VertexOutput i) : COLOR
 	// Todo: Some characters can use dithered transparency,
 	// like Miku's sleeves, while others get broken by it. 
 	#if defined(_ALPHATEST_ON)
-		float mask = saturate(interleaved_gradient(i.pos.xy)); 
-		//float mask = (float((9*int(i.pos.x)+5*int(i.pos.y))%11) + 0.5) / 11.0;
-		//mask = (1-_Cutoff) * (mask + _Cutoff);
-		//mask = saturate(_Cutoff + _Cutoff*mask);
-		//clip (baseColor.a - mask);
-		baseColor.a = saturate(baseColor.a + baseColor.a * mask); 
-		clip (baseColor.a - _Cutoff);
+		if (_AlphaSharp  == 0) {
+			float mask = saturate(interleaved_gradient(i.pos.xy)); 
+			baseColor.a = saturate(baseColor.a + baseColor.a * mask); 
+			clip (baseColor.a - _Cutoff);
+		}
+		if (_AlphaSharp  == 1) {
+			baseColor.a = ((baseColor.a - _Cutoff) / max(fwidth(baseColor.a), 0.0001) + 0.5);
+			clip (baseColor.a);
+		}
 	#endif
 
 	// Lighting parameters
@@ -116,45 +118,41 @@ float4 frag(VertexOutput i) : COLOR
 			diffuseColor.xyz = diffuseColor.xyz * (oneMinusReflectivity); 
 			// Unity's boost to diffuse power to accomodate rougher metals.
 			// Note: It looks like 2017 doesn't do this anymore... 
-			// But it looks nice, so I've left it in.
-			diffuseColor.xyz += specColor.xyz * (1 - _Smoothness_var) * 0.5;
+			// But it looks nice, so I've left it in. Maybe it'll be an option later.
+			//diffuseColor.xyz += specColor.xyz * (1 - _Smoothness_var) * 0.5;
 		}
 	#endif
 
-	// Derive the direction of incoming light from either the direction or the ambient probes.
-    #if defined(DIRECTIONAL)
-    	lightDirection = lightDirection; // Do nothing.
-    #else
-    	// Get the dominant light direction from light probes
-	    lightDirection = normalize(unity_SHAr.xyz + unity_SHAg.xyz + unity_SHAb.xyz);
-	    #if !defined(POINT) && !defined(SPOT) 
-	    if(length(unity_SHAr.xyz*unity_SHAr.w + unity_SHAg.xyz*unity_SHAg.w + unity_SHAb.xyz*unity_SHAb.w) == 0)
-	    {
-	        lightDirection = normalize(float4(1, 1, 1, 0));
-	    }
-	    #endif
-    #endif
+    // Derive the dominant light direction from light probes and directional light.
+	lightDirection = Unity_SafeNormalize(unity_SHAr.xyz + unity_SHAg.xyz + unity_SHAb.xyz +
+		lightDirection * _LightColor0.w * attenuation * _LightSkew.xyz);
+
     #if !defined(DIRECTIONAL) && !defined(POINT) && !defined(SPOT)
     	attenuation = 1;
 	#endif
-	float remappedLight = (dot(normalDirection, lightDirection) * 0.5 + 0.5) * attenuation;
+
+	// Attenuation contains the shadow buffer. This makes shadows 0, which means a strict 
+	// multiply by attenuation will mean they always use the indirect light colour, even
+	// if an area has probe lighting that should override them. 
+	// To counter this, attenuation is remapped so that, in areas where probe light exceeds
+	// direct light, attenuation is nullified. 
+	float remappedAttenuation = saturate(((unity_SHAr.w + unity_SHAg.w + unity_SHAb.w) / _LightColor0.w)+attenuation);
+	float remappedLight = (dot(normalDirection, lightDirection) * 0.5 + 0.5) * remappedAttenuation;
 	
 	// Shadow mask handling
 	float4 shadowMask = tex2D(_ShadowMask,TRANSFORM_TEX(i.uv0, _MainTex));
 	
 	if (_ShadowMaskType == 0) 
 	{
-	// RGB will boost shadow range. Raising _Shadow reduces its influence.
-	// Alpha will boost light range. Raising _Shadow reduces its influence.
-	remappedLight = min(remappedLight, (remappedLight * shadowMask)+_Shadow);
-	remappedLight = max(remappedLight, (remappedLight * (1+1-shadowMask.w)));
+		// RGB will boost shadow range. Raising _Shadow reduces its influence.
+		// Alpha will boost light range. Raising _Shadow reduces its influence.
+		remappedLight = min(remappedLight, (remappedLight * shadowMask)+_Shadow);
+		remappedLight = max(remappedLight, (remappedLight * (1+1-shadowMask.w)));
 	}
 	if (_ShadowMaskType == 1) 
 	{
-	// RGB will boost shadow range. Raising _Shadow reduces its influence.
-	// Alpha will boost light range. Raising _Shadow reduces its influence.
-	remappedLight = min(remappedLight, (remappedLight * shadowMask.w)+_Shadow);
-	//remappedLight = max(remappedLight, (remappedLight * (1+1-shadowMask.w)));
+		// Alpha will boost shadow range. Raising _Shadow reduces its influence.
+		remappedLight = min(remappedLight, (remappedLight * shadowMask.w)+_Shadow);
 	}
 	remappedLight = saturate(remappedLight);
 
@@ -202,6 +200,8 @@ float4 frag(VertexOutput i) : COLOR
 	// Apply indirect lighting shift.
 	lightContribution = lightContribution*(1-_IndirectLightingBoost)+_IndirectLightingBoost;
 
+	remappedAttenuation = max(remappedAttenuation, dot(lightContribution, 1.0/3.0));
+
 	if (_UseMatcap == 1) 
 	{
 		// Based on Masataka SUMI's implementation
@@ -219,11 +219,11 @@ float4 frag(VertexOutput i) : COLOR
 	//float horizon = min(1.0 + dot(reflDir, normalDirection), 1.0);
 
 	#if defined(_LIGHTINGTYPE_CUBED)
-		float3 directLighting   = ((ShadeSH9_mod(half4(0.0,  1.0, 0.0, 1.0)) + _LightColor0.rgb)) ;
+		float3 directLighting   = ((ShadeSH9_mod(half4(0.0,  1.0, 0.0, 1.0)) + _LightColor0.rgb * remappedAttenuation)) ;
 		float3 indirectLighting = ((ShadeSH9_mod(half4(0.0, -1.0, 0.0, 1.0)))); 
 	#endif
 	#if defined(_LIGHTINGTYPE_ARKTOON)
-		float3 directLighting   = ((GetSHLength() + _LightColor0.rgb)) ;
+		float3 directLighting   = ((GetSHLength() + _LightColor0.rgb * remappedAttenuation)) ;
 		float3 indirectLighting = ((ShadeSH9_mod(half4(0.0, 0.0, 0.0, 1.0)))); 
 	#endif
 

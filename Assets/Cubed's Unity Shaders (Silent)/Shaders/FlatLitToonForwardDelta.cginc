@@ -106,14 +106,15 @@ float4 frag(VertexOutput i) : COLOR
 		// Perceptual roughness transformation...
 		float roughness = SmoothnessToRoughness(_Smoothness_var);
 
+		// Specular energy converservation. From EnergyConservationBetweenDiffuseAndSpecular in UnityStandardUtils.cginc
+		half oneMinusReflectivity = 1 - max3(specColor);
+
 		if (_UseMetallic == 1)
 		{
 			// From DiffuseAndSpecularFromMetallic
+			oneMinusReflectivity = OneMinusReflectivityFromMetallic(specColor);
 			specColor = lerp (unity_ColorSpaceDielectricSpec.rgb, diffuseColor, specColor);
 		}
-		
-		// Specular energy converservation. From EnergyConservationBetweenDiffuseAndSpecular in UnityStandardUtils.cginc
-		half oneMinusReflectivity = 1 - max3(specColor);
 
 		// oneMinusRoughness + (1 - oneMinusReflectivity)
 		float grazingTerm = saturate(1-roughness + (1-oneMinusReflectivity));
@@ -122,7 +123,9 @@ float4 frag(VertexOutput i) : COLOR
 		{
 			diffuseColor.xyz = diffuseColor.xyz * (oneMinusReflectivity); 
 			// Unity's boost to diffuse power to accomodate rougher metals.
-			diffuseColor.xyz += specColor.xyz * (1 - _Smoothness_var) * 0.5;
+			// Note: It looks like 2017 doesn't do this anymore... 
+			// But it looks nice, so I've left it in. Maybe it'll be an option later.
+			//diffuseColor.xyz += specColor.xyz * (1 - _Smoothness_var) * 0.5;
 		}
 	#endif
 
