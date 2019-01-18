@@ -96,9 +96,7 @@ Shader "CubedParadox/Flat Lit Toon (Silent)"
 			#pragma shader_feature _DETAIL
 			#pragma shader_feature _SPECULAR_DETAIL
 			#pragma shader_feature _ _SPECULAR_GGX _SPECULAR_CHARLIE _SPECULAR_GGX_ANISO
-			#pragma shader_feature _MATCAP
 			#pragma shader_feature _LIGHTINGTYPE_CUBED _LIGHTINGTYPE_ARKTOON _LIGHTINGTYPE_STANDARD
-			#pragma shader_feature _SUBSURFACE
 			#pragma vertex vert
 			#pragma geometry geom
 			#pragma fragment frag
@@ -128,7 +126,6 @@ Shader "CubedParadox/Flat Lit Toon (Silent)"
 			#pragma shader_feature _DETAIL
 			#pragma shader_feature _SPECULAR_DETAIL
 			#pragma shader_feature _ _SPECULAR_GGX _SPECULAR_CHARLIE _SPECULAR_GGX_ANISO
-			#pragma shader_feature _SUBSURFACE
 			#include "FlatLitToonCore.cginc"
 			#pragma vertex vert
 			#pragma geometry geom
