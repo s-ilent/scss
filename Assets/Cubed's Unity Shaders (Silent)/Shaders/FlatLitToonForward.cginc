@@ -18,7 +18,7 @@ float4 frag(VertexOutput i) : COLOR
 	float4 baseColor = lerp(_MainTex_var.rgba,(_MainTex_var.rgba*_Color.rgba),_ColorMask_var.g);
 	baseColor *= float4(i.col.rgb, 1); // Could vertex alpha be used, ever? Let's hope not.
 
-	float3 lightDirection = normalize(_WorldSpaceLightPos0.xyz + 0.0000001); // Offset to avoid error in lightless worlds.
+	float3 lightDirection = Unity_SafeNormalize(_WorldSpaceLightPos0.xyz); 
 	UNITY_LIGHT_ATTENUATION(attenuation, i, i.posWorld.xyz);
 	float3 viewDirection = normalize(_WorldSpaceCameraPos.xyz - i.posWorld.xyz);
 
@@ -41,6 +41,10 @@ float4 frag(VertexOutput i) : COLOR
 			baseColor.a = ((baseColor.a - _Cutoff) / max(fwidth(baseColor.a), 0.0001) + 0.5);
 			clip (baseColor.a);
 		}
+	#endif
+
+	#if !defined(_ALPHATEST_ON) | !defined(_ALPHABLEND_ON) | !defined(_ALPHAPREMULTIPLY_ON)
+		baseColor.a = 1.0;
 	#endif
 
 	// Lighting parameters
@@ -200,6 +204,9 @@ float4 frag(VertexOutput i) : COLOR
 	// Apply indirect lighting shift.
 	lightContribution = lightContribution*(1-_IndirectLightingBoost)+_IndirectLightingBoost;
 
+	// Remap attenuation for when direct light is added in later. This means it will be occluded
+	// by shadow, so being in a dark place with light probe ambient lighting won't also include
+	// directional lighting that isn't visible.
 	remappedAttenuation = max(remappedAttenuation, dot(lightContribution, 1.0/3.0));
 
 	if (_UseMatcap == 1) 

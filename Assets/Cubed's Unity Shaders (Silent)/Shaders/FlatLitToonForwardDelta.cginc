@@ -129,6 +129,22 @@ float4 frag(VertexOutput i) : COLOR
 		}
 	#endif
 
+	if (_UseMatcap == 1) 
+	{
+		// Based on Masataka SUMI's implementation
+	    half3 worldUp = float3(0, 1, 0);
+	    half3 worldViewUp = normalize(worldUp - viewDirection * dot(viewDirection, worldUp));
+	    half3 worldViewRight = normalize(cross(viewDirection, worldViewUp));
+	    half2 matcapUV = half2(dot(worldViewRight, normalDirection), dot(worldViewUp, normalDirection)) * 0.5 + 0.5;
+	
+		float3 AdditiveMatcap = tex2D(_AdditiveMatcap, matcapUV);
+		float3 MultiplyMatcap = tex2D(_MultiplyMatcap, matcapUV);
+		float4 _MatcapMask_var = tex2D(_MatcapMask,TRANSFORM_TEX(i.uv0, _MainTex));
+		diffuseColor.xyz = lerp(diffuseColor.xyz, diffuseColor.xyz*MultiplyMatcap, _MultiplyMatcapStrength * _MatcapMask_var.w);
+		diffuseColor.xyz += (_LightColor0)*AdditiveMatcap*_AdditiveMatcapStrength*_MatcapMask_var.g;
+	}
+
+
 	// Physically based specular
 	float3 specularContribution = 0;
 	#if defined(USE_SPECULAR)
@@ -167,11 +183,12 @@ float4 frag(VertexOutput i) : COLOR
 
 	finalColor *= attenuation;
 
-	#if defined(_SUBSURFACE)
+	if (_UseSubsurfaceScattering == 1)
+	{
 	float3 thicknessMap_var = pow(tex2D(_ThicknessMap, TRANSFORM_TEX(i.uv0, _MainTex)), _ThicknessMapPower);
 	finalColor += diffuseColor * getSubsurfaceScatteringLight(_LightColor0, lightDirection, normalDirection, viewDirection,
 		attenuation, thicknessMap_var, 0.0);
-	#endif
+	}
 
 	fixed4 finalRGBA = fixed4(finalColor,1) * i.col;
 	UNITY_APPLY_FOG(i.fogCoord, finalRGBA);
