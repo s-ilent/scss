@@ -58,14 +58,21 @@ namespace FlatLitToonS.Unity
         public enum LightingCalculationType
         {
             Arktoon,
-            Cubed,
-            Standard
+            Standard,
+            Cubed
         }
 
         public enum ShadowMaskType
         {
             Occlusion,
             Tone
+        }
+
+        public enum LightRampType
+        {
+            Horizontal,
+            Vertical,
+            None
         }
 
         public static class Styles
@@ -151,12 +158,14 @@ namespace FlatLitToonS.Unity
             public static GUIContent scatteringIntensity = new GUIContent("Scattering Intensity", "Strength of the subsurface scattering effect.");
             public static GUIContent scatteringPower = new GUIContent("Scattering Power", "Controls the power of the scattering effect.");
             public static GUIContent scatteringDistortion = new GUIContent("Scattering Distortion", "Controls the level of distortion light receives when passing through the material.");
+            public static GUIContent scatteringAmbient = new GUIContent("Scattering Ambient", "Controls the intensity of ambient light received from scattering.");
 
-            public static GUIContent useVerticalLightramp = new GUIContent("Vertical Lightramp", "Uses lightramps that run from bottom to top instead of left to right. For MMD compatibility.");
+            public static GUIContent lightRampType = new GUIContent("Lighting Ramp Type", "For if you use lightramps that run from bottom to top instead of left to right, or none at all.");
             public static GUIContent lightingCalculationType = new GUIContent("Lighting Calculation", "Changes how the direct/indirect lighting calculation is performed.");
             public static GUIContent shadowMaskType = new GUIContent("Shadow Mask Style", "Changes how the shadow mask is used.");
 
             public static GUIContent lightSkew = new GUIContent("Light Skew", "Skews the direction of the received lighting. The default is (1, 0.1, 1, 0), which corresponds to normal strength on the X and Z axis, while reducing the effect of the Y axis. This essentially stops you from getting those harsh lights from above or below that look so weird on cel shaded models. But that's just a default...");
+            public static GUIContent pixelSampleMode = new GUIContent("Pixel Art Mode", "Treats the main texture as pixel art. Great for retro avatars! Note: When using this, you should make sure mipmaps are Enabled and texture sampling is set to Trilinear.");
 
             public static GUIContent manualButton = new GUIContent("This shader has a manual. Check it out!","For information on new features, old features, and just how to use the shader in general, check out the manual on the shader wiki!");
 
@@ -229,12 +238,14 @@ namespace FlatLitToonS.Unity
         protected MaterialProperty scatteringIntensity;
         protected MaterialProperty scatteringPower;
         protected MaterialProperty scatteringDistortion;
+        protected MaterialProperty scatteringAmbient;
 
-        protected MaterialProperty useVerticalLightramp;
+        protected MaterialProperty lightRampType;
         protected MaterialProperty lightingCalculationType;
         protected MaterialProperty shadowMaskType;
 
         protected MaterialProperty lightSkew;
+        protected MaterialProperty pixelSampleMode;
 
         protected void FindProperties(MaterialProperty[] props)
             { 
@@ -301,12 +312,14 @@ namespace FlatLitToonS.Unity
                 scatteringIntensity = FindProperty("_SSSIntensity", props);
                 scatteringPower = FindProperty("_SSSPow", props);
                 scatteringDistortion = FindProperty("_SSSDist", props);
+                scatteringAmbient = FindProperty("_SSSAmbient", props);
 
-                useVerticalLightramp = FindProperty("_UseVerticalLightramp", props);
+                lightRampType = FindProperty("_LightRampType", props);
                 lightingCalculationType = FindProperty("_LightingCalculationType", props);
                 shadowMaskType = FindProperty("_ShadowMaskType", props);
 
                 lightSkew = FindProperty("_LightSkew", props);
+                pixelSampleMode = FindProperty("_PixelSampleMode", props); 
             }
 
         public override void OnGUI(MaterialEditor materialEditor, MaterialProperty[] props)
@@ -451,7 +464,10 @@ namespace FlatLitToonS.Unity
                 EditorGUILayout.Space();
 
                 EditorGUILayout.LabelField(Styles.shadingOptionsTitle, EditorStyles.boldLabel);
-                materialEditor.TexturePropertySingleLine(Styles.lightingRamp, lightingRamp);
+                if (((LightRampType)material.GetFloat("_LightRampType")) != LightRampType.None) 
+                {
+                    materialEditor.TexturePropertySingleLine(Styles.lightingRamp, lightingRamp);
+                }
                 materialEditor.ShaderProperty(shadowLift, Styles.shadowLift);
                 materialEditor.ShaderProperty(indirectLightBoost, Styles.indirectLightBoost);
                 EditorGUILayout.Space();
@@ -579,6 +595,7 @@ namespace FlatLitToonS.Unity
                     materialEditor.ShaderProperty(scatteringIntensity, Styles.scatteringIntensity);
                     materialEditor.ShaderProperty(scatteringPower, Styles.scatteringPower);
                     materialEditor.ShaderProperty(scatteringDistortion, Styles.scatteringDistortion);
+                    materialEditor.ShaderProperty(scatteringAmbient, Styles.scatteringAmbient);
                 }
             } 
             EditorGUI.EndChangeCheck();
@@ -632,7 +649,24 @@ namespace FlatLitToonS.Unity
 
             EditorGUI.BeginChangeCheck();
 
-            materialEditor.ShaderProperty(useVerticalLightramp, Styles.useVerticalLightramp);
+            var lMode = (LightRampType)lightRampType.floatValue;
+            EditorGUI.BeginChangeCheck();
+            
+            lMode = (LightRampType)EditorGUILayout.Popup("Light Ramp Type", (int)lMode, Enum.GetNames(typeof(LightRampType)));
+
+            if (EditorGUI.EndChangeCheck())
+            {
+                materialEditor.RegisterPropertyChangeUndo("Light Ramp Type");
+                lightRampType.floatValue = (float)lMode;
+
+                foreach (var obj in lightRampType.targets)
+                {
+                    SetupMaterialWithLightRampType((Material)obj, (LightRampType)material.GetFloat("_LightRampType"));
+                }
+
+            } 
+
+            materialEditor.ShaderProperty(pixelSampleMode, Styles.pixelSampleMode);
 
             lcMode = (LightingCalculationType)EditorGUILayout.Popup("Lighting Calculation", (int)lcMode, Enum.GetNames(typeof(LightingCalculationType)));
 
@@ -820,24 +854,16 @@ namespace FlatLitToonS.Unity
             switch ((SpecularType)material.GetFloat("_SpecularType"))
             {
                 case SpecularType.Standard:
-                    material.EnableKeyword("_SPECULAR_GGX");
-                    material.DisableKeyword("_SPECULAR_CHARLIE");
-                    material.DisableKeyword("_SPECULAR_GGX_ANISO");
+                    material.SetFloat("_SpecularType", 1);
                     break;
                 case SpecularType.Cloth:
-                    material.DisableKeyword("_SPECULAR_GGX");
-                    material.EnableKeyword("_SPECULAR_CHARLIE");
-                    material.DisableKeyword("_SPECULAR_GGX_ANISO");
+                    material.SetFloat("_SpecularType", 2);
                     break;
                 case SpecularType.Anisotropic:
-                    material.DisableKeyword("_SPECULAR_GGX");
-                    material.DisableKeyword("_SPECULAR_CHARLIE");
-                    material.EnableKeyword("_SPECULAR_GGX_ANISO");
+                    material.SetFloat("_SpecularType", 3);
                     break;
                 case SpecularType.Disable:
-                    material.DisableKeyword("_SPECULAR_GGX");
-                    material.DisableKeyword("_SPECULAR_CHARLIE");
-                    material.DisableKeyword("_SPECULAR_GGX_ANISO");
+                    material.SetFloat("_SpecularType", 0);
                     break;
                 default:
                     break;
@@ -858,26 +884,38 @@ namespace FlatLitToonS.Unity
                     break;
             }
         }
+
+        public static void SetupMaterialWithLightRampType(Material material, LightRampType lightRampType)
+        {
+            switch ((LightRampType)material.GetFloat("_LightRampType"))
+            {
+                case LightRampType.Horizontal:
+                    material.SetFloat("_LightRampType", 0);
+                    break;
+                case LightRampType.Vertical:
+                    material.SetFloat("_LightRampType", 1);
+                    break;
+                case LightRampType.None:
+                    material.SetFloat("_LightRampType", 2);
+                    break;
+                default:
+                    break;
+            }
+        }
             
         public static void SetupMaterialWithLightingCalculationType(Material material, LightingCalculationType LightingCalculationType)
         {
             switch ((LightingCalculationType)material.GetFloat("_LightingCalculationType"))
             {   
-                case LightingCalculationType.Cubed:
-                    material.EnableKeyword("_LIGHTINGTYPE_CUBED");
-                    material.DisableKeyword("_LIGHTINGTYPE_ARKTOON");
-                    material.DisableKeyword("_LIGHTINGTYPE_STANDARD");
-                    break;
                 case LightingCalculationType.Standard:
-                    material.DisableKeyword("_LIGHTINGTYPE_CUBED");
-                    material.DisableKeyword("_LIGHTINGTYPE_ARKTOON");
-                    material.EnableKeyword("_LIGHTINGTYPE_STANDARD");
+                    material.SetFloat("_LightingCalculationType", 1);
+                    break;
+                case LightingCalculationType.Cubed:
+                    material.SetFloat("_LightingCalculationType", 2);
                     break;
                 default:
                 case LightingCalculationType.Arktoon:
-                    material.DisableKeyword("_LIGHTINGTYPE_CUBED");
-                    material.EnableKeyword("_LIGHTINGTYPE_ARKTOON");
-                    material.DisableKeyword("_LIGHTINGTYPE_STANDARD");
+                    material.SetFloat("_LightingCalculationType", 0);
                     break;
             }
         }
