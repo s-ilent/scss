@@ -1,22 +1,29 @@
-// For pass "FORWARD"
 float4 frag(VertexOutput i) : COLOR
 {
 	float4 objPos = mul(unity_ObjectToWorld, float4(0,0,0,1));
 	i.normalDir = normalize(i.normalDir);
 	float3x3 tangentTransform = float3x3(i.tangentDir, i.bitangentDir, i.normalDir);
 
-	// Colour and detail mask. Green is colour tint, while alpha is normal detail mask.
+	float2 mainUVs = _PixelSampleMode? sharpSample(_MainTex_TexelSize.zw, i.uv0) : i.uv0;
+
+	// Colour and detail mask. Green is colour tint mask, while alpha is normal detail mask.
 	float4 _ColorMask_var = tex2D(_ColorMask,TRANSFORM_TEX(i.uv0, _MainTex));
 	float3 _BumpMap_var = NormalInTangentSpace(i.uv0, _ColorMask_var.a);
 
 	float3 normalDirection = normalize(mul(_BumpMap_var.rgb, tangentTransform)); // Perturbed normals
 
-	float4 _MainTex_var = tex2D(_MainTex,TRANSFORM_TEX(i.uv0, _MainTex));
+	float4 _MainTex_var = tex2D(_MainTex,TRANSFORM_TEX(mainUVs, _MainTex));
 
+	float3 emissive = 0; // Not used in add pass.
+	#if defined(UNITY_PASS_FORWARDBASE)
 	float4 _EmissionMap_var = tex2D(_EmissionMap,TRANSFORM_TEX(i.uv0, _MainTex));
-	float3 emissive = (_EmissionMap_var.rgb*_EmissionColor.rgb);
-	float4 baseColor = lerp(_MainTex_var.rgba,(_MainTex_var.rgba*_Color.rgba),_ColorMask_var.g);
-	baseColor *= float4(i.col.rgb, 1); // Could vertex alpha be used, ever? Let's hope not.
+	emissive += (_EmissionMap_var.rgb*_EmissionColor.rgb);
+	#endif
+
+	float3 diffuseColor = _MainTex_var.rgb * LerpWhiteTo(_Color.rgb, _ColorMask_var.g);
+	float alpha = _MainTex_var.a;
+
+	diffuseColor *= i.col.rgb; // Could vertex alpha be used, ever? Let's hope not.
 
 	float3 lightDirection = Unity_SafeNormalize(_WorldSpaceLightPos0.xyz); 
 	UNITY_LIGHT_ATTENUATION(attenuation, i, i.posWorld.xyz);
@@ -25,7 +32,7 @@ float4 frag(VertexOutput i) : COLOR
 	#if COLORED_OUTLINE
 	if(i.is_outline) 
 	{
-		baseColor.rgb = i.col.rgb; 
+		diffuseColor = i.col.rgb; 
 	}
 	#endif
 
@@ -33,18 +40,18 @@ float4 frag(VertexOutput i) : COLOR
 	// like Miku's sleeves, while others get broken by it. 
 	#if defined(_ALPHATEST_ON)
 		if (_AlphaSharp  == 0) {
-			float mask = saturate(interleaved_gradient(i.pos.xy)); 
-			baseColor.a = saturate(baseColor.a + baseColor.a * mask); 
-			clip (baseColor.a - _Cutoff);
+			float mask = saturate(interleaved_gradient(i.pos.xy + _SinTime.x%4)); 
+			alpha = saturate(alpha + alpha * mask); 
+			clip (alpha - _Cutoff);
 		}
 		if (_AlphaSharp  == 1) {
-			baseColor.a = ((baseColor.a - _Cutoff) / max(fwidth(baseColor.a), 0.0001) + 0.5);
-			clip (baseColor.a);
+			alpha = ((alpha - _Cutoff) / max(fwidth(alpha), 0.0001) + 0.5);
+			clip (alpha);
 		}
 	#endif
 
-	#if !defined(_ALPHATEST_ON) | !defined(_ALPHABLEND_ON) | !defined(_ALPHAPREMULTIPLY_ON)
-		baseColor.a = 1.0;
+	#if !defined(_ALPHATEST_ON) || !defined(_ALPHABLEND_ON) || !defined(_ALPHAPREMULTIPLY_ON)
+		alpha = 1.0;
 	#endif
 
 	// Lighting parameters
@@ -61,28 +68,28 @@ float4 frag(VertexOutput i) : COLOR
 
 	if (_UseFresnel == 1)
 	{
-	fresnelEffect = rlPow4.y;
-	float2 fresStep = .5 + float2(-1, 1) * fwidth(rlPow4.y);
-	// Sharper rim lighting for the anime look.
-	fresnelEffect *= _FresnelWidth;
-	float2 fresStep_var = lerp(float2(0.0, 1.0), fresStep, 1-_FresnelStrength);
-	fresnelEffect = smoothstep(fresStep_var.x, fresStep_var.y, fresnelEffect);
-	fresnelEffect *= _FresnelTint.rgb * _FresnelTint.a;
+		fresnelEffect = rlPow4.y;
+		float2 fresStep = .5 + float2(-1, 1) * fwidth(rlPow4.y);
+		// Sharper rim lighting for the anime look.
+		fresnelEffect *= _FresnelWidth;
+		float2 fresStep_var = lerp(float2(0.0, 1.0), fresStep, 1-_FresnelStrength);
+		fresnelEffect = smoothstep(fresStep_var.x, fresStep_var.y, fresnelEffect);
+		fresnelEffect *= _FresnelTint.rgb * _FresnelTint.a;
 	}
 
 	// Customisable fresnel for a user-defined glow
 	emissive += _CustomFresnelColor.xyz * (pow(rlPow4.y, rcp(_CustomFresnelColor.w+0.0001)));
 
 	float3 lightmap = float4(1.0,1.0,1.0,1.0);
-	#ifdef LIGHTMAP_ON
+	#if defined(LIGHTMAP_ON)
 		lightmap = DecodeLightmap(UNITY_SAMPLE_TEX2D(unity_Lightmap, i.uv1 * unity_LightmapST.xy + unity_LightmapST.zw));
 	#endif
 
-	// Seperate energy conserved and original value for later.
-	float3 diffuseColor = baseColor.xyz;
+	float perceptualRoughness = 0; float3 specColor = 0; half grazingTerm = 0; 
 
-	#if defined(USE_SPECULAR)
-		// Specular, high quality (but with probably decent performance)
+	// Specular, high quality (but with probably decent performance)
+	if (_SpecularType != 0 )
+	{
 		float4 _SpecularMap_var = tex2D(_SpecularMap,TRANSFORM_TEX(i.uv0, _MainTex));
 
 		#if defined(_SPECULAR_DETAIL)
@@ -91,7 +98,7 @@ float4 frag(VertexOutput i) : COLOR
 		#endif
 
 		// Todo: Add smoothness in diffuse alpha support
-		float3 specColor = _SpecularMap_var.rgb;
+		specColor = _SpecularMap_var.rgb;
 		float _Smoothness_var = _Smoothness * _SpecularMap_var.w;
 
 		// Because specular behaves poorly on backfaces, disable specular on outlines. 
@@ -102,10 +109,16 @@ float4 frag(VertexOutput i) : COLOR
 		}
 
 		// Perceptual roughness transformation...
-		float roughness = SmoothnessToRoughness(_Smoothness_var);
+		perceptualRoughness = SmoothnessToPerceptualRoughness(_Smoothness_var);
+
+		// Valve's geometic specular AA (to reduce shimmering edges)
+    	float3 vNormalWsDdx = ddx(i.normalDir.xyz);
+    	float3 vNormalWsDdy = ddy(i.normalDir.xyz);
+    	float flGeometricRoughnessFactor = pow(saturate(max(dot(vNormalWsDdx.xyz, vNormalWsDdx.xyz), dot(vNormalWsDdy.xyz, vNormalWsDdy.xyz))), 0.333);
+    	perceptualRoughness = min(perceptualRoughness, 1.0 - flGeometricRoughnessFactor); // Ensure we don't double-count roughness if normal map encodes geometric roughness
 
 		// Specular energy converservation. From EnergyConservationBetweenDiffuseAndSpecular in UnityStandardUtils.cginc
-		half oneMinusReflectivity = 1 - max3(specColor);
+		half oneMinusReflectivity = 1 - SpecularStrength(specColor); 
 
 		if (_UseMetallic == 1)
 		{
@@ -115,7 +128,7 @@ float4 frag(VertexOutput i) : COLOR
 		}
 
 		// oneMinusRoughness + (1 - oneMinusReflectivity)
-		float grazingTerm = saturate(1-roughness + (1-oneMinusReflectivity));
+		grazingTerm = saturate(_Smoothness_var + (1-oneMinusReflectivity));
 
 		if (_UseEnergyConservation == 1)
 		{
@@ -125,27 +138,39 @@ float4 frag(VertexOutput i) : COLOR
 			// But it looks nice, so I've left it in. Maybe it'll be an option later.
 			//diffuseColor.xyz += specColor.xyz * (1 - _Smoothness_var) * 0.5;
 		}
+	}
+
+	// If we're in the delta pass, then ambient light is always black, because the delta
+	// pass is added on top. 
+	#if defined(UNITY_PASS_FORWARDBASE)
+	    // Derive the dominant light direction from light probes and directional light.
+		lightDirection = Unity_SafeNormalize(unity_SHAr.xyz + unity_SHAg.xyz + unity_SHAb.xyz +
+			lightDirection * _LightColor0.w * attenuation * _LightSkew.xyz);
+
+	    #if !defined(DIRECTIONAL) && !defined(POINT) && !defined(SPOT)
+	    	attenuation = 1;
+		#endif
+
+		// Attenuation contains the shadow buffer. This makes shadows 0, which means a strict 
+		// multiply by attenuation will mean they always use the indirect light colour, even
+		// if an area has probe lighting that should override them. 
+		// To counter this, attenuation is remapped so that, in areas where probe light exceeds
+		// direct light, attenuation is nullified. 
+		float ambientLightProbeIntensity = (unity_SHAr.w + unity_SHAg.w + unity_SHAb.w) * 1.0/3.0;
+		float remappedAttenuation = saturate(saturate(ambientLightProbeIntensity/_LightColor0.w)+attenuation);
+		float remappedLight = (DisneyDiffuse(NdotV, NdotL, LdotH, perceptualRoughness) * 
+			dot(normalDirection, lightDirection) * 0.5 + 0.5) * remappedAttenuation;
 	#endif
 
-    // Derive the dominant light direction from light probes and directional light.
-	lightDirection = Unity_SafeNormalize(unity_SHAr.xyz + unity_SHAg.xyz + unity_SHAb.xyz +
-		lightDirection * _LightColor0.w * attenuation * _LightSkew.xyz);
-
-    #if !defined(DIRECTIONAL) && !defined(POINT) && !defined(SPOT)
-    	attenuation = 1;
+	#if defined(UNITY_PASS_FORWARDADD)
+		float ambientLightProbeIntensity = 0; // Not used
+		float remappedAttenuation = 0; // Not used
+		float remappedLight = dot(normalize(_WorldSpaceLightPos0.xyz - i.posWorld.xyz),normalDirection)
+			* DisneyDiffuse(NdotV, NdotL, LdotH, perceptualRoughness);
 	#endif
 
-	// Attenuation contains the shadow buffer. This makes shadows 0, which means a strict 
-	// multiply by attenuation will mean they always use the indirect light colour, even
-	// if an area has probe lighting that should override them. 
-	// To counter this, attenuation is remapped so that, in areas where probe light exceeds
-	// direct light, attenuation is nullified. 
-	float remappedAttenuation = saturate(((unity_SHAr.w + unity_SHAg.w + unity_SHAb.w) / _LightColor0.w)+attenuation);
-	float remappedLight = (dot(normalDirection, lightDirection) * 0.5 + 0.5) * remappedAttenuation;
-	
 	// Shadow mask handling
 	float4 shadowMask = tex2D(_ShadowMask,TRANSFORM_TEX(i.uv0, _MainTex));
-	
 	if (_ShadowMaskType == 0) 
 	{
 		// RGB will boost shadow range. Raising _Shadow reduces its influence.
@@ -166,48 +191,24 @@ float4 frag(VertexOutput i) : COLOR
 	// Remove light influence from outlines. 
 	//remappedLight = i.is_outline? 0 : remappedLight;
 
-	float3 lightContribution = 1;
-	#if 1
-		// Apply lightramp to lighting
-		lightContribution = sampleRampWithOptions(remappedLight);
-	#else
-		// Lighting without lightramp
-		#if 1
-			// This produces more instructions, but also an antialiased edge. 
-			float shadeWidth = max(fwidth(remappedLight), 0.01);
-
-			// Create two variables storing values similar to 0.49 and 0.51 that the fractional part
-			// of the lighting is squeezed into. Then add the non-fractional part to the result.
-			// Using fwidth (which should be cheap), we can come up with a gradient
-			// about the size of 2 pixels in screen space at minimum.
-			// Note: This might be slower than just sampling a light ramp,
-			// but popular thought states math > textures for modern GPUs.
-
-			float2 shadeOffset = 0.50 + float2(-shadeWidth, shadeWidth); 
-			lightContribution = smoothstep(shadeOffset.x, shadeOffset.y, frac(remappedLight)); 
-			lightContribution += floor(remappedLight);
-		#else
-			// Cubed's original
-			//lightContribution = saturate((1.0 - _Shadow) + floor(saturate(remappedLight) * 2.0)); 
-			lightContribution = saturate(floor(saturate(remappedLight) * 2.0)); 
-		#endif
-	#endif
+	// Apply lightramp to lighting
+	float3 lightContribution = sampleRampWithOptions(remappedLight);
 
 	if (_ShadowMaskType == 1) 
 	{
 		// Implementation A
 		// Not used because it requires lots of tweaking.
 		//diffuseColor = lerp(diffuseColor * shadowMask.rgb, diffuseColor, lightContribution);
-		lightContribution += (1 - lightContribution) * shadowMask;
+		// Implementation B
+		// Needs less tweaking, but may appear too bright in areas with high light variance.
+		// Implementation B-2
+		// Applies correction based on difference between ambient and direct light. 
+		lightContribution += (1 - lightContribution) * shadowMask
+		 * min(1.0, (1+ambientLightProbeIntensity)/_LightColor0.w);
 	}
 
 	// Apply indirect lighting shift.
 	lightContribution = lightContribution*(1-_IndirectLightingBoost)+_IndirectLightingBoost;
-
-	// Remap attenuation for when direct light is added in later. This means it will be occluded
-	// by shadow, so being in a dark place with light probe ambient lighting won't also include
-	// directional lighting that isn't visible.
-	remappedAttenuation = max(remappedAttenuation, dot(lightContribution, 1.0/3.0));
 
 	if (_UseMatcap == 1) 
 	{
@@ -221,104 +222,145 @@ float4 frag(VertexOutput i) : COLOR
 		float3 MultiplyMatcap = tex2D(_MultiplyMatcap, matcapUV);
 		float4 _MatcapMask_var = tex2D(_MatcapMask,TRANSFORM_TEX(i.uv0, _MainTex));
 		diffuseColor.xyz = lerp(diffuseColor.xyz, diffuseColor.xyz*MultiplyMatcap, _MultiplyMatcapStrength * _MatcapMask_var.w);
-		diffuseColor.xyz += (ShadeSH9_mod(half4(0.0,  0.0, 0.0, 1.0))+_LightColor0)*AdditiveMatcap*_AdditiveMatcapStrength*_MatcapMask_var.g;
+		diffuseColor.xyz += 
+			// Additive's power is defined by ambient lighting. 
+			#if defined(UNITY_PASS_FORWARDBASE)
+			(ShadeSH9_mod(half4(0.0,  0.0, 0.0, 1.0))+_LightColor0)
+			#endif
+			#if defined(UNITY_PASS_FORWARDADD)
+			(_LightColor0)
+			#endif
+			*AdditiveMatcap*_AdditiveMatcapStrength*_MatcapMask_var.g;
+			
 	}
 	//float horizon = min(1.0 + dot(reflDir, normalDirection), 1.0);
 
-	#if defined(_LIGHTINGTYPE_CUBED)
-		float3 directLighting   = ((ShadeSH9_mod(half4(0.0,  1.0, 0.0, 1.0)) + _LightColor0.rgb * remappedAttenuation)) ;
-		float3 indirectLighting = ((ShadeSH9_mod(half4(0.0, -1.0, 0.0, 1.0)))); 
-	#endif
-	#if defined(_LIGHTINGTYPE_ARKTOON)
-		float3 directLighting   = ((GetSHLength() + _LightColor0.rgb * remappedAttenuation)) ;
-		float3 indirectLighting = ((ShadeSH9_mod(half4(0.0, 0.0, 0.0, 1.0)))); 
+	// If we're in the delta pass, then ambient light is always black, because the delta
+	// pass is added on top, and vertex lights don't need to be added.
+	float3 directLighting = 0.0;
+	float3 indirectLighting = 0.0;
+
+	#if defined(UNITY_PASS_FORWARDBASE)
+		if (_LightingCalculationType == 0)
+		{
+			directLighting   = (GetSHLength() + _LightColor0.rgb);
+			indirectLighting = (ShadeSH9_mod(half4(0.0, 0.0, 0.0, 1.0))); 
+		}
+		if (_LightingCalculationType == 2)
+		{
+			directLighting   = (ShadeSH9_mod(half4(0.0,  1.0, 0.0, 1.0)) + _LightColor0.rgb);
+			indirectLighting = (ShadeSH9_mod(half4(0.0, -1.0, 0.0, 1.0))); 
+		}
 	#endif
 
-	// Vertex lighting based on Shade4PointLights
-	float4 vertexAttenuation = i.vertexLight;
-	vertexAttenuation = min(vertexAttenuation, (vertexAttenuation * shadowMask)+_Shadow);
-	vertexAttenuation = max(vertexAttenuation, (vertexAttenuation * (1+1-shadowMask.w)));
-	vertexAttenuation = saturate(vertexAttenuation);
-
-	// Cheaper, but less aethetically correct.
-	//vertexAttenuation = smoothstep(UNITY_PI/10-0.025,UNITY_PI/10+0.025, 
-	//	 frac(vertexAttenuation))+floor(vertexAttenuation);
+	#if defined(UNITY_PASS_FORWARDADD)
+		directLighting = _LightColor0;
+		indirectLighting = 0.0;
+	#endif
 
 	float3 vertexContribution = 0;
-    vertexContribution += unity_LightColor[0] * sampleRampWithOptions(vertexAttenuation.x) * vertexAttenuation.x;
-    vertexContribution += unity_LightColor[1] * sampleRampWithOptions(vertexAttenuation.y) * vertexAttenuation.y;
-    vertexContribution += unity_LightColor[2] * sampleRampWithOptions(vertexAttenuation.z) * vertexAttenuation.z;
-    vertexContribution += unity_LightColor[3] * sampleRampWithOptions(vertexAttenuation.w) * vertexAttenuation.w;
+	#if defined(UNITY_PASS_FORWARDBASE)
+		// Vertex lighting based on Shade4PointLights
+		float4 vertexAttenuation = i.vertexLight;
+		vertexAttenuation = min(vertexAttenuation, (vertexAttenuation * shadowMask)+_Shadow);
+		vertexAttenuation = max(vertexAttenuation, (vertexAttenuation * (1+1-shadowMask.w)));
+		vertexAttenuation = saturate(vertexAttenuation);
+
+	    vertexContribution += unity_LightColor[0] * sampleRampWithOptions(vertexAttenuation.x) * vertexAttenuation.x;
+	    vertexContribution += unity_LightColor[1] * sampleRampWithOptions(vertexAttenuation.y) * vertexAttenuation.y;
+	    vertexContribution += unity_LightColor[2] * sampleRampWithOptions(vertexAttenuation.z) * vertexAttenuation.z;
+	    vertexContribution += unity_LightColor[3] * sampleRampWithOptions(vertexAttenuation.w) * vertexAttenuation.w;
+	#endif
 
 	// Physically based specular
-	#if defined(USE_SPECULAR) || defined(_LIGHTINGTYPE_STANDARD)
+	float3 directContribution = 0;
+	float3 finalColor = 0;
+	if ((_SpecularType != 0 ) || (_LightingCalculationType == 1))
+	{
 		half nh = saturate(dot(normalDirection, halfDir));
-		#if defined(_SPECULAR_GGX)
-			half V = SmithJointGGXVisibilityTerm (NdotL, NdotV, roughness);
-		    half D = GGXTerm (nh, roughness);
-	    #endif
-		#if defined(_SPECULAR_CHARLIE)
-			half V = V_Neubelt (NdotV, NdotL);
-		    half D = D_Charlie (roughness, nh);
-	    #endif
-	    #if defined(_SPECULAR_GGX_ANISO)
+	    half V = 0; half D = 0;
+	    float roughness = PerceptualRoughnessToRoughness(perceptualRoughness);
+		if (_SpecularType == 1) // GGX
+		{
+		    // GGX with roughtness to 0 would mean no specular at all, using max(roughness, 0.002) here to match HDrenderloop roughtness remapping.
+		    roughness = max(roughness, 0.002);
+			V = SmithJointGGXVisibilityTerm (NdotL, NdotV, roughness);
+		    D = GGXTerm (nh, roughness);
+		} 
+		else if (_SpecularType == 2) // Charlie
+		{
+			V = V_Neubelt (NdotV, NdotL);
+		    D = D_Charlie (roughness, nh);
+		}
+		else if (_SpecularType == 3) // GGX Anisotropic
+		{
 		    float anisotropy = _Anisotropy;
 		    float at = max(roughness * (1.0 + anisotropy), 0.001);
 		    float ab = max(roughness * (1.0 - anisotropy), 0.001);
 
+			#if 0
 		    float TdotL = dot(i.tangentDir, lightDirection);
 		    float BdotL = dot(i.bitangentDir, lightDirection);
 		    float TdotV = dot(i.tangentDir, viewDirection);
 		    float BdotV = dot(i.bitangentDir, lightDirection);
 
 		    // Accurate but probably expensive
-			//float V = V_SmithGGXCorrelated_Anisotropic (at, ab, TdotV, BdotV, TdotL, BdotL, NdotV, NdotL);
-			half V = SmithJointGGXVisibilityTerm (NdotL, NdotV, roughness);
-		    half D = D_GGX_Anisotropic(nh, halfDir, i.tangentDir, i.bitangentDir, at, ab);
-	    #endif
+			float V = V_SmithGGXCorrelated_Anisotropic (at, ab, TdotV, BdotV, TdotL, BdotL, NdotV, NdotL);
+			#else
+			V = SmithJointGGXVisibilityTerm (NdotL, NdotV, roughness);
+			#endif
 
-	    #if defined(_LIGHTINGTYPE_STANDARD) & !defined(USE_SPECULAR)
-	    // Awkward
-	    	half V = 0; half D = 0; half roughness = 0; half specColor = 0; half grazingTerm = 0;
-	    #endif
-
+		    D = D_GGX_Anisotropic(nh, halfDir, i.tangentDir, i.bitangentDir, at, ab);
+		}
 	    half specularTerm = V*D * UNITY_PI; // Torrance-Sparrow model, Fresnel is applied later
 	    specularTerm = max(0, specularTerm * NdotL);
 
-	    // We could match the falloff of specular to the light ramp, but it causes artifacts.
-	    //specularTerm = max(0, specularTerm * (lightContribution * 2 - 1));
+	    /* Todo
+	    #if defined(_SPECULARHIGHLIGHTS_OFF)
+    		specularTerm = 0.0;
+		#endif
+ 		*/
 
 		half surfaceReduction = 1.0 / (roughness*roughness + 1);
+
+    	// To provide true Lambert lighting, we need to be able to kill specular completely.
+    	specularTerm *= any(specColor) ? 1.0 : 0.0;
 
 		UnityGI gi =  GetUnityGI(_LightColor0.rgb, lightDirection, 
 		normalDirection, viewDirection, reflDir, attenuation, roughness, i.posWorld.xyz);
 
-		//lightContribution = DisneyDiffuse(NdotV, NdotL, LdotH, roughness) * NdotL;
-
-		#if defined(_LIGHTINGTYPE_STANDARD)
-			float3 indirectLighting = gi.indirect.diffuse.rgb;
-			float3 directContribution = diffuseColor * (gi.indirect.diffuse.rgb + _LightColor0.rgb * lightContribution);
-		#else
-			float3 directContribution = diffuseColor * 
-			lerp(indirectLighting, directLighting, lightContribution);
-		#endif
+		if (_LightingCalculationType == 1) // Standard
+		{
+			indirectLighting = gi.indirect.diffuse.rgb;
+			directContribution = diffuseColor * (gi.indirect.diffuse.rgb + _LightColor0.rgb * lightContribution);
+		} 
+		else 
+		{
+			directContribution = diffuseColor * lerp(indirectLighting, directLighting, lightContribution);
+		}
 
 		directContribution += vertexContribution*diffuseColor;
-	
+		
 		directContribution *= 1+fresnelEffect;
 
-		float3 finalColor = emissive + directContribution +
+		finalColor = emissive + directContribution +
 		specularTerm * (gi.light.color + vertexContribution) * FresnelTerm(specColor, LdotH) +
 		surfaceReduction * (gi.indirect.specular.rgb + vertexContribution) * FresnelLerp(specColor, grazingTerm, NdotV);
-	#else
-		float3 directContribution = diffuseColor * 
+	}
+	else
+	{
+		directContribution = diffuseColor * 
 		lerp(indirectLighting, directLighting, lightContribution);
 
 		directContribution += vertexContribution*diffuseColor;
 		
 		directContribution *= 1+fresnelEffect;
 
-		float3 finalColor = directContribution + emissive;
+		finalColor = directContribution + emissive;
+	}
+
+	#if defined(UNITY_PASS_FORWARDADD)
+		finalColor *= attenuation;
 	#endif
 
 	if (_UseSubsurfaceScattering == 1)
@@ -328,7 +370,7 @@ float4 frag(VertexOutput i) : COLOR
 		attenuation, thicknessMap_var, indirectLighting);
 	}
 
-	fixed4 finalRGBA = fixed4(finalColor * lightmap, baseColor.a);
+	fixed4 finalRGBA = fixed4(finalColor * lightmap, alpha);
 	UNITY_APPLY_FOG(i.fogCoord, finalRGBA);
 	return finalRGBA;
 }

@@ -6,7 +6,7 @@
 #include "AutoLight.cginc"
 #include "Lighting.cginc"
 
-uniform sampler2D _MainTex; uniform float4 _MainTex_ST;
+uniform sampler2D _MainTex; uniform float4 _MainTex_ST; uniform float4 _MainTex_TexelSize;
 uniform sampler2D _ColorMask; uniform float4 _ColorMask_ST;
 uniform sampler2D _BumpMap; uniform float4 _BumpMap_ST;
 uniform sampler2D _DetailNormalMap; uniform float4 _DetailNormalMap_ST;
@@ -34,9 +34,11 @@ uniform float4 _outline_color;
 
 uniform float _UseFresnel;
 uniform float _UseEnergyConservation;
-uniform float _UseVerticalLightramp;
+uniform float _LightRampType;
 uniform float _UseMetallic;
 uniform float _ShadowMaskType;
+uniform float _SpecularType;
+uniform float _LightingCalculationType;
 
 uniform float _UseMatcap;
 uniform sampler2D _AdditiveMatcap; uniform float4 _AdditiveMatcap_ST; 
@@ -56,8 +58,10 @@ uniform float3 _SSSCol;
 uniform float _SSSIntensity;
 uniform float _SSSPow;
 uniform float _SSSDist;
+uniform float _SSSAmbient;
 
 uniform float4 _LightSkew;
+uniform float _PixelSampleMode;
 
 static const float3 grayscale_vector = 1.0/3.0; 
 // When operating in non-perceptual space, treat greyscale as an equal distribution.
@@ -299,6 +303,12 @@ float interleaved_gradient(float2 uv : SV_POSITION) : SV_Target
 	return frac(magic.z * frac(dot(uv, magic.xy)));
 }
 
+float Dither17(float2 Pos, float FrameIndexMod4)
+{
+    // 3 scalar float ALU (1 mul, 2 mad, 1 frac)
+    return frac(dot(float3(Pos.xy, FrameIndexMod4), uint3(2, 7, 23) / 17.0f));
+}
+
 float max3 (float3 x) 
 {
 	return max(x.x, max(x.y, x.z));
@@ -396,18 +406,31 @@ float3 getSubsurfaceScatteringLight (float3 lightColor, float3 lightDirection, f
 	float attenuation, float3 thickness, float3 indirectLight)
 {
 	float3 vSSLight = lightDirection + normalDirection * _SSSDist; // Distortion
-	float3 vdotSS = pow(saturate(dot(viewDirection, -vSSLight)), _SSSPow) * _SSSIntensity * abs(_ThicknessMapInvert-thickness); 
+	float3 vdotSS = pow(saturate(dot(viewDirection, -vSSLight)), _SSSPow) 
+		* _SSSIntensity; 
 	
 	return lerp(1, attenuation, float(any(_WorldSpaceLightPos0.xyz))) 
-				* (vdotSS * _SSSCol) 
-				* (lightColor + indirectLight);
+				* (vdotSS + _SSSAmbient) * abs(_ThicknessMapInvert-thickness)
+				* (lightColor + indirectLight) * _SSSCol;
 				
 }
 
 float3 sampleRampWithOptions(float rampPosition) 
 {
-	float2 rampUV = float2(rampPosition*(1-_UseVerticalLightramp), rampPosition*_UseVerticalLightramp);
-	return tex2D(_Ramp, saturate(rampUV));
+	if (_LightRampType == 2) // None
+	{
+		float shadeWidth = max(fwidth(rampPosition), 0.00);
+
+		float shadeOffset = UNITY_PI/10.0; 
+		float lightContribution = smoothstep(shadeOffset-shadeWidth, shadeOffset+shadeWidth, frac(rampPosition)); 
+		lightContribution += floor(rampPosition);
+		return lightContribution;
+	}
+	else {
+		float2 rampUV = float2(rampPosition*(1-_LightRampType), rampPosition*_LightRampType);
+		return tex2D(_Ramp, saturate(rampUV));
+
+	}
 }
 
 inline float3 BlendNormalsPD(float3 n1, float3 n2) {
