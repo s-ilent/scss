@@ -421,7 +421,7 @@ float3 sampleRampWithOptions(float rampPosition)
 	{
 		float shadeWidth = max(fwidth(rampPosition), 0.00);
 
-		float shadeOffset = UNITY_PI/10.0; 
+		const float shadeOffset = (UNITY_PI/10.0); 
 		float lightContribution = smoothstep(shadeOffset-shadeWidth, shadeOffset+shadeWidth, frac(rampPosition)); 
 		lightContribution += floor(rampPosition);
 		return lightContribution;
