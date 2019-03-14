@@ -85,7 +85,7 @@ float4 frag(VertexOutput i) : COLOR
 		lightmap = DecodeLightmap(UNITY_SAMPLE_TEX2D(unity_Lightmap, i.uv1 * unity_LightmapST.xy + unity_LightmapST.zw));
 	#endif
 
-	float perceptualRoughness = 0; float3 specColor = 0; half grazingTerm = 0; 
+	float perceptualRoughness = 1; float3 specColor = 0; half grazingTerm = 0; 
 
 	// Specular, high quality (but with probably decent performance)
 	if (_SpecularType != 0 )
@@ -110,12 +110,6 @@ float4 frag(VertexOutput i) : COLOR
 
 		// Perceptual roughness transformation...
 		perceptualRoughness = SmoothnessToPerceptualRoughness(_Smoothness_var);
-
-		// Valve's geometic specular AA (to reduce shimmering edges)
-    	float3 vNormalWsDdx = ddx(i.normalDir.xyz);
-    	float3 vNormalWsDdy = ddy(i.normalDir.xyz);
-    	float flGeometricRoughnessFactor = pow(saturate(max(dot(vNormalWsDdx.xyz, vNormalWsDdx.xyz), dot(vNormalWsDdy.xyz, vNormalWsDdy.xyz))), 0.333);
-    	perceptualRoughness = min(perceptualRoughness, 1.0 - flGeometricRoughnessFactor); // Ensure we don't double-count roughness if normal map encodes geometric roughness
 
 		// Specular energy converservation. From EnergyConservationBetweenDiffuseAndSpecular in UnityStandardUtils.cginc
 		half oneMinusReflectivity = 1 - SpecularStrength(specColor); 
@@ -175,15 +169,14 @@ float4 frag(VertexOutput i) : COLOR
 	{
 		// RGB will boost shadow range. Raising _Shadow reduces its influence.
 		// Alpha will boost light range. Raising _Shadow reduces its influence.
-		remappedLight = min(remappedLight, (remappedLight * shadowMask)+_Shadow);
-		remappedLight = max(remappedLight, (remappedLight * (1+1-shadowMask.w)));
+		remappedLight *= (1 - _Shadow) * shadowMask.rgb + _Shadow;
+		remappedLight = min(1.0, (remappedLight * (1+1-shadowMask.w)));
 	}
 	if (_ShadowMaskType == 1) 
 	{
 		// Alpha will boost shadow range. Raising _Shadow reduces its influence.
-		remappedLight = min(remappedLight, (remappedLight * shadowMask.w)+_Shadow);
+		remappedLight = (1 - _Shadow) * shadowMask.w + _Shadow;
 	}
-	remappedLight = saturate(remappedLight);
 
 	// Shadow appearance setting
 	remappedLight = saturate(_ShadowLift + remappedLight * (1-_ShadowLift));
@@ -273,13 +266,20 @@ float4 frag(VertexOutput i) : COLOR
 	#endif
 
 	// Physically based specular
-	float3 directContribution = 0;
 	float3 finalColor = 0;
 	if ((_SpecularType != 0 ) || (_LightingCalculationType == 1))
 	{
 		half nh = saturate(dot(normalDirection, halfDir));
 	    half V = 0; half D = 0;
-	    float roughness = PerceptualRoughnessToRoughness(perceptualRoughness);
+	    //float roughness = PerceptualRoughnessToRoughness(perceptualRoughness);
+	    float roughness = (perceptualRoughness);
+
+		// Valve's geometic specular AA (to reduce shimmering edges)
+    	float3 vNormalWsDdx = ddx(i.normalDir.xyz);
+    	float3 vNormalWsDdy = ddy(i.normalDir.xyz);
+    	float flGeometricRoughnessFactor = pow(saturate(max(dot(vNormalWsDdx.xyz, vNormalWsDdx.xyz), dot(vNormalWsDdy.xyz, vNormalWsDdy.xyz))), 0.333);
+    	roughness = min(roughness, 1.0 - flGeometricRoughnessFactor); // Ensure we don't double-count roughness if normal map encodes geometric roughness
+    	
 		if (_SpecularType == 1) // GGX
 		{
 		    // GGX with roughtness to 0 would mean no specular at all, using max(roughness, 0.002) here to match HDrenderloop roughtness remapping.
@@ -328,6 +328,8 @@ float4 frag(VertexOutput i) : COLOR
 
 		UnityGI gi =  GetUnityGI(_LightColor0.rgb, lightDirection, 
 		normalDirection, viewDirection, reflDir, attenuation, roughness, i.posWorld.xyz);
+	
+		float3 directContribution = 0;
 
 		if (_LightingCalculationType == 1) // Standard
 		{
@@ -349,6 +351,8 @@ float4 frag(VertexOutput i) : COLOR
 	}
 	else
 	{
+		float3 directContribution = 0;
+
 		directContribution = diffuseColor * 
 		lerp(indirectLighting, directLighting, lightContribution);
 
