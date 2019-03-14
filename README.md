@@ -1,6 +1,7 @@
 # Silent's Cel Shading Shaders
 Shaders for Unity for cel shading, based off CubedParadox's Flat Lit Toon, feating a number of handy features.
 # [Want to know how to use this shader? Here's the manual!](https://gitlab.com/s-ilent/SCSS/wikis/Manual/Setting-Overview)
+# [Can't find the Download link? Click here!](https://gitlab.com/s-ilent/SCSS/-/archive/master/SCSS-master.zip)
 Features include:
 * Customisable lighting through light ramp textures
 * Specular and smoothness functionality similar to Unity's Standard shader
