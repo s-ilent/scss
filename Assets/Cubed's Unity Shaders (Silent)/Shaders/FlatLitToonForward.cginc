@@ -1,4 +1,4 @@
-float4 frag(VertexOutput i) : COLOR
+float4 frag(VertexOutput i, uint facing : SV_IsFrontFace) : SV_Target
 {
 	float4 objPos = mul(unity_ObjectToWorld, float4(0,0,0,1));
 	i.normalDir = normalize(i.normalDir);
@@ -12,6 +12,10 @@ float4 frag(VertexOutput i) : COLOR
 
 	float3 normalDirection = normalize(mul(_BumpMap_var.rgb, tangentTransform)); // Perturbed normals
 
+	facing = inMirror()? !facing : facing;
+	normalDirection.z *= facing? 1 : -1; // Correct backfaces
+	if (i.is_outline && !facing) discard;
+
 	float4 _MainTex_var = tex2D(_MainTex,TRANSFORM_TEX(mainUVs, _MainTex));
 
 	float3 emissive = 0; // Not used in add pass.
@@ -21,7 +25,7 @@ float4 frag(VertexOutput i) : COLOR
 	#endif
 
 	float3 diffuseColor = _MainTex_var.rgb * LerpWhiteTo(_Color.rgb, _ColorMask_var.g);
-	float alpha = _MainTex_var.a;
+	float alpha = _MainTex_var.a * _Color.a;
 
 	diffuseColor *= i.col.rgb; // Could vertex alpha be used, ever? Let's hope not.
 
@@ -40,7 +44,8 @@ float4 frag(VertexOutput i) : COLOR
 	// like Miku's sleeves, while others get broken by it. 
 	#if defined(_ALPHATEST_ON)
 		if (_AlphaSharp  == 0) {
-			float mask = saturate(interleaved_gradient(i.pos.xy + _SinTime.x%4)); 
+			float mask = (T(intensity(i.pos.xy + _SinTime.x%4)));
+			alpha *= alpha;
 			alpha = saturate(alpha + alpha * mask); 
 			clip (alpha - _Cutoff);
 		}
@@ -175,7 +180,7 @@ float4 frag(VertexOutput i) : COLOR
 	if (_ShadowMaskType == 1) 
 	{
 		// Alpha will boost shadow range. Raising _Shadow reduces its influence.
-		remappedLight = (1 - _Shadow) * shadowMask.w + _Shadow;
+		remappedLight *= (1 - _Shadow) * shadowMask.w + _Shadow;
 	}
 
 	// Shadow appearance setting
@@ -218,7 +223,7 @@ float4 frag(VertexOutput i) : COLOR
 		diffuseColor.xyz += 
 			// Additive's power is defined by ambient lighting. 
 			#if defined(UNITY_PASS_FORWARDBASE)
-			(ShadeSH9_mod(half4(0.0,  0.0, 0.0, 1.0))+_LightColor0)
+			(ShadeSH9(half4(0.0,  0.0, 0.0, 1.0))+_LightColor0)
 			#endif
 			#if defined(UNITY_PASS_FORWARDADD)
 			(_LightColor0)
@@ -237,12 +242,12 @@ float4 frag(VertexOutput i) : COLOR
 		if (_LightingCalculationType == 0)
 		{
 			directLighting   = (GetSHLength() + _LightColor0.rgb);
-			indirectLighting = (ShadeSH9_mod(half4(0.0, 0.0, 0.0, 1.0))); 
+			indirectLighting = (ShadeSH9(half4(0.0, 0.0, 0.0, 1.0))); 
 		}
 		if (_LightingCalculationType == 2)
 		{
-			directLighting   = (ShadeSH9_mod(half4(0.0,  1.0, 0.0, 1.0)) + _LightColor0.rgb);
-			indirectLighting = (ShadeSH9_mod(half4(0.0, -1.0, 0.0, 1.0))); 
+			directLighting   = (ShadeSH9(half4(0.0,  1.0, 0.0, 1.0)) + _LightColor0.rgb);
+			indirectLighting = (ShadeSH9(half4(0.0, -1.0, 0.0, 1.0))); 
 		}
 	#endif
 
@@ -282,7 +287,7 @@ float4 frag(VertexOutput i) : COLOR
     	
 		if (_SpecularType == 1) // GGX
 		{
-		    // GGX with roughtness to 0 would mean no specular at all, using max(roughness, 0.002) here to match HDrenderloop roughtness remapping.
+		    // "GGX with roughness to 0 would mean no specular at all, using max(roughness, 0.002) here to match HDrenderloop roughness remapping."
 		    roughness = max(roughness, 0.002);
 			V = SmithJointGGXVisibilityTerm (NdotL, NdotV, roughness);
 		    D = GGXTerm (nh, roughness);

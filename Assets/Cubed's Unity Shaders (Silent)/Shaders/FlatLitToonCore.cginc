@@ -79,11 +79,9 @@ struct v2g
 	float3 tangentDir : TEXCOORD4;
 	float3 bitangentDir : TEXCOORD5;
 	float4 pos : CLIP_POS;
-	UNITY_SHADOW_COORDS(6)
-	UNITY_FOG_COORDS(7)
-
-	//Since ifdef won't work in geom we must always pass this
-	half4 vertexLight : TEXCOORD8;
+	half4 vertexLight : TEXCOORD6;
+	UNITY_SHADOW_COORDS(7)
+	UNITY_FOG_COORDS(8)
 };
 
 // Shade4PointLights from UnityCG.cginc but only returns their attenuation.
@@ -183,13 +181,11 @@ struct VertexOutput
 	float3 normalDir : TEXCOORD3;
 	float3 tangentDir : TEXCOORD4;
 	float3 bitangentDir : TEXCOORD5;
+	half4 vertexLight : TEXCOORD6;
 	float4 col : COLOR;
 	bool is_outline : IS_OUTLINE;
-	UNITY_SHADOW_COORDS(6)
-	UNITY_FOG_COORDS(7)
-
-	//Since ifdef won't work in frag we must always pass this
-	half4 vertexLight : TEXCOORD8;
+	UNITY_SHADOW_COORDS(7)
+	UNITY_FOG_COORDS(8)
 };
 
 [maxvertexcount(6)]
@@ -268,35 +264,6 @@ void geom(triangle v2g IN[3], inout TriangleStream<VertexOutput> tristream)
 	tristream.RestartStrip();
 }
 
- 
-// Hack suggested by ACIIL to reduce overbrightening
-// Reducing the intensity of the incoming indirect light by two
-// In testing this, I noticed the intensity of directly lit objects 
-// isn't the same as with standard shader comparing by eye.
-// Disabled for review.
-inline float3 ShadeSH9_mod(half4 normalDirection)
-{
-	return ShadeSH9(normalDirection);
-}
-
-float grayscaleSH9(float3 normalDirection)
-{
-	return dot(ShadeSH9_mod(half4(normalDirection, 1.0)), grayscale_vector);
-}
-
-float3 UnitySpecularSimplified(float3 specColor, float smoothness, float2 rlPow4, float3 nDotL )
-{
-	float LUT_RANGE = 16.0; // must match range in NHxRoughness() function in GeneratedTextures.cpp
-	// Lookup texture to save instructions
-	float specular = tex2D(unity_NHxRoughness, float2(rlPow4.x, SmoothnessToPerceptualRoughness(smoothness))).UNITY_ATTEN_CHANNEL * LUT_RANGE; 
-		// Todo: IFDEF SpecularByLightramp?
-		// But it causes issues where, for example, a lightramp with a wide middle section will cause extra
-		// brightness in areas where specularity is weak, but present. 
-		// specular = tex2D(_Ramp, saturate(float2( specular, 0.0)) );
-	return specular * specColor; // Return specular colour multiplied by specular  
-	//return specular * specColor * nDotL; // Return specular colour multiplied by specular  
-}
-
 float interleaved_gradient(float2 uv : SV_POSITION) : SV_Target
 {
 	float3 magic = float3(0.06711056, 0.00583715, 52.9829189);
@@ -313,6 +280,32 @@ float max3 (float3 x)
 {
 	return max(x.x, max(x.y, x.z));
 }
+
+// "R2" dithering
+
+// Triangle Wave
+float T(float z) {
+    return z >= 0.5 ? 2.-2.*z : 2.*z;
+}
+
+// R dither mask
+float intensity(float2 pixel) {
+    const float a1 = 0.75487766624669276;
+    const float a2 = 0.569840290998;
+    return frac(a1 * float(pixel.x) + a2 * float(pixel.y));
+}
+
+float rDither(float gray, float2 pos) {
+	#define steps 8
+	// pos is screen pixel position in 0-res range
+    // Calculated noised gray value
+    float noised = (2./steps) * T(intensity(float2(pos.xy))) + gray - (1./steps);
+    // Clamp to the number of gray levels we want
+    return floor(steps * noised) / (steps-1.);
+    #undef steps
+}
+
+// "R2" dithering -- end
 
 // BRDF based on implementation in Filament.
 // https://github.com/google/filament
@@ -466,6 +459,11 @@ float2 sharpSample( float2 texResolution , float2 p )
 	p = i + smoothstep(0, max(0.0001, fwidth(p)), frac(p));
 	p = (p - 0.5)/texResolution;
 	return p;
+}
+
+bool inMirror()
+{
+	return unity_CameraProjection[2][0] != 0.f || unity_CameraProjection[2][1] != 0.f;
 }
 
 #endif

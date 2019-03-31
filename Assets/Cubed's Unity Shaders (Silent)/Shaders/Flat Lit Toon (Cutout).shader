@@ -93,7 +93,7 @@ Shader "CubedParadox/Flat Lit Toon (Silent) (Cutout)"
 
 			CGPROGRAM
 
-			#pragma multi_compile UNITY_PASS_FORWARDBASE
+			#define UNITY_PASS_FORWARDBASE
 
 			#pragma shader_feature NO_OUTLINE TINTED_OUTLINE COLORED_OUTLINE
 			#pragma shader_feature _ _ALPHATEST_ON _ALPHABLEND_ON _ALPHAPREMULTIPLY_ON
@@ -123,7 +123,7 @@ Shader "CubedParadox/Flat Lit Toon (Silent) (Cutout)"
 
 			CGPROGRAM
 
-			#pragma multi_compile UNITY_PASS_FORWARDADD
+			#define UNITY_PASS_FORWARDADD
 			
 			#pragma shader_feature NO_OUTLINE TINTED_OUTLINE COLORED_OUTLINE
 			#pragma shader_feature _ _ALPHATEST_ON _ALPHABLEND_ON _ALPHAPREMULTIPLY_ON
@@ -149,9 +149,15 @@ Shader "CubedParadox/Flat Lit Toon (Silent) (Cutout)"
 			Name "SHADOW_CASTER"
 			Tags{ "LightMode" = "ShadowCaster" }
 
-			ZWrite On ZTest LEqual
+            Blend[_SrcBlend][_DstBlend]
+            BlendOp[_BlendOp]
+            ZTest[_ZTest]
+            ZWrite[_ZWrite]
+            Cull[_CullMode]
+            ColorMask[_ColorWriteMask]
 
 			CGPROGRAM
+			#define UNITY_PASS_SHADOWCASTER
 			#pragma shader_feature _ _ALPHATEST_ON _ALPHABLEND_ON _ALPHAPREMULTIPLY_ON
 			#include "FlatLitToonShadows.cginc"
 			
