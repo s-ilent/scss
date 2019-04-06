@@ -139,11 +139,14 @@ float4 frag(VertexOutput i, uint facing : SV_IsFrontFace) : SV_Target
 		}
 	}
 
+	float directAttenuation = saturate(min(attenuation,dot(normalDirection, lightDirection)+.5));
+	directAttenuation = sampleRampWithOptions(directAttenuation);
+
 	// If we're in the delta pass, then ambient light is always black, because the delta
 	// pass is added on top. 
 	#if defined(UNITY_PASS_FORWARDBASE)
 	    // Derive the dominant light direction from light probes and directional light.
-		lightDirection = Unity_SafeNormalize(unity_SHAr.xyz + unity_SHAg.xyz + unity_SHAb.xyz +
+		float3 remappedLightDirection = Unity_SafeNormalize(unity_SHAr.xyz + unity_SHAg.xyz + unity_SHAb.xyz +
 			lightDirection * _LightColor0.w * attenuation * _LightSkew.xyz);
 
 	    #if !defined(DIRECTIONAL) && !defined(POINT) && !defined(SPOT)
@@ -155,10 +158,11 @@ float4 frag(VertexOutput i, uint facing : SV_IsFrontFace) : SV_Target
 		// if an area has probe lighting that should override them. 
 		// To counter this, attenuation is remapped so that, in areas where probe light exceeds
 		// direct light, attenuation is nullified. 
-		float ambientLightProbeIntensity = (unity_SHAr.w + unity_SHAg.w + unity_SHAb.w) * 1.0/3.0;
-		float remappedAttenuation = saturate(saturate(ambientLightProbeIntensity/_LightColor0.w)+attenuation);
+		float ambientLightProbeIntensity = (unity_SHAr.w + unity_SHAg.w + unity_SHAb.w);
+		float remappedAttenuation = 
+		saturate(saturate(ambientLightProbeIntensity/_LightColor0.w)+directAttenuation);
 		float remappedLight = (DisneyDiffuse(NdotV, NdotL, LdotH, perceptualRoughness) * 
-			dot(normalDirection, lightDirection) * 0.5 + 0.5) * remappedAttenuation;
+			dot(normalDirection, remappedLightDirection) * 0.5 + 0.5) * remappedAttenuation;
 	#endif
 
 	#if defined(UNITY_PASS_FORWARDADD)
@@ -170,18 +174,24 @@ float4 frag(VertexOutput i, uint facing : SV_IsFrontFace) : SV_Target
 
 	// Shadow mask handling
 	float4 shadowMask = tex2D(_ShadowMask,TRANSFORM_TEX(i.uv0, _MainTex));
+	float3 occlusion = 1.0;
+	float lightening = 0.0;
+
 	if (_ShadowMaskType == 0) 
 	{
 		// RGB will boost shadow range. Raising _Shadow reduces its influence.
 		// Alpha will boost light range. Raising _Shadow reduces its influence.
-		remappedLight *= (1 - _Shadow) * shadowMask.rgb + _Shadow;
-		remappedLight = min(1.0, (remappedLight * (1+1-shadowMask.w)));
+		occlusion = shadowMask.rgb;
+		lightening = shadowMask.w;
 	}
 	if (_ShadowMaskType == 1) 
 	{
 		// Alpha will boost shadow range. Raising _Shadow reduces its influence.
-		remappedLight *= (1 - _Shadow) * shadowMask.w + _Shadow;
+		occlusion = shadowMask.w;
 	}
+
+	remappedLight *= (1 - _Shadow) * occlusion + _Shadow;
+	remappedLight = min(1.0, (remappedLight * (1+1-lightening)));
 
 	// Shadow appearance setting
 	remappedLight = saturate(_ShadowLift + remappedLight * (1-_ShadowLift));
@@ -241,13 +251,13 @@ float4 frag(VertexOutput i, uint facing : SV_IsFrontFace) : SV_Target
 	#if defined(UNITY_PASS_FORWARDBASE)
 		if (_LightingCalculationType == 0)
 		{
-			directLighting   = (GetSHLength() + _LightColor0.rgb);
-			indirectLighting = (ShadeSH9(half4(0.0, 0.0, 0.0, 1.0))); 
+			directLighting   = GetSHLength() + _LightColor0.rgb*directAttenuation;
+			indirectLighting = ShadeSH9(half4(0.0, 0.0, 0.0, 1.0)); 
 		}
 		if (_LightingCalculationType == 2)
 		{
-			directLighting   = (ShadeSH9(half4(0.0,  1.0, 0.0, 1.0)) + _LightColor0.rgb);
-			indirectLighting = (ShadeSH9(half4(0.0, -1.0, 0.0, 1.0))); 
+			directLighting   = ShadeSH9(half4(0.0,  1.0, 0.0, 1.0)) + _LightColor0.rgb*directAttenuation;
+			indirectLighting = ShadeSH9(half4(0.0, -1.0, 0.0, 1.0)); 
 		}
 	#endif
 
@@ -260,8 +270,8 @@ float4 frag(VertexOutput i, uint facing : SV_IsFrontFace) : SV_Target
 	#if defined(UNITY_PASS_FORWARDBASE)
 		// Vertex lighting based on Shade4PointLights
 		float4 vertexAttenuation = i.vertexLight;
-		vertexAttenuation = min(vertexAttenuation, (vertexAttenuation * shadowMask)+_Shadow);
-		vertexAttenuation = max(vertexAttenuation, (vertexAttenuation * (1+1-shadowMask.w)));
+		vertexAttenuation *= (1 - _Shadow) * occlusion.g + _Shadow;
+		vertexAttenuation = max(vertexAttenuation, (vertexAttenuation * (1+1-lightening)));
 		vertexAttenuation = saturate(vertexAttenuation);
 
 	    vertexContribution += unity_LightColor[0] * sampleRampWithOptions(vertexAttenuation.x) * vertexAttenuation.x;
