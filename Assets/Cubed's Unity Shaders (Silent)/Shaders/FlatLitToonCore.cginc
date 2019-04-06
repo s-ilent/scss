@@ -65,7 +65,6 @@ uniform float _PixelSampleMode;
 
 static const float3 grayscale_vector = 1.0/3.0; 
 // When operating in non-perceptual space, treat greyscale as an equal distribution.
-// Previously float3(0, 0.3823529, 0.01845836);
 
 struct v2g
 {
@@ -110,6 +109,7 @@ float4 Shade4PointLightsAtten (
     // correct NdotL
     float4 corr = rsqrt(lengthSq);
     ndotl = max (float4(0,0,0,0), ndotl * corr);
+    ndotl = ndotl * 0.5 + 0.5; // Match with Forward for light ramp sampling
     // attenuation
     float4 atten = 1.0 / (1.0 + lengthSq * lightAttenSq);
     float4 diff = ndotl * atten;
@@ -132,15 +132,13 @@ inline half4 VertexLightContribution(float3 posWorld, half3 normalWorld)
 				unity_4LightPosX0, unity_4LightPosY0, unity_4LightPosZ0,
 				unity_4LightAtten0, posWorld, normalWorld);
 		#endif
-		// (Shouldn't SH already be handled in the main shader?)
-		//vertexLight = ShadeSHPerVertex(normalWorld, vertexLight);
 	#endif
 
 	return vertexLight;
 }
 
 v2g vert(appdata_full v) {
-	v2g o;
+	v2g o = (v2g)0;
 	o.uv0 = v.texcoord;
 	o.uv1 = v.texcoord1;
 	o.normal = v.normal;
@@ -191,7 +189,7 @@ struct VertexOutput
 [maxvertexcount(6)]
 void geom(triangle v2g IN[3], inout TriangleStream<VertexOutput> tristream)
 {
-	VertexOutput o;
+	VertexOutput o = (VertexOutput)0;
 	#if !NO_OUTLINE
 	for (int i = 2; i >= 0; i--)
 	{
@@ -211,7 +209,6 @@ void geom(triangle v2g IN[3], inout TriangleStream<VertexOutput> tristream)
 		_outline_width_var *= min(distance(o.posWorld,_WorldSpaceCameraPos)*4, 1); 
 
 		o.pos = UnityObjectToClipPos(IN[i].vertex + normalize(IN[i].normal) * _outline_width_var);
-		//o.pos = UnityObjectToClipPos(IN[i].vertex + normalize(IN[i].normal) * (_outline_width * .01));
 
 		// Pass-through the shadow coordinates if this pass has shadows.
 		#if defined (SHADOWS_SCREEN) || ( defined (SHADOWS_DEPTH) && defined (SPOT) ) || defined (SHADOWS_CUBE) || (defined (UNITY_LIGHT_PROBE_PROXY_VOLUME) && UNITY_VERSION<600)
