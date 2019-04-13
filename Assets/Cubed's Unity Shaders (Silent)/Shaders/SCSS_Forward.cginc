@@ -83,7 +83,9 @@ float4 frag(VertexOutput i, uint facing : SV_IsFrontFace) : SV_Target
 	}
 
 	// Customisable fresnel for a user-defined glow
+	#if defined(UNITY_PASS_FORWARDBASE)
 	emissive += _CustomFresnelColor.xyz * (pow(rlPow4.y, rcp(_CustomFresnelColor.w+0.0001)));
+	#endif
 
 	float3 lightmap = float4(1.0,1.0,1.0,1.0);
 	#if defined(LIGHTMAP_ON)
@@ -140,39 +142,38 @@ float4 frag(VertexOutput i, uint facing : SV_IsFrontFace) : SV_Target
 	}
 
 	// Shadowmask/AO handling
-	float4 shadowMask = tex2D(_ShadowMask,TRANSFORM_TEX(i.uv0, _MainTex));
-	float4 occlusion = 1.0;
-	float4 lightening = 0.0;
+	float4 _ShadowMask_var = tex2D(_ShadowMask,TRANSFORM_TEX(i.uv0, _MainTex));
 
 	if (_ShadowMaskType == 0) 
 	{
 		// RGB will boost shadow range. Raising _Shadow reduces its influence.
 		// Alpha will boost light range. Raising _Shadow reduces its influence.
-		occlusion = float4(shadowMask.rgb, dot(shadowMask.rgb, 1.0/3.0));
-		lightening = shadowMask.w;
+		_ShadowMask_var = float4(_ShadowMaskColor.rgb*(1-_ShadowMask_var.w), _ShadowMaskColor.a*_ShadowMask_var.r);
 	}
 	if (_ShadowMaskType == 1) 
 	{
-		occlusion = shadowMask.w;
-		lightening = float4(shadowMask.rgb, dot(shadowMask.rgb, 1.0/3.0));
+		_ShadowMask_var = _ShadowMask_var * _ShadowMaskColor;
 	}
 
-	lightening = saturate(lightening + _IndirectLightingBoost);
+	_ShadowMask_var.rgb = saturate(_ShadowMask_var.rgb + _IndirectLightingBoost);
 
 	// Lighting handling
 
 	#if defined(UNITY_PASS_FORWARDBASE)
+	// Clamp attenuation by N.L to avoid weird light wrapping effect
+	// Though it looks a bit like SSS it also looks really odd in some lighting conditions.
 	float directAttenuation = saturate(min(attenuation,dot(normalDirection, lightDirection)+.5));
 	#endif
 
 	#if defined(UNITY_PASS_FORWARDBASE)
 	    // Derive the dominant light direction from light probes and directional light.
 		float ambientProbeIntensity = (unity_SHAr.w + unity_SHAg.w + unity_SHAb.w);
-		float3 remappedLightDirection = Unity_SafeNormalize((unity_SHAr.xyz + unity_SHAg.xyz + unity_SHAb.xyz) +
-			lightDirection * _LightColor0.w * directAttenuation * _LightSkew.xyz);
+		float3 remappedLightDirection = 
+			Unity_SafeNormalize((unity_SHAr.xyz + unity_SHAg.xyz + unity_SHAb.xyz) * _LightSkew.xyz
+			+ lightDirection * _LightColor0.w * directAttenuation);
 
 	    #if !defined(DIRECTIONAL) && !defined(POINT) && !defined(SPOT)
-	    	attenuation = 1;
+	    	attenuation, directAttenuation = 1;
 		#endif
 
 		// Attenuation contains the shadow buffer. This makes shadows 0, which means a strict 
@@ -182,10 +183,9 @@ float4 frag(VertexOutput i, uint facing : SV_IsFrontFace) : SV_Target
 		// direct light, attenuation is nullified. 
 		float remappedAttenuation = saturate((ambientProbeIntensity / _LightColor0.w)+directAttenuation);
 		float remappedLight = dot(remappedLightDirection,normalDirection);
-		remappedLight *= DisneyDiffuse(NdotV, remappedLight, LdotH, perceptualRoughness);
+		remappedLight *= DisneyDiffuse(NdotV, saturate(remappedLight), LdotH, perceptualRoughness);
 		remappedLight *= 0.5 + 0.5;
 		remappedLight *= remappedAttenuation;
-
 	#endif
 
 	#if defined(UNITY_PASS_FORWARDADD)
@@ -196,14 +196,15 @@ float4 frag(VertexOutput i, uint facing : SV_IsFrontFace) : SV_Target
 	#endif
 
 	// Shadow appearance setting
-	remappedLight *= (1 - _Shadow) * occlusion + _Shadow;
+	remappedLight *= (1 - _Shadow) * _ShadowMask_var.w + _Shadow;
 	remappedLight = saturate(_ShadowLift + remappedLight * (1-_ShadowLift));
 
 	// Apply lightramp to lighting
 	float3 lightContribution = sampleRampWithOptions(remappedLight);
 	//lightContribution = lerp(lightening, 1.0, remappedLight);
-	lightContribution += (1 - lightContribution) * lightening
+	lightContribution += (1 - lightContribution) * _ShadowMask_var.rgb
 	 * min(1.0, (1+ambientProbeIntensity)/_LightColor0.w);
+	lightContribution = saturate(lightContribution);
 
 	remappedAttenuation = max(remappedAttenuation, dot(lightContribution, 1.0/3.0));
 
@@ -223,7 +224,7 @@ float4 frag(VertexOutput i, uint facing : SV_IsFrontFace) : SV_Target
 		diffuseColor.xyz += 
 			// Additive's power is defined by ambient lighting. 
 			#if defined(UNITY_PASS_FORWARDBASE)
-			(ShadeSH9(half4(0.0,  0.0, 0.0, 1.0))+_LightColor0)
+			(BetterSH9(half4(0.0,  0.0, 0.0, 1.0))+_LightColor0)
 			#endif
 			#if defined(UNITY_PASS_FORWARDADD)
 			(_LightColor0)
@@ -242,12 +243,12 @@ float4 frag(VertexOutput i, uint facing : SV_IsFrontFace) : SV_Target
 		if (_LightingCalculationType == 0)
 		{
 			directLighting   = GetSHLength() + _LightColor0.rgb * remappedAttenuation;
-			indirectLighting = ShadeSH9(half4(0.0, 0.0, 0.0, 1.0)); 
+			indirectLighting = BetterSH9(half4(0.0, 0.0, 0.0, 1.0)); 
 		}
 		if (_LightingCalculationType == 2)
 		{
-			directLighting   = ShadeSH9(half4(0.0,  1.0, 0.0, 1.0)) + _LightColor0.rgb * remappedAttenuation;
-			indirectLighting = ShadeSH9(half4(0.0, -1.0, 0.0, 1.0)); 
+			directLighting   = BetterSH9(half4(0.0,  1.0, 0.0, 1.0)) + _LightColor0.rgb * remappedAttenuation;
+			indirectLighting = BetterSH9(half4(0.0, -1.0, 0.0, 1.0)); 
 		}
 	#endif
 
@@ -260,8 +261,8 @@ float4 frag(VertexOutput i, uint facing : SV_IsFrontFace) : SV_Target
 	#if defined(UNITY_PASS_FORWARDBASE)
 		// Vertex lighting based on Shade4PointLights
 		float4 vertexAttenuation = i.vertexLight;
-		vertexAttenuation *= (1 - _Shadow) * occlusion.w + _Shadow;
-		vertexAttenuation = max(vertexAttenuation, (vertexAttenuation * (1+1-lightening.w)));
+		vertexAttenuation *= (1 - _Shadow) * _ShadowMask_var.w + _Shadow;
+		vertexAttenuation = max(vertexAttenuation, (vertexAttenuation * (1+1-Luminance(_ShadowMask_var.rgb))));
 		vertexAttenuation = saturate(vertexAttenuation);
 
 	    vertexContribution += unity_LightColor[0] * sampleRampWithOptions(vertexAttenuation.x) * vertexAttenuation.x;
@@ -285,20 +286,21 @@ float4 frag(VertexOutput i, uint facing : SV_IsFrontFace) : SV_Target
     	float flGeometricRoughnessFactor = pow(saturate(max(dot(vNormalWsDdx.xyz, vNormalWsDdx.xyz), dot(vNormalWsDdy.xyz, vNormalWsDdy.xyz))), 0.333);
     	roughness = min(roughness, 1.0 - flGeometricRoughnessFactor); // Ensure we don't double-count roughness if normal map encodes geometric roughness
     	
-		if (_SpecularType == 1) // GGX
+    	[call] switch(_SpecularType)
 		{
+		case 1: // GGX
 		    // "GGX with roughness to 0 would mean no specular at all, using max(roughness, 0.002) here to match HDrenderloop roughness remapping."
 		    roughness = max(roughness, 0.002);
 			V = SmithJointGGXVisibilityTerm (NdotL, NdotV, roughness);
 		    D = GGXTerm (nh, roughness);
-		} 
-		else if (_SpecularType == 2) // Charlie
-		{
+		    break;
+
+		case 2: // Charlie (cloth)
 			V = V_Neubelt (NdotV, NdotL);
 		    D = D_Charlie (roughness, nh);
-		}
-		else if (_SpecularType == 3) // GGX Anisotropic
-		{
+		    break;
+
+		case 3: // GGX anisotropic
 		    float anisotropy = _Anisotropy;
 		    float at = max(roughness * (1.0 + anisotropy), 0.001);
 		    float ab = max(roughness * (1.0 - anisotropy), 0.001);
@@ -316,7 +318,9 @@ float4 frag(VertexOutput i, uint facing : SV_IsFrontFace) : SV_Target
 			#endif
 
 		    D = D_GGX_Anisotropic(nh, halfDir, i.tangentDir, i.bitangentDir, at, ab);
+		    break;
 		}
+
 	    half specularTerm = V*D * UNITY_PI; // Torrance-Sparrow model, Fresnel is applied later
 	    specularTerm = max(0, specularTerm * NdotL);
 
@@ -333,17 +337,22 @@ float4 frag(VertexOutput i, uint facing : SV_IsFrontFace) : SV_Target
 
 		UnityGI gi =  GetUnityGI(_LightColor0.rgb, lightDirection, 
 		normalDirection, viewDirection, reflDir, attenuation, roughness, i.posWorld.xyz);
-	
+
 		float3 directContribution = 0;
 
 		if (_LightingCalculationType == 1) // Standard
 		{
-			indirectLighting = gi.indirect.diffuse.rgb;
-			directContribution = diffuseColor * (gi.indirect.diffuse.rgb + _LightColor0.rgb * lightContribution);
+			// Match indirect lighting to tonemap
+			indirectLighting = gi.indirect.diffuse.rgb 
+			+ BetterSH9(half4(0.0, 0.0, 0.0, 1.0)) * lightContribution;
+			_LightColor0.rgb = max(0.0000001, _LightColor0.rgb);
+			directContribution = diffuseColor * 
+			(indirectLighting + lightContribution * _LightColor0.rgb);
 		} 
 		else 
 		{
-			directContribution = diffuseColor * lerp(indirectLighting, directLighting, lightContribution);
+			directContribution = diffuseColor * 
+			lerp(indirectLighting, directLighting, lightContribution);
 		}
 
 		directContribution += vertexContribution*diffuseColor;
