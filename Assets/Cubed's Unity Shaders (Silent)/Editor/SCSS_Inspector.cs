@@ -5,7 +5,7 @@ using System;
 // Parts of this file are based on https://github.com/Microsoft/MixedRealityToolkit-Unity/
 // licensed under the MIT license. 
 
-namespace FlatLitToonS.Unity
+namespace SilentCelShading.Unity
 {
     public class Inspector : ShaderGUI
     {
@@ -187,11 +187,7 @@ namespace FlatLitToonS.Unity
         protected MaterialProperty mainTexture;
         protected MaterialProperty color;
         protected MaterialProperty colorMask;
-        protected MaterialProperty lightingRamp;
-        protected MaterialProperty shadowMaskPow;
-        protected MaterialProperty shadowLift; 
-        protected MaterialProperty shadowMask;
-        protected MaterialProperty indirectLightBoost;
+
         protected MaterialProperty outlineMode;
         protected MaterialProperty outlineWidth;
         protected MaterialProperty outlineColor;
@@ -240,6 +236,12 @@ namespace FlatLitToonS.Unity
         protected MaterialProperty scatteringDistortion;
         protected MaterialProperty scatteringAmbient;
 
+        protected MaterialProperty lightingRamp;
+        protected MaterialProperty shadowLift; 
+        protected MaterialProperty shadowMask;
+        protected MaterialProperty shadowMaskPow;
+        protected MaterialProperty shadowMaskColor;
+        protected MaterialProperty indirectLightBoost;
         protected MaterialProperty lightRampType;
         protected MaterialProperty lightingCalculationType;
         protected MaterialProperty shadowMaskType;
@@ -268,7 +270,7 @@ namespace FlatLitToonS.Unity
                 shadowLift = FindProperty("_ShadowLift", props);
                 indirectLightBoost = FindProperty("_IndirectLightingBoost", props);
                 shadowMask = FindProperty("_ShadowMask", props);
-                //fresnel = FindProperty("_Fresnel", props);
+                shadowMaskColor = FindProperty("_ShadowMaskColor", props);
                 outlineMode = FindProperty("_OutlineMode", props);
                 outlineWidth = FindProperty("_outline_width", props);
                 outlineColor = FindProperty("_outline_color", props);
@@ -472,7 +474,7 @@ namespace FlatLitToonS.Unity
                 materialEditor.ShaderProperty(indirectLightBoost, Styles.indirectLightBoost);
                 EditorGUILayout.Space();
 
-                materialEditor.TexturePropertySingleLine(Styles.shadowMask, shadowMask);
+                materialEditor.TexturePropertySingleLine(Styles.shadowMask, shadowMask, shadowMaskColor);
 
                 var sMode = (ShadowMaskType)shadowMaskType.floatValue;
                 EditorGUI.BeginChangeCheck();

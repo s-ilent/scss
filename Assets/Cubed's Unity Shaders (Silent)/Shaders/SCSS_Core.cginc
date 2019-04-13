@@ -6,6 +6,8 @@
 #include "AutoLight.cginc"
 #include "Lighting.cginc"
 
+#include "SCSS_UnityGI.cginc"
+
 uniform sampler2D _MainTex; uniform float4 _MainTex_ST; uniform float4 _MainTex_TexelSize;
 uniform sampler2D _ColorMask; uniform float4 _ColorMask_ST;
 uniform sampler2D _BumpMap; uniform float4 _BumpMap_ST;
@@ -18,6 +20,7 @@ uniform sampler2D _ShadowMask; uniform float4 _ShadowMask_ST;
 uniform float4 _Color;
 uniform float _DetailNormalMapScale;
 uniform float _Shadow;
+uniform float4 _ShadowMaskColor;
 uniform float _ShadowLift;
 uniform float _IndirectLightingBoost;
 uniform float _Cutoff;
@@ -348,33 +351,6 @@ float V_SmithGGXCorrelated_Anisotropic(float at, float ab, float ToV, float BoV,
     float lambdaL = NoV * length(float3(at * ToL, ab * BoL, NoL));
     float v = 0.5 / (lambdaV + lambdaL + 1e-7f);
     return v;
-}
-
-UnityGI GetUnityGI(float3 lightColor, float3 lightDirection, float3 normalDirection,float3 viewDirection, 
-float3 viewReflectDirection, float attenuation, float roughness, float3 worldPos){
-    UnityLight light;
-    light.color = lightColor;
-    light.dir = lightDirection;
-    light.ndotl = max(0.0h,dot( normalDirection, lightDirection));
-    UnityGIInput d;
-    d.light = light;
-    d.worldPos = worldPos;
-    d.worldViewDir = viewDirection;
-    d.atten = attenuation;
-    d.ambient = 0.0h;
-    d.boxMax[0] = unity_SpecCube0_BoxMax;
-    d.boxMin[0] = unity_SpecCube0_BoxMin;
-    d.probePosition[0] = unity_SpecCube0_ProbePosition;
-    d.probeHDR[0] = unity_SpecCube0_HDR;
-    d.boxMax[1] = unity_SpecCube1_BoxMax;
-    d.boxMin[1] = unity_SpecCube1_BoxMin;
-    d.probePosition[1] = unity_SpecCube1_ProbePosition;
-    d.probeHDR[1] = unity_SpecCube1_HDR;
-    Unity_GlossyEnvironmentData ugls_en_data;
-    ugls_en_data.roughness = roughness;
-    ugls_en_data.reflUVW = viewReflectDirection;
-    UnityGI gi = UnityGlobalIllumination(d, 1.0h, normalDirection, ugls_en_data );
-    return gi;
 }
 
 // Get the maximum SH contribution
