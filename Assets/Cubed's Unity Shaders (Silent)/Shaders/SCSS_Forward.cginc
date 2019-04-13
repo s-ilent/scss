@@ -27,7 +27,7 @@ float4 frag(VertexOutput i, uint facing : SV_IsFrontFace) : SV_Target
 	float3 diffuseColor = _MainTex_var.rgb * LerpWhiteTo(_Color.rgb, _ColorMask_var.g);
 	float alpha = _MainTex_var.a * _Color.a;
 
-	diffuseColor *= i.col.rgb; // Could vertex alpha be used, ever? Let's hope not.
+	diffuseColor *= i.color.rgb; // Could vertex alpha be used, ever? Let's hope not.
 
 	float3 lightDirection = Unity_SafeNormalize(_WorldSpaceLightPos0.xyz); 
 	UNITY_LIGHT_ATTENUATION(attenuation, i, i.posWorld.xyz);
@@ -36,7 +36,7 @@ float4 frag(VertexOutput i, uint facing : SV_IsFrontFace) : SV_Target
 	#if COLORED_OUTLINE
 	if(i.is_outline) 
 	{
-		diffuseColor = i.col.rgb; 
+		diffuseColor = i.color.rgb; 
 	}
 	#endif
 
@@ -55,7 +55,7 @@ float4 frag(VertexOutput i, uint facing : SV_IsFrontFace) : SV_Target
 		}
 	#endif
 
-	#if !defined(_ALPHATEST_ON) || !defined(_ALPHABLEND_ON) || !defined(_ALPHAPREMULTIPLY_ON)
+	#if !(defined(_ALPHATEST_ON) || defined(_ALPHABLEND_ON) || defined(_ALPHAPREMULTIPLY_ON))
 		alpha = 1.0;
 	#endif
 
@@ -80,6 +80,7 @@ float4 frag(VertexOutput i, uint facing : SV_IsFrontFace) : SV_Target
 		float2 fresStep_var = lerp(float2(0.0, 1.0), fresStep, 1-_FresnelStrength);
 		fresnelEffect = smoothstep(fresStep_var.x, fresStep_var.y, fresnelEffect);
 		fresnelEffect *= _FresnelTint.rgb * _FresnelTint.a;
+		fresnelEffect *= 1-i.is_outline;
 	}
 
 	// Customisable fresnel for a user-defined glow
@@ -273,6 +274,7 @@ float4 frag(VertexOutput i, uint facing : SV_IsFrontFace) : SV_Target
 
 	// Physically based specular
 	float3 finalColor = 0;
+	UnityGI gi = (UnityGI)0;
 	if ((_SpecularType != 0 ) || (_LightingCalculationType == 1))
 	{
 		half nh = saturate(dot(normalDirection, halfDir));
