@@ -82,6 +82,7 @@ struct v2g
 	float3 bitangentDir : TEXCOORD5;
 	float4 pos : CLIP_POS;
 	half4 vertexLight : TEXCOORD6;
+	fixed4 color : COLOR;
 	UNITY_SHADOW_COORDS(7)
 	UNITY_FOG_COORDS(8)
 };
@@ -154,6 +155,7 @@ v2g vert(appdata_full v) {
 	float3 lightColor = _LightColor0.rgb;
 	o.vertex = v.vertex;
 	o.pos = UnityObjectToClipPos(v.vertex);
+	o.color = v.color;
 
 	#if (UNITY_VERSION<600)
 	TRANSFER_SHADOW(o);
@@ -183,7 +185,7 @@ struct VertexOutput
 	float3 tangentDir : TEXCOORD4;
 	float3 bitangentDir : TEXCOORD5;
 	half4 vertexLight : TEXCOORD6;
-	float4 col : COLOR;
+	float4 color : COLOR;
 	bool is_outline : IS_OUTLINE;
 	UNITY_SHADOW_COORDS(7)
 	UNITY_FOG_COORDS(8)
@@ -199,7 +201,6 @@ void geom(triangle v2g IN[3], inout TriangleStream<VertexOutput> tristream)
 		o.pos = UnityObjectToClipPos(IN[i].vertex + normalize(IN[i].normal) * (_outline_width * .01));
 		o.uv0 = IN[i].uv0;
 		o.uv1 = IN[i].uv1;
-		o.col = fixed4( _outline_color.r, _outline_color.g, _outline_color.b, 1);
 		o.posWorld = mul(unity_ObjectToWorld, IN[i].vertex);
 		o.normalDir = UnityObjectToWorldNormal(IN[i].normal);
 		o.tangentDir = IN[i].tangentDir;
@@ -225,6 +226,7 @@ void geom(triangle v2g IN[3], inout TriangleStream<VertexOutput> tristream)
 
 		// Pass-through the vertex light information.
 		o.vertexLight = IN[i].vertexLight;
+		o.color = fixed4( _outline_color.r, _outline_color.g, _outline_color.b, 1)*IN[i].color;
 
 		tristream.Append(o);
 	}
@@ -237,7 +239,6 @@ void geom(triangle v2g IN[3], inout TriangleStream<VertexOutput> tristream)
 		o.pos = UnityObjectToClipPos(IN[ii].vertex);
 		o.uv0 = IN[ii].uv0;
 		o.uv1 = IN[ii].uv1;
-		o.col = fixed4(1., 1., 1., 0.);
 		o.posWorld = mul(unity_ObjectToWorld, IN[ii].vertex);
 		o.normalDir = UnityObjectToWorldNormal(IN[ii].normal);
 		o.tangentDir = IN[ii].tangentDir;
@@ -257,6 +258,7 @@ void geom(triangle v2g IN[3], inout TriangleStream<VertexOutput> tristream)
 
 		// Pass-through the vertex light information.
 		o.vertexLight = IN[ii].vertexLight;
+		o.color = IN[ii].color;
 
 		tristream.Append(o);
 	}
