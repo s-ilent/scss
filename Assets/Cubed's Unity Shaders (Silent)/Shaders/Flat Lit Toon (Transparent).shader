@@ -10,6 +10,7 @@ Shader "CubedParadox/Flat Lit Toon (Silent) (Transparent)"
 		_IndirectLightingBoost("Indirect Lighting Boost", Range(0, 1)) = 0.0
 		[Enum(ShadowMaskType)] _ShadowMaskType ("Shadow Mask Type", Float) = 0.0
 		_ShadowMask("ShadowMask", 2D) = "white" {}
+		_ShadowMaskColor("ShadowMask Color", Color) = (1,1,1,1)
 		_Ramp ("Lighting Ramp", 2D) = "white" {}
 		_outline_width("outline_width", Float) = 0.2
 		_outline_color("outline_color", Color) = (0.5,0.5,0.5,1)
@@ -98,8 +99,18 @@ Shader "CubedParadox/Flat Lit Toon (Silent) (Transparent)"
 			#pragma shader_feature _ _ALPHATEST_ON _ALPHABLEND_ON _ALPHAPREMULTIPLY_ON
 			#pragma shader_feature _DETAIL
 			#pragma shader_feature _SPECULAR_DETAIL
+
+			// When sampling lighting, Unity assume L2 probe sampling will be done
+			// in the vertex shader. However, this would be problematic due to 
+			// the requirements of cel shading. 
+			#define UNITY_SAMPLE_FULL_SH_PER_PIXEL 1
 			
-			#include "FlatLitToonCore.cginc"
+			#if defined(UNITY_SHOULD_SAMPLE_SH)
+    		#undef UNITY_SHOULD_SAMPLE_SH
+    		#define SAMPLE_SH_NONLINEAR
+			#endif
+			
+			#include "SCSS_Core.cginc"
 
 			#pragma vertex vert
 			#pragma geometry geom
@@ -108,7 +119,7 @@ Shader "CubedParadox/Flat Lit Toon (Silent) (Transparent)"
 			#pragma multi_compile_fwdbase nolightmap 
 			#pragma multi_compile_fog
 
-			#include "FlatLitToonForward.cginc"
+			#include "SCSS_Forward.cginc"
 
 			ENDCG
 		}
@@ -129,7 +140,7 @@ Shader "CubedParadox/Flat Lit Toon (Silent) (Transparent)"
 			#pragma shader_feature _DETAIL
 			#pragma shader_feature _SPECULAR_DETAIL
 
-			#include "FlatLitToonCore.cginc"
+			#include "SCSS_Core.cginc"
 
 			#pragma vertex vert
 			#pragma geometry geom
@@ -138,7 +149,7 @@ Shader "CubedParadox/Flat Lit Toon (Silent) (Transparent)"
 			#pragma multi_compile_fwdadd nolightmap 
 			#pragma multi_compile_fog
 
-			#include "FlatLitToonForward.cginc"
+			#include "SCSS_Forward.cginc"
 
 			ENDCG
 		}
@@ -158,7 +169,7 @@ Shader "CubedParadox/Flat Lit Toon (Silent) (Transparent)"
 			CGPROGRAM
 			#define UNITY_PASS_SHADOWCASTER
 			#pragma shader_feature _ _ALPHATEST_ON _ALPHABLEND_ON _ALPHAPREMULTIPLY_ON
-			#include "FlatLitToonShadows.cginc"
+			#include "SCSS_Shadows.cginc"
 			
 			#pragma multi_compile_shadowcaster
 
@@ -168,5 +179,5 @@ Shader "CubedParadox/Flat Lit Toon (Silent) (Transparent)"
 		}
 	}
 	FallBack "Diffuse"
-	CustomEditor "FlatLitToonS.Unity.Inspector"
+	CustomEditor "SilentCelShading.Unity.Inspector"
 }
