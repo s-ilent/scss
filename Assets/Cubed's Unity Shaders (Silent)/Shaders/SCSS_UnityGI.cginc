@@ -78,6 +78,7 @@ half3 BetterSH9 (half4 normal) {
 	indirect.r = shEvaluateDiffuseL1Geomerics_local(L0.r, unity_SHAr.xyz, normal);
 	indirect.g = shEvaluateDiffuseL1Geomerics_local(L0.g, unity_SHAg.xyz, normal);
 	indirect.b = shEvaluateDiffuseL1Geomerics_local(L0.b, unity_SHAb.xyz, normal);
+	indirect = max(0, indirect);
 	return indirect;
 
 }

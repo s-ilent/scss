@@ -195,17 +195,17 @@ float4 frag(VertexOutput i, uint facing : SV_IsFrontFace) : SV_Target
 		float remappedLight = dot(normalize(_WorldSpaceLightPos0.xyz - i.posWorld.xyz),normalDirection)
 			* DisneyDiffuse(NdotV, NdotL, LdotH, perceptualRoughness);
 	#endif
+	remappedLight = saturate(remappedLight);
 
 	// Shadow appearance setting
 	remappedLight *= (1 - _Shadow) * _ShadowMask_var.w + _Shadow;
-	remappedLight = saturate(_ShadowLift + remappedLight * (1-_ShadowLift));
+	remappedLight = _ShadowLift + remappedLight * (1-_ShadowLift);
 
 	// Apply lightramp to lighting
 	float3 lightContribution = sampleRampWithOptions(remappedLight);
 	//lightContribution = lerp(lightening, 1.0, remappedLight);
 	lightContribution += (1 - lightContribution) * _ShadowMask_var.rgb
-	 * min(1.0, (1+ambientProbeIntensity)/_LightColor0.w);
-	lightContribution = saturate(lightContribution);
+	 * saturate((1+ambientProbeIntensity)/_LightColor0.w);
 
 	remappedAttenuation = max(remappedAttenuation, dot(lightContribution, 1.0/3.0));
 
@@ -346,7 +346,10 @@ float4 frag(VertexOutput i, uint facing : SV_IsFrontFace) : SV_Target
 		{
 			// Match indirect lighting to tonemap
 			indirectLighting = gi.indirect.diffuse.rgb 
-			+ BetterSH9(half4(0.0, 0.0, 0.0, 1.0)) * lightContribution;
+			#if defined(UNITY_PASS_FORWARDBASE)
+			+ BetterSH9(half4(0.0, 0.0, 0.0, 1.0)) * lightContribution
+			#endif
+			;
 			_LightColor0.rgb = max(0.0000001, _LightColor0.rgb);
 			directContribution = diffuseColor * 
 			(indirectLighting + lightContribution * _LightColor0.rgb);
