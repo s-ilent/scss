@@ -93,6 +93,22 @@ float4 frag(VertexOutput i, uint facing : SV_IsFrontFace) : SV_Target
 		lightmap = DecodeLightmap(UNITY_SAMPLE_TEX2D(unity_Lightmap, i.uv1 * unity_LightmapST.xy + unity_LightmapST.zw));
 	#endif
 
+	// Shadowmask/AO handling
+	float4 _ShadowMask_var = tex2D(_ShadowMask,TRANSFORM_TEX(i.uv0, _MainTex));
+
+	if (_ShadowMaskType == 0) 
+	{
+		// RGB will boost shadow range. Raising _Shadow reduces its influence.
+		// Alpha will boost light range. Raising _Shadow reduces its influence.
+		_ShadowMask_var = float4(_ShadowMaskColor.rgb*(1-_ShadowMask_var.w), _ShadowMaskColor.a*_ShadowMask_var.r);
+	}
+	if (_ShadowMaskType == 1) 
+	{
+		_ShadowMask_var = _ShadowMask_var * _ShadowMaskColor;
+	}
+
+	_ShadowMask_var.rgb = saturate(_ShadowMask_var.rgb + _IndirectLightingBoost);
+
 	float perceptualRoughness = 1; float3 specColor = 0; half grazingTerm = 0; 
 
 	// Specular, high quality (but with probably decent performance)
@@ -140,23 +156,12 @@ float4 frag(VertexOutput i, uint facing : SV_IsFrontFace) : SV_Target
 			// But it looks nice, so I've left it in. Maybe it'll be an option later.
 			//diffuseColor.xyz += specColor.xyz * (1 - _Smoothness_var) * 0.5;
 		}
-	}
 
-	// Shadowmask/AO handling
-	float4 _ShadowMask_var = tex2D(_ShadowMask,TRANSFORM_TEX(i.uv0, _MainTex));
-
-	if (_ShadowMaskType == 0) 
+	if (_UseEnergyConservation == 1)
 	{
-		// RGB will boost shadow range. Raising _Shadow reduces its influence.
-		// Alpha will boost light range. Raising _Shadow reduces its influence.
-		_ShadowMask_var = float4(_ShadowMaskColor.rgb*(1-_ShadowMask_var.w), _ShadowMaskColor.a*_ShadowMask_var.r);
+		_ShadowMask_var.xyz = _ShadowMask_var.xyz * (oneMinusReflectivity); 
 	}
-	if (_ShadowMaskType == 1) 
-	{
-		_ShadowMask_var = _ShadowMask_var * _ShadowMaskColor;
 	}
-
-	_ShadowMask_var.rgb = saturate(_ShadowMask_var.rgb + _IndirectLightingBoost);
 
 	// Lighting handling
 
@@ -278,7 +283,7 @@ float4 frag(VertexOutput i, uint facing : SV_IsFrontFace) : SV_Target
 	if ((_SpecularType != 0 ) || (_LightingCalculationType == 1))
 	{
 		half nh = saturate(dot(normalDirection, halfDir));
-	    half V = 0; half D = 0;
+	    half V = 0; half D = 0; float3 shiftedTangent = 0;
 	    //float roughness = PerceptualRoughnessToRoughness(perceptualRoughness);
 	    float roughness = (perceptualRoughness);
 
@@ -288,11 +293,13 @@ float4 frag(VertexOutput i, uint facing : SV_IsFrontFace) : SV_Target
     	float flGeometricRoughnessFactor = pow(saturate(max(dot(vNormalWsDdx.xyz, vNormalWsDdx.xyz), dot(vNormalWsDdy.xyz, vNormalWsDdy.xyz))), 0.333);
     	roughness = min(roughness, 1.0 - flGeometricRoughnessFactor); // Ensure we don't double-count roughness if normal map encodes geometric roughness
     	
+		// "GGX with roughness to 0 would mean no specular at all, using max(roughness, 0.002) here to match HDrenderloop roughness remapping."
+		// This also fixes issues with the other specular types.
+		roughness = max(roughness, 0.002);
+
     	[call] switch(_SpecularType)
 		{
 		case 1: // GGX
-		    // "GGX with roughness to 0 would mean no specular at all, using max(roughness, 0.002) here to match HDrenderloop roughness remapping."
-		    roughness = max(roughness, 0.002);
 			V = SmithJointGGXVisibilityTerm (NdotL, NdotV, roughness);
 		    D = GGXTerm (nh, roughness);
 		    break;
@@ -318,8 +325,22 @@ float4 frag(VertexOutput i, uint facing : SV_IsFrontFace) : SV_Target
 			#else
 			V = SmithJointGGXVisibilityTerm (NdotL, NdotV, roughness);
 			#endif
+			// Temporary
+			shiftedTangent = ShiftTangent(i.tangentDir, normalDirection, roughness);
+		    D = D_GGX_Anisotropic(nh, halfDir, shiftedTangent, i.bitangentDir, at, ab);
+		    break;
 
-		    D = D_GGX_Anisotropic(nh, halfDir, i.tangentDir, i.bitangentDir, at, ab);
+		case 4: // Strand
+			V = SmithJointGGXVisibilityTerm (NdotL, NdotV, roughness);
+			// Temporary
+			shiftedTangent = ShiftTangent(i.tangentDir, normalDirection, roughness);
+		    // exponent, strength
+			D = StrandSpecular(shiftedTangent, 
+				viewDirection, lightDirection, halfDir, 
+				_Anisotropy*100, 1.0 );
+			D += StrandSpecular(shiftedTangent, 
+				viewDirection, lightDirection, halfDir, 
+				_Anisotropy*10, 0.05 );
 		    break;
 		}
 

@@ -147,9 +147,10 @@ v2g vert(appdata_full v) {
 	o.uv1 = v.texcoord1;
 	o.normal = v.normal;
 	o.tangent = v.tangent;
-	o.normalDir = normalize(UnityObjectToWorldNormal(v.normal));
-	o.tangentDir = normalize(mul(unity_ObjectToWorld, float4(v.tangent.xyz, 0.0)).xyz);
-	o.bitangentDir = normalize(cross(o.normalDir, o.tangentDir) * v.tangent.w);
+	o.normalDir = UnityObjectToWorldNormal(v.normal);
+	float3 tangentMul = normalize(mul(unity_ObjectToWorld, v.tangent.xyz));
+	o.tangentDir = float4(tangentMul, v.tangent.w);
+	o.bitangentDir = cross(o.normalDir, o.tangentDir);
 	float4 objPos = mul(unity_ObjectToWorld, float4(0, 0, 0, 1));
 	o.posWorld = mul(unity_ObjectToWorld, v.vertex);
 	float3 lightColor = _LightColor0.rgb;
@@ -166,9 +167,6 @@ v2g vert(appdata_full v) {
 	UNITY_TRANSFER_FOG(o, o.pos);
 #if VERTEXLIGHT_ON
 	o.vertexLight = VertexLightContribution(o.posWorld, o.normalDir);
-	// As suggested by netri.
-	// https://github.com/cubedparadox/Cubeds-Unity-Shaders/pull/40
-	//o.vertexLight = VertexLightContribution(o.posWorld, UnityObjectToWorldNormal(normalize(v.vertex)));
 #else
 	o.vertexLight = 0;
 #endif
@@ -353,6 +351,22 @@ float V_SmithGGXCorrelated_Anisotropic(float at, float ab, float ToV, float BoV,
     float lambdaL = NoV * length(float3(at * ToL, ab * BoL, NoL));
     float v = 0.5 / (lambdaV + lambdaL + 1e-7f);
     return v;
+}
+
+// From "From mobile to high-end PC: Achieving high quality anime style rendering on Unity"
+float3 ShiftTangent (float3 T, float3 N, float shift) 
+{
+	float3 shiftedT = T + shift * N;
+	return normalize(shiftedT);
+}
+
+float StrandSpecular(float3 T, float3 V, float3 L, float3 H, float exponent, float strength)
+{
+	//float3 H = normalize(L+V);
+	float dotTH = dot(T, H);
+	float sinTH = sqrt(1.0-dotTH*dotTH);
+	float dirAtten = smoothstep(-1.0, 0.0, dotTH);
+	return dirAtten * pow(sinTH, exponent) * strength;
 }
 
 // Get the maximum SH contribution
