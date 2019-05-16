@@ -18,6 +18,7 @@ float shEvaluateDiffuseL1Geomerics_local(float L0, float3 L1, float3 n)
 	//float q = 0.5f * (1.0f + dot(R1 / lenR1, n));
 	//float q = dot(R1 / lenR1, n) * 0.5 + 0.5;
 	float q = dot(normalize(R1), n) * 0.5 + 0.5;
+	q = saturate(q); // Thanks to ScruffyRuffles for the bug identity.
 
 	// power for q
 	// lerps from 1 (linear) to 3 (cubic) based on directionality
@@ -39,6 +40,7 @@ inline UnityGI UnityGlobalIllumination_SCSS (UnityGIInput data, half occlusion, 
 	    nonLinearSH.r = shEvaluateDiffuseL1Geomerics_local(L0.r, unity_SHAr.xyz, normalWorld);
 	    nonLinearSH.g = shEvaluateDiffuseL1Geomerics_local(L0.g, unity_SHAg.xyz, normalWorld);
 	    nonLinearSH.b = shEvaluateDiffuseL1Geomerics_local(L0.b, unity_SHAb.xyz, normalWorld);
+	    nonLinearSH = max(nonLinearSH, 0);
 	    o_gi.indirect.diffuse += nonLinearSH * occlusion;
     #endif
     o_gi.indirect.specular = UnityGI_IndirectSpecular(data, occlusion, glossIn);
