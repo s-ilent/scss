@@ -13,7 +13,7 @@ Shader "Silent's Cel Shading/Opaque"
 		_ShadowMask("ShadowMask", 2D) = "white" {} 
 		_ShadowMaskColor("ShadowMask Color", Color) = (1,1,1,1)
 		_Ramp ("Lighting Ramp", 2D) = "white" {}
-		_outline_width("outline_width", Float) = 0.2
+		_outline_width("outline_width", Float) = 0.1
 		_outline_color("outline_color", Color) = (0.5,0.5,0.5,1)
 		_outline_tint("outline_tint", Range(0, 1)) = 0.5
 		_EmissionMap("Emission Map", 2D) = "white" {}

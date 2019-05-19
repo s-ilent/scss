@@ -216,7 +216,7 @@ float4 frag(VertexOutput i, uint facing : SV_IsFrontFace) : SV_Target
 	    float3 vNormalWsDdx = ddx(i.normalDir.xyz);
 	    float3 vNormalWsDdy = ddy(i.normalDir.xyz);
 	    float flGeometricRoughnessFactor = pow(saturate(max(dot(vNormalWsDdx.xyz, vNormalWsDdx.xyz), dot(vNormalWsDdy.xyz, vNormalWsDdy.xyz))), 0.333);
-	    c.smoothness = max(c.smoothness, flGeometricRoughnessFactor); // Ensure we don't double-count roughness if normal map encodes geometric roughness
+	    c.smoothness = min(c.smoothness, 1-flGeometricRoughnessFactor); // Ensure we don't double-count roughness if normal map encodes geometric roughness
 	    	
 	}
 
