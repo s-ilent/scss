@@ -190,7 +190,7 @@ void getMatcapEffect(inout SCSS_Input c, SCSS_Light l, float3 viewDir, float2 te
 	
 	float3 AdditiveMatcap = tex2D(_AdditiveMatcap, matcapUV);
 	float3 MultiplyMatcap = tex2D(_MultiplyMatcap, matcapUV);
-	float4 _MatcapMask_var = tex2D(_MatcapMask, texcoords.xy);
+	float4 _MatcapMask_var = MatcapMask(texcoords.xy);
 	c.albedo.xyz = lerp(c.albedo.xyz, c.albedo.xyz*MultiplyMatcap, _MultiplyMatcapStrength * _MatcapMask_var.w);
 	c.albedo.xyz += 
 		// Additive's power is defined by ambient lighting. 
@@ -220,38 +220,6 @@ float3 getSubsurfaceScatteringLight (SCSS_Light l, float3 normalDirection, float
 half3 calcDiffuse(float3 tonemap, float occlusion, half3 normal, half perceptualRoughness, half attenuation, 
 	half smoothness, SCSS_LightParam d, SCSS_Light l)
 {
-	float3 directLighting = 0.0;
-	float3 indirectLighting = 0.0;
-
-#if defined(UNITY_PASS_FORWARDBASE)
-	if (_LightingCalculationType == 0)
-	{
-		directLighting   = GetSHLength();
-		indirectLighting = BetterSH9(half4(0.0, 0.0, 0.0, 1.0)); 
-	}
-	if (_LightingCalculationType == 1) // Standard
-	{
-		directLighting = 
-		indirectLighting = BetterSH9(half4(normal, 1.0));
-	} 
-	if (_LightingCalculationType == 2)
-	{
-		directLighting   = BetterSH9(half4(0.0,  1.0, 0.0, 1.0));
-		indirectLighting = BetterSH9(half4(0.0, -1.0, 0.0, 1.0)); 
-	}
-
-	indirectLighting *= 1+tonemap;
-#endif
-
-#if defined(UNITY_PASS_FORWARDADD)
-	directLighting = 
-	indirectLighting = l.color;
-
-	indirectLighting *= tonemap;
-#endif
-
-	// Not used in add pass.
-	float ambientProbeIntensity = (unity_SHAr.w + unity_SHAg.w + unity_SHAb.w);
 	float remappedLight = d.NdotL * attenuation
 		* DisneyDiffuse(d.NdotV, d.NdotL, d.LdotH, perceptualRoughness);
 	remappedLight *= 0.5 + 0.5;
@@ -259,9 +227,44 @@ half3 calcDiffuse(float3 tonemap, float occlusion, half3 normal, half perceptual
 	remappedLight *= (1 - _Shadow) * occlusion + _Shadow;
 	remappedLight = _ShadowLift + remappedLight * (1-_ShadowLift);
 
-	float3 lightContribution = sampleRampWithOptions(remappedLight) * l.color;
+	float3 lightContribution = sampleRampWithOptions(remappedLight);
+
+	float3 directLighting = 0.0;
+	float3 indirectLighting = 0.0;
+
+#if defined(UNITY_PASS_FORWARDADD)
+	directLighting = 
+	indirectLighting = l.color;
+
+	indirectLighting *= tonemap;
+
+	lightContribution = lerp(indirectLighting, directLighting, lightContribution);
+#endif
 
 #if defined(UNITY_PASS_FORWARDBASE)
+	lightContribution *= l.color;
+
+	if (_LightingCalculationType == 0) // Arktoon
+	{
+		directLighting   = GetSHLength();
+		indirectLighting = BetterSH9(half4(0.0, 0.0, 0.0, 1.0)); 
+	}
+	if (_LightingCalculationType == 1) // Standard
+	{
+		directLighting = 
+		indirectLighting = BetterSH9(half4(normal, 1.0))
+						 + SHEvalLinearL2(half4(normal, 1.0));
+	} 
+	if (_LightingCalculationType == 2) // Cubed
+	{
+		directLighting   = BetterSH9(half4(0.0,  1.0, 0.0, 1.0));
+		indirectLighting = BetterSH9(half4(0.0, -1.0, 0.0, 1.0)); 
+	}
+
+	indirectLighting *= 1+tonemap;
+
+	float ambientProbeIntensity = (unity_SHAr.w + unity_SHAg.w + unity_SHAb.w);
+
 	lightContribution += (1 - lightContribution) * tonemap
 	 * saturate((ambientProbeIntensity)/(l.intensity+1));
 
@@ -269,10 +272,6 @@ half3 calcDiffuse(float3 tonemap, float occlusion, half3 normal, half perceptual
 	float ambientLight = dot(normal, ambientLightDirection);
 	ambientLight *= 0.5 + 0.5;
 	lightContribution += lerp(indirectLighting, directLighting, sampleRampWithOptions(ambientLight));
-#endif
-
-#if defined(UNITY_PASS_FORWARDADD)
-	lightContribution = lerp(indirectLighting, directLighting, lightContribution);
 #endif
 
 	return lightContribution;	
@@ -401,7 +400,7 @@ float3 SCSS_ApplyLighting(SCSS_Input c, SCSS_LightParam d, VertexOutput i, float
 		finalColor *= 1+sharpFresnelLight(d);
 	}
 
-	if (_SpecularType != 0 )
+	if (_SpecularType != 0 && i.is_outline == 0)
 	{
     	finalColor += calcSpecular(c.specColor, c.smoothness, c.normal, c.oneMinusReflectivity, perceptualRoughness, 
     		viewDir, attenuation, d, l, i);
@@ -411,9 +410,9 @@ float3 SCSS_ApplyLighting(SCSS_Input c, SCSS_LightParam d, VertexOutput i, float
 		finalColor *= attenuation;
 	#endif
 
-	if (_UseSubsurfaceScattering == 1)
+	if (_UseSubsurfaceScattering == 1 && i.is_outline == 0)
 	{
-	float3 thicknessMap_var = pow(tex2D(_ThicknessMap, texcoords.xy), _ThicknessMapPower);
+	float3 thicknessMap_var = pow(Thickness(texcoords.xy), _ThicknessMapPower);
 	finalColor += c.albedo * getSubsurfaceScatteringLight(l, c.normal, viewDir,
 		attenuation, thicknessMap_var, c.tonemap);
 	};

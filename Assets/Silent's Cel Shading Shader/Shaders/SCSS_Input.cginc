@@ -5,27 +5,35 @@
 #include "AutoLight.cginc"
 #include "Lighting.cginc"
 
+UNITY_DECLARE_TEX2D(_MainTex); uniform half4 _MainTex_ST; uniform half4 _MainTex_TexelSize;
+UNITY_DECLARE_TEX2D_NOSAMPLER(_DetailAlbedoMap); uniform half4 _DetailAlbedoMap_ST; uniform half4 _DetailAlbedoMap_TexelSize;
+UNITY_DECLARE_TEX2D_NOSAMPLER(_ColorMask); uniform half4 _ColorMask_ST;
+UNITY_DECLARE_TEX2D_NOSAMPLER(_BumpMap); uniform half4 _BumpMap_ST;
+UNITY_DECLARE_TEX2D_NOSAMPLER(_DetailNormalMap); uniform half4 _DetailNormalMap_ST;
+UNITY_DECLARE_TEX2D_NOSAMPLER(_EmissionMap); uniform half4 _EmissionMap_ST;
+UNITY_DECLARE_TEX2D_NOSAMPLER(_SpecGlossMap); uniform half4 _SpecGlossMap_ST;
+UNITY_DECLARE_TEX2D_NOSAMPLER(_ShadowMask); uniform half4 _ShadowMask_ST;
+UNITY_DECLARE_TEX2D_NOSAMPLER(_MatcapMask); uniform half4 _MatcapMask_ST; 
+UNITY_DECLARE_TEX2D_NOSAMPLER(_SpecularDetailMask); uniform half4 _SpecularDetailMask_ST;
+UNITY_DECLARE_TEX2D_NOSAMPLER(_ThicknessMap); uniform half4 _ThicknessMap_ST;
+
+uniform sampler2D _Ramp; uniform half4 _Ramp_ST;
+uniform sampler2D _AdditiveMatcap; uniform half4 _AdditiveMatcap_ST; 
+uniform sampler2D _MultiplyMatcap; uniform half4 _MultiplyMatcap_ST; 
+
 uniform float4 _Color;
-uniform sampler2D _MainTex; uniform float4 _MainTex_ST; uniform float4 _MainTex_TexelSize;
-uniform sampler2D _DetailAlbedoMap; uniform float4 _DetailAlbedoMap_ST; uniform float4 _DetailAlbedoMap_TexelSize;
-uniform sampler2D _ColorMask; uniform float4 _ColorMask_ST;
 uniform float _Cutoff;
 uniform float _AlphaSharp;
 uniform float _UVSec;
 
 uniform float _DetailNormalMapScale;
-uniform sampler2D _BumpMap; uniform float4 _BumpMap_ST;
-uniform sampler2D _DetailNormalMap; uniform float4 _DetailNormalMap_ST;
 
 uniform float _LightRampType;
-uniform sampler2D _Ramp; uniform float4 _Ramp_ST;
 
 uniform float4 _EmissionColor;
-uniform sampler2D _EmissionMap; uniform float4 _EmissionMap_ST;
 
 uniform float _UseMetallic;
 uniform float _SpecularType;
-uniform sampler2D _SpecGlossMap; uniform float4 _SpecGlossMap_ST;
 uniform float _Smoothness;
 uniform float _Anisotropy;
 uniform float _UseEnergyConservation;
@@ -33,7 +41,6 @@ uniform float _UseEnergyConservation;
 uniform float _Shadow;
 uniform float4 _ShadowMaskColor;
 uniform float _ShadowMaskType;
-uniform sampler2D _ShadowMask; uniform float4 _ShadowMask_ST;
 uniform float _ShadowLift;
 uniform float _IndirectLightingBoost;
 
@@ -50,17 +57,12 @@ uniform float4 _outline_color;
 uniform float _LightingCalculationType;
 
 uniform float _UseMatcap;
-uniform sampler2D _AdditiveMatcap; uniform float4 _AdditiveMatcap_ST; 
 uniform float _AdditiveMatcapStrength;
-uniform sampler2D _MultiplyMatcap; uniform float4 _MultiplyMatcap_ST; 
 uniform float _MultiplyMatcapStrength;
-uniform sampler2D _MatcapMask; uniform float4 _MatcapMask_ST; 
 
-uniform sampler2D _SpecularDetailMask; uniform float4 _SpecularDetailMask_ST;
 uniform float _SpecularDetailStrength;
 
 uniform float _UseSubsurfaceScattering;
-uniform sampler2D _ThicknessMap; uniform float4 _ThicknessMap_ST;
 uniform float _ThicknessMapPower;
 uniform float _ThicknessMapInvert;
 uniform float3 _SSSCol;
@@ -141,20 +143,30 @@ float4 TexCoords(VertexOutput v)
 
 half ColorMask(float2 uv)
 {
-    return tex2D (_ColorMask, uv).g;
+    return UNITY_SAMPLE_TEX2D_SAMPLER (_ColorMask, _MainTex, uv).g;
 }
 
 half DetailMask(float2 uv)
 {
-    return tex2D (_ColorMask, uv).a;
+    return UNITY_SAMPLE_TEX2D_SAMPLER (_ColorMask, _MainTex, uv).a;
+}
+
+half4 MatcapMask(float2 uv)
+{
+    return UNITY_SAMPLE_TEX2D_SAMPLER (_MatcapMask, _MainTex, uv);
+}
+
+half3 Thickness(float2 uv)
+{
+    return UNITY_SAMPLE_TEX2D_SAMPLER (_ThicknessMap, _MainTex, uv);
 }
 
 half3 Albedo(float4 texcoords)
 {
-    half3 albedo = tex2D (_MainTex, texcoords.xy).rgb * LerpWhiteTo(_Color.rgb, ColorMask(texcoords.xy));
+    half3 albedo = UNITY_SAMPLE_TEX2D (_MainTex, texcoords.xy).rgb * LerpWhiteTo(_Color.rgb, ColorMask(texcoords.xy));
 #if _DETAIL
     half mask = DetailMask(texcoords.xy);
-    half3 detailAlbedo = tex2D (_DetailAlbedoMap, texcoords.zw).rgb;
+    half3 detailAlbedo = UNITY_SAMPLE_TEX2D_SAMPLER (_DetailAlbedoMap, _MainTex, texcoords.zw).rgb;
     #if _DETAIL_MULX2
         albedo *= LerpWhiteTo (detailAlbedo * unity_ColorSpaceDouble.rgb, mask);
     #elif _DETAIL_MUL
@@ -173,7 +185,7 @@ half Alpha(float2 uv)
 #if defined(_SMOOTHNESS_TEXTURE_ALBEDO_CHANNEL_A)
     return _Color.a;
 #else
-    return tex2D(_MainTex, uv).a * _Color.a;
+    return UNITY_SAMPLE_TEX2D(_MainTex, uv).a * _Color.a;
 #endif
 }
 
@@ -183,23 +195,23 @@ half4 SpecularGloss(float4 texcoords)
     half4 sg;
 #if 1 //def _SPECGLOSSMAP
     #ifdef _SMOOTHNESS_TEXTURE_ALBEDO_CHANNEL_A
-        sg.rgb = tex2D(_SpecGlossMap, texcoords.xy).rgb;
-        sg.a = tex2D(_MainTex, texcoords.xy).a;
+        sg.rgb = UNITY_SAMPLE_TEX2D_SAMPLER(_SpecGlossMap, _MainTex, texcoords.xy).rgb;
+        sg.a = UNITY_SAMPLE_TEX2D(_MainTex, texcoords.xy).a;
     #else
-        sg = tex2D(_SpecGlossMap, texcoords.xy);
+        sg = UNITY_SAMPLE_TEX2D_SAMPLER(_SpecGlossMap, _MainTex, texcoords.xy);
     #endif
     sg.a *= _Smoothness; // _GlossMapScale is what Standard uses for this
 #else
     sg.rgb = _SpecColor.rgb;
     #ifdef _SMOOTHNESS_TEXTURE_ALBEDO_CHANNEL_A
-        sg.a = tex2D(_MainTex, texcoords.xy).a * _Smoothness; // _GlossMapScale is what Standard uses for this
+        sg.a = UNITY_SAMPLE_TEX2D(_MainTex, texcoords.xy).a * _Smoothness; // _GlossMapScale is what Standard uses for this
     #else
         sg.a = _Smoothness; // _Glossiness is what Standard uses for this
     #endif
 #endif
 
 #if defined(_SPECULAR_DETAIL)
-	float4 sdm = tex2D(_SpecularDetailMask,TRANSFORM_TEX(texcoords.zw, _SpecularDetailMask));
+	float4 sdm = UNITY_SAMPLE_TEX2D_SAMPLER(_SpecularDetailMask,_MainTex,TRANSFORM_TEX(texcoords.zw, _SpecularDetailMask));
 	sg *= saturate(sdm + 1-_SpecularDetailStrength);
 #endif
 
@@ -208,14 +220,14 @@ half4 SpecularGloss(float4 texcoords)
 
 half3 Emission(float2 uv)
 {
-    return tex2D(_EmissionMap, uv).rgb * _EmissionColor.rgb;
+    return UNITY_SAMPLE_TEX2D_SAMPLER(_EmissionMap, _MainTex, uv).rgb * _EmissionColor.rgb;
 }
 
 half3 NormalInTangentSpace(float2 texcoords, half mask)
 {
-	float3 normalTangent = UnpackScaleNormal(tex2D(_BumpMap,TRANSFORM_TEX(texcoords.xy, _MainTex)), 1.0);
+	float3 normalTangent = UnpackScaleNormal(UNITY_SAMPLE_TEX2D_SAMPLER(_BumpMap, _MainTex, TRANSFORM_TEX(texcoords.xy, _MainTex)), 1.0);
 #if _DETAIL 
-    half3 detailNormalTangent = UnpackScaleNormal(tex2D (_DetailNormalMap, TRANSFORM_TEX(texcoords.xy, _DetailNormalMap)), _DetailNormalMapScale);
+    half3 detailNormalTangent = UnpackScaleNormal(UNITY_SAMPLE_TEX2D_SAMPLER (_DetailNormalMap, _MainTex, TRANSFORM_TEX(texcoords.xy, _DetailNormalMap)), _DetailNormalMapScale);
     #if _DETAIL_LERP
         normalTangent = lerp(
             normalTangent,
@@ -234,7 +246,7 @@ half3 NormalInTangentSpace(float2 texcoords, half mask)
 
 half3 Tonemap(float2 uv, inout float occlusion)
 {
-	float4 _ShadowMask_var = tex2D(_ShadowMask, uv.xy);
+	float4 _ShadowMask_var = UNITY_SAMPLE_TEX2D_SAMPLER(_ShadowMask, _MainTex, uv.xy);
 
 	if (_ShadowMaskType == 0) 
 	{
