@@ -1,5 +1,11 @@
 v2g vert(appdata_full v) {
 	v2g o = (v2g)0;
+
+    UNITY_SETUP_INSTANCE_ID(v);
+    UNITY_INITIALIZE_OUTPUT(v2g, o);
+    UNITY_TRANSFER_INSTANCE_ID(v, o);
+    UNITY_INITIALIZE_VERTEX_OUTPUT_STEREO(o);
+
 	o.pos = UnityObjectToClipPos(v.vertex);
 	o.uv0 = v.texcoord;
 	o.uv1 = v.texcoord1;
@@ -11,7 +17,6 @@ v2g vert(appdata_full v) {
 	o.bitangentDir = cross(o.normalDir, o.tangentDir) * sign;
 	float4 objPos = mul(unity_ObjectToWorld, float4(0, 0, 0, 1));
 	o.posWorld = mul(unity_ObjectToWorld, v.vertex);
-	float3 lightColor = _LightColor0.rgb;
 	o.vertex = v.vertex;
 	o.color = v.color;
 
@@ -67,6 +72,8 @@ void geom(triangle v2g IN[3], inout TriangleStream<VertexOutput> tristream)
 		o.vertexLight = IN[i].vertexLight;
 		o.color = fixed4( _outline_color.r, _outline_color.g, _outline_color.b, 1)*IN[i].color;
 
+		UNITY_TRANSFER_INSTANCE_ID(IN[i], o);
+
 		tristream.Append(o);
 	}
 
@@ -99,6 +106,8 @@ void geom(triangle v2g IN[3], inout TriangleStream<VertexOutput> tristream)
 		o.vertexLight = IN[ii].vertexLight;
 		o.color = IN[ii].color;
 
+		UNITY_TRANSFER_INSTANCE_ID(IN[i], o);
+
 		tristream.Append(o);
 	}
 
@@ -107,6 +116,7 @@ void geom(triangle v2g IN[3], inout TriangleStream<VertexOutput> tristream)
 
 float4 frag(VertexOutput i, uint facing : SV_IsFrontFace) : SV_Target
 {
+    UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(i);
 	float3x3 tangentTransform = float3x3(i.tangentDir, i.bitangentDir, i.normalDir);
 
 	float4 texcoords = TexCoords(i);
@@ -115,7 +125,6 @@ float4 frag(VertexOutput i, uint facing : SV_IsFrontFace) : SV_Target
 
     half3 normalTangent = NormalInTangentSpace(i.uv0, DetailMask(texcoords.xy));
     c.normal = normalize(i.tangentDir * normalTangent.x + i.bitangentDir * normalTangent.y + i.normalDir * normalTangent.z); 
-	//c.normal = normalize(mul(NormalInTangentSpace(i.uv0, DetailMask(texcoords.xy)), tangentTransform)); 
 
 	// Backface correction. If a polygon is facing away from the camera, it's lit incorrectly.
 	// This will light it as though it is facing the camera (which it visually is), unless
@@ -201,10 +210,6 @@ float4 frag(VertexOutput i, uint facing : SV_IsFrontFace) : SV_Target
 		if (_UseEnergyConservation == 1)
 		{
 			c.albedo.xyz = c.albedo.xyz * (c.oneMinusReflectivity); 
-			// Unity's boost to diffuse power to accomodate rougher metals.
-			// Note: It looks like 2017 doesn't do this anymore... 
-			// But it looks nice, so I've left it in. Maybe it'll be an option later.
-			//c.albedo.xyz += c.specColor.xyz * (1 - c.smoothness) * 0.5;
 		}
 
 		if (_UseEnergyConservation == 1)
