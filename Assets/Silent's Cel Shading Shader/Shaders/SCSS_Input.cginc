@@ -93,6 +93,9 @@ struct v2g
 	fixed4 color : COLOR;
 	UNITY_SHADOW_COORDS(7)
 	UNITY_FOG_COORDS(8)
+
+    UNITY_VERTEX_INPUT_INSTANCE_ID
+    UNITY_VERTEX_OUTPUT_STEREO
 };
 
 struct VertexOutput
@@ -109,6 +112,9 @@ struct VertexOutput
 	bool is_outline : IS_OUTLINE;
 	UNITY_SHADOW_COORDS(7)
 	UNITY_FOG_COORDS(8)
+
+    UNITY_VERTEX_INPUT_INSTANCE_ID
+    UNITY_VERTEX_OUTPUT_STEREO
 };
 
 struct SCSS_Input 
@@ -248,19 +254,21 @@ half3 Tonemap(float2 uv, inout float occlusion)
 {
 	float4 _ShadowMask_var = UNITY_SAMPLE_TEX2D_SAMPLER(_ShadowMask, _MainTex, uv.xy);
 
+	float3 tonemap;
+
 	if (_ShadowMaskType == 0) 
 	{
 		// RGB will boost shadow range. Raising _Shadow reduces its influence.
 		// Alpha will boost light range. Raising _Shadow reduces its influence.
-		_ShadowMask_var = float4(_ShadowMaskColor.rgb*(1-_ShadowMask_var.w), 
-			_ShadowMaskColor.a*_ShadowMask_var.r);
+		tonemap = _ShadowMaskColor.rgb*saturate(_IndirectLightingBoost+1-_ShadowMask_var.w);
+		occlusion = _ShadowMaskColor.a*_ShadowMask_var.r;
 	}
 	if (_ShadowMaskType == 1) 
 	{
-		_ShadowMask_var = _ShadowMask_var * _ShadowMaskColor;
+		tonemap = saturate(_ShadowMask_var+_IndirectLightingBoost) * _ShadowMaskColor.rgb;
+		occlusion = _ShadowMaskColor.a*_ShadowMask_var.a;
 	}
-	occlusion = _ShadowMask_var.a;
-	return saturate(_ShadowMask_var.rgb + _IndirectLightingBoost);
+	return tonemap;
 }
 
 #endif // SCSS_INPUT_INCLUDED

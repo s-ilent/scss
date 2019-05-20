@@ -180,20 +180,25 @@ float3 sharpFresnelLight(SCSS_LightParam d) {
 	return fresnelEffect * _FresnelTint.rgb * _FresnelTint.a;
 }
 
-void getMatcapEffect(inout SCSS_Input c, SCSS_Light l, float3 viewDir, float2 texcoords)
+struct MatcapOutput 
 {
+	half3 add;
+	half3 multiply;
+};
+
+MatcapOutput getMatcapEffect(float3 normal, SCSS_Light l, float3 viewDir, float2 texcoords)
+{
+	MatcapOutput matcaps = (MatcapOutput) 0;
 	// Based on Masataka SUMI's implementation
-	 half3 worldUp = float3(0, 1, 0);
-	 half3 worldViewUp = normalize(worldUp - viewDir * dot(viewDir, worldUp));
-	 half3 worldViewRight = normalize(cross(viewDir, worldViewUp));
-	 half2 matcapUV = half2(dot(worldViewRight, c.normal), dot(worldViewUp, c.normal)) * 0.5 + 0.5;
+	half3 worldUp = float3(0, 1, 0);
+	half3 worldViewUp = normalize(worldUp - viewDir * dot(viewDir, worldUp));
+	half3 worldViewRight = normalize(cross(viewDir, worldViewUp));
+	half2 matcapUV = half2(dot(worldViewRight, normal), dot(worldViewUp, normal)) * 0.5 + 0.5;
 	
 	float3 AdditiveMatcap = tex2D(_AdditiveMatcap, matcapUV);
 	float3 MultiplyMatcap = tex2D(_MultiplyMatcap, matcapUV);
 	float4 _MatcapMask_var = MatcapMask(texcoords.xy);
-	c.albedo.xyz = lerp(c.albedo.xyz, c.albedo.xyz*MultiplyMatcap, _MultiplyMatcapStrength * _MatcapMask_var.w);
-	c.albedo.xyz += 
-		// Additive's power is defined by ambient lighting. 
+	matcaps.add = 
 		#if defined(UNITY_PASS_FORWARDBASE)
 		(BetterSH9(half4(0.0,  0.0, 0.0, 1.0))+l.color)
 		#endif
@@ -201,7 +206,10 @@ void getMatcapEffect(inout SCSS_Input c, SCSS_Light l, float3 viewDir, float2 te
 		(l.color)
 		#endif
 		*AdditiveMatcap*_AdditiveMatcapStrength*_MatcapMask_var.g;
+	matcaps.multiply = LerpWhiteTo(MultiplyMatcap, _MultiplyMatcapStrength * _MatcapMask_var.w);
+	return matcaps;
 }
+
 
 //SSS method from GDC 2011 conference by Colin Barre-Bresebois & Marc Bouchard and modified by Xiexe
 float3 getSubsurfaceScatteringLight (SCSS_Light l, float3 normalDirection, float3 viewDirection, 
@@ -387,7 +395,9 @@ float3 SCSS_ApplyLighting(SCSS_Input c, SCSS_LightParam d, VertexOutput i, float
 	// Matcap handling
 	if (_UseMatcap == 1) 
 	{
-		getMatcapEffect(c, l, viewDir, texcoords.xy);
+		MatcapOutput matcaps = getMatcapEffect(c.normal, l, viewDir, texcoords.xy);
+		c.albedo *= matcaps.multiply;
+		c.albedo += matcaps.add;
 	}
 
 	float3 finalColor = c.albedo*calcDiffuse(c.tonemap, c.occlusion, c.normal, 
