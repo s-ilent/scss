@@ -47,7 +47,7 @@ float4 Shade4PointLightsAtten (
     ndotl += toLightZ * normal.z;
     // correct NdotL
     float4 corr = rsqrt(lengthSq);
-    ndotl = max (float4(0,0,0,0), ndotl * corr);
+    ndotl = ndotl * corr; //max (float4(0,0,0,0), ndotl * corr);
     ndotl = ndotl * 0.5 + 0.5; // Match with Forward for light ramp sampling
     // attenuation
     float4 atten = 1.0 / (1.0 + lengthSq * lightAttenSq);
@@ -228,6 +228,9 @@ float3 getSubsurfaceScatteringLight (SCSS_Light l, float3 normalDirection, float
 half3 calcDiffuse(float3 tonemap, float occlusion, half3 normal, half perceptualRoughness, half attenuation, 
 	half smoothness, SCSS_LightParam d, SCSS_Light l)
 {
+#if defined(UNITY_PASS_FORWARDADD)
+	attenuation = 1; // Attenuation is applied later for ForwardAdd.
+#endif
 	float remappedLight = d.NdotL * attenuation
 		* DisneyDiffuse(d.NdotV, d.NdotL, d.LdotH, perceptualRoughness);
 	remappedLight *= 0.5 + 0.5;
