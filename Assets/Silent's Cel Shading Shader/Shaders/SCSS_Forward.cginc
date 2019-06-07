@@ -217,12 +217,8 @@ float4 frag(VertexOutput i, uint facing : SV_IsFrontFace) : SV_Target
 			c.tonemap = c.tonemap * (c.oneMinusReflectivity); 
 		}
 
-		// Valve's geometic specular AA (to reduce shimmering edges)
-	    float3 vNormalWsDdx = ddx(i.normalDir.xyz);
-	    float3 vNormalWsDdy = ddy(i.normalDir.xyz);
-	    float flGeometricRoughnessFactor = pow(saturate(max(dot(vNormalWsDdx.xyz, vNormalWsDdx.xyz), dot(vNormalWsDdy.xyz, vNormalWsDdy.xyz))), 0.333);
-	    c.smoothness = min(c.smoothness, 1-flGeometricRoughnessFactor); // Ensure we don't double-count roughness if normal map encodes geometric roughness
-	    	
+		// Geometric Specular AA from HDRP
+	    c.smoothness = GeometricNormalFiltering(c.smoothness, i.normalDir.xyz, 0.25, 0.5);
 	}
 
 	// Lighting handling

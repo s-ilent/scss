@@ -58,7 +58,8 @@ namespace SilentCelShading.Unity
         {
             Arktoon,
             Standard,
-            Cubed
+            Cubed,
+            Directional
         }
 
         public enum ShadowMaskType
@@ -659,6 +660,27 @@ namespace SilentCelShading.Unity
 
             GUILayout.Label(Styles.advancedOptionsTitle, EditorStyles.boldLabel, new GUILayoutOption[0]);
 
+            var lMode = (LightRampType)lightRampType.floatValue;
+            EditorGUI.BeginChangeCheck();
+            
+            lMode = (LightRampType)EditorGUILayout.Popup("Light Ramp Type", (int)lMode, Enum.GetNames(typeof(LightRampType)));
+
+            if (EditorGUI.EndChangeCheck())
+            {
+                materialEditor.RegisterPropertyChangeUndo("Light Ramp Type");
+                lightRampType.floatValue = (float)lMode;
+
+                foreach (var obj in lightRampType.targets)
+                {
+                    SetupMaterialWithLightRampType((Material)obj, (LightRampType)material.GetFloat("_LightRampType"));
+                }
+
+            } 
+
+            EditorGUI.BeginChangeCheck();
+
+            materialEditor.ShaderProperty(pixelSampleMode, Styles.pixelSampleMode);
+
             var aaMode = (AlbedoAlphaMode)albedoAlphaMode.floatValue;
             EditorGUI.BeginChangeCheck();
 
@@ -687,27 +709,6 @@ namespace SilentCelShading.Unity
             {
                 MaterialChanged(material);
             }
-
-            var lMode = (LightRampType)lightRampType.floatValue;
-            EditorGUI.BeginChangeCheck();
-            
-            lMode = (LightRampType)EditorGUILayout.Popup("Light Ramp Type", (int)lMode, Enum.GetNames(typeof(LightRampType)));
-
-            if (EditorGUI.EndChangeCheck())
-            {
-                materialEditor.RegisterPropertyChangeUndo("Light Ramp Type");
-                lightRampType.floatValue = (float)lMode;
-
-                foreach (var obj in lightRampType.targets)
-                {
-                    SetupMaterialWithLightRampType((Material)obj, (LightRampType)material.GetFloat("_LightRampType"));
-                }
-
-            } 
-
-            EditorGUI.BeginChangeCheck();
-
-            materialEditor.ShaderProperty(pixelSampleMode, Styles.pixelSampleMode);
 
             var lcMode = (LightingCalculationType)lightingCalculationType.floatValue;
 
@@ -973,6 +974,9 @@ namespace SilentCelShading.Unity
                     break;
                 case LightingCalculationType.Cubed:
                     material.SetFloat("_LightingCalculationType", 2);
+                    break;
+                case LightingCalculationType.Directional:
+                    material.SetFloat("_LightingCalculationType", 3);
                     break;
                 default:
                 case LightingCalculationType.Arktoon:

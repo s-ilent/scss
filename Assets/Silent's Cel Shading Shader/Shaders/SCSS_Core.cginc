@@ -233,7 +233,7 @@ half3 calcDiffuse(float3 tonemap, float occlusion, half3 normal, half perceptual
 #endif
 	float remappedLight = d.NdotL * attenuation
 		* DisneyDiffuse(d.NdotV, d.NdotL, d.LdotH, perceptualRoughness);
-	remappedLight *= 0.5 + 0.5;
+	remappedLight = remappedLight * 0.5 + 0.5;
 
 	remappedLight *= (1 - _Shadow) * occlusion + _Shadow;
 	remappedLight = _ShadowLift + remappedLight * (1-_ShadowLift);
@@ -271,6 +271,12 @@ half3 calcDiffuse(float3 tonemap, float occlusion, half3 normal, half perceptual
 		directLighting   = BetterSH9(half4(0.0,  1.0, 0.0, 1.0));
 		indirectLighting = BetterSH9(half4(0.0, -1.0, 0.0, 1.0)); 
 	}
+	if (_LightingCalculationType == 3) // True Directional
+	{
+		float4 ambientDir = float4(Unity_SafeNormalize(unity_SHAr.xyz + unity_SHAg.xyz + unity_SHAb.xyz), 1.0);
+		directLighting   = BetterSH9(ambientDir);
+		indirectLighting = BetterSH9(-ambientDir); 
+	}
 
 	indirectLighting *= 1+tonemap;
 
@@ -281,7 +287,7 @@ half3 calcDiffuse(float3 tonemap, float occlusion, half3 normal, half perceptual
 
 	float3 ambientLightDirection = Unity_SafeNormalize((unity_SHAr.xyz + unity_SHAg.xyz + unity_SHAb.xyz) * _LightSkew.xyz);
 	float ambientLight = dot(normal, ambientLightDirection);
-	ambientLight *= 0.5 + 0.5;
+	ambientLight = ambientLight * 0.5 + 0.5;
 	lightContribution += lerp(indirectLighting, directLighting, sampleRampWithOptions(ambientLight));
 #endif
 
