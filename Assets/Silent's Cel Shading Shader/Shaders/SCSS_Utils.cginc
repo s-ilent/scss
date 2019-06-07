@@ -62,4 +62,63 @@ bool inMirror()
 	return unity_CameraProjection[2][0] != 0.f || unity_CameraProjection[2][1] != 0.f;
 }
 
+//-----------------------------------------------------------------------------
+// Helper functions for roughness
+//-----------------------------------------------------------------------------
+
+float RoughnessToPerceptualRoughness(float roughness)
+{
+    return sqrt(roughness);
+}
+
+float RoughnessToPerceptualSmoothness(float roughness)
+{
+    return 1.0 - sqrt(roughness);
+}
+
+float PerceptualSmoothnessToRoughness(float perceptualSmoothness)
+{
+    return (1.0 - perceptualSmoothness) * (1.0 - perceptualSmoothness);
+}
+
+float PerceptualSmoothnessToPerceptualRoughness(float perceptualSmoothness)
+{
+    return (1.0 - perceptualSmoothness);
+}
+
+float PerceptualRoughnessToPerceptualSmoothness(float perceptualRoughness)
+{
+    return (1.0 - perceptualRoughness);
+}
+
+// Return modified perceptualSmoothness based on provided variance (get from GeometricNormalVariance + TextureNormalVariance)
+float NormalFiltering(float perceptualSmoothness, float variance, float threshold)
+{
+    float roughness = PerceptualSmoothnessToRoughness(perceptualSmoothness);
+    // Ref: Geometry into Shading - http://graphics.pixar.com/library/BumpRoughness/paper.pdf - equation (3)
+    float squaredRoughness = saturate(roughness * roughness + min(2.0 * variance, threshold * threshold)); // threshold can be really low, square the value for easier control
+
+    return RoughnessToPerceptualSmoothness(sqrt(squaredRoughness));
+}
+
+// Reference: Error Reduction and Simplification for Shading Anti-Aliasing
+// Specular antialiasing for geometry-induced normal (and NDF) variations: Tokuyoshi / Kaplanyan et al.'s method.
+// This is the deferred approximation, which works reasonably well so we keep it for forward too for now.
+// screenSpaceVariance should be at most 0.5^2 = 0.25, as that corresponds to considering
+// a gaussian pixel reconstruction kernel with a standard deviation of 0.5 of a pixel, thus 2 sigma covering the whole pixel.
+float GeometricNormalVariance(float3 geometricNormalWS, float screenSpaceVariance)
+{
+    float3 deltaU = ddx(geometricNormalWS);
+    float3 deltaV = ddy(geometricNormalWS);
+
+    return screenSpaceVariance * (dot(deltaU, deltaU) + dot(deltaV, deltaV));
+}
+
+// Return modified perceptualSmoothness
+float GeometricNormalFiltering(float perceptualSmoothness, float3 geometricNormalWS, float screenSpaceVariance, float threshold)
+{
+    float variance = GeometricNormalVariance(geometricNormalWS, screenSpaceVariance);
+    return NormalFiltering(perceptualSmoothness, variance, threshold);
+}
+
 #endif // SCSS_UTILS_INCLUDED
