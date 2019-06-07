@@ -1,5 +1,5 @@
 # Silent's Cel Shading Shaders
-Shaders for Unity for cel shading, based off CubedParadox's Flat Lit Toon, feating a number of handy features.
+Shaders for Unity for cel shading, originally based off CubedParadox's Flat Lit Toon, now featuring tons of improvements and handy features.
 # [Want to know how to use this shader? Here's the manual!](https://gitlab.com/s-ilent/SCSS/wikis/Manual/Setting-Overview)
 # [Can't find the Download link? Click here!](https://gitlab.com/s-ilent/SCSS/-/archive/master/SCSS-master.zip)
 Features include:
@@ -13,7 +13,9 @@ Features include:
 * Cleaner outlines that reduce size based on camera proximity
 * Compatible with texture types used in MMD models
 
-<div style="width: 5em">![Too Much Preview](https://cdn.discordapp.com/attachments/445750247147438083/505926650781761561/2018-10-28_12-41-31.jpg)</div>
+<div style="width: 5em">![Too Much Preview](https://cdn.discordapp.com/attachments/429349528156504064/580032645413601291/Unity_2019-05-20_21-04-34.png)</div>
+
+<div style="width: 5em">![Too Much Preview](https://cdn.discordapp.com/attachments/429349528156504064/580024394995204096/Unity_2019-05-20_21-39-24.png)</div>
 
 # [For more details, please check the setting overview!](https://gitlab.com/s-ilent/SCSS/wikis/Manual/Setting-Overview)
 
