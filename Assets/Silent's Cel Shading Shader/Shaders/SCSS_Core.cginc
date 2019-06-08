@@ -46,9 +46,14 @@ float4 Shade4PointLightsAtten (
     ndotl += toLightY * normal.y;
     ndotl += toLightZ * normal.z;
     // correct NdotL
-    float4 corr = rsqrt(lengthSq);
-    ndotl = ndotl * corr; //max (float4(0,0,0,0), ndotl * corr);
-    ndotl = ndotl * 0.5 + 0.5; // Match with Forward for light ramp sampling
+    float4 corr = 0; //rsqrt(lengthSq);
+    corr.x = fastRcpSqrtNR0(lengthSq.x);
+    corr.y = fastRcpSqrtNR0(lengthSq.y);
+    corr.z = fastRcpSqrtNR0(lengthSq.z);
+    corr.w = fastRcpSqrtNR0(lengthSq.x);
+
+    ndotl = corr * ndotl * 0.5 + 0.5; // Match with Forward for light ramp sampling
+    ndotl = max (float4(0,0,0,0), ndotl);
     // attenuation
     float4 atten = 1.0 / (1.0 + lengthSq * lightAttenSq);
     float4 diff = ndotl * atten;
@@ -323,7 +328,10 @@ half3 calcSpecular(float3 specColor, float smoothness, float3 normal, float oneM
 	// This also fixes issues with the other specular types.
 	roughness = max(roughness, 0.002);
 
-    [call] switch(_SpecularType)
+    #ifndef SHADER_TARGET_GLSL
+	[call]
+	#endif
+	switch(_SpecularType)
 	{
 	case 1: // GGX
 		V = SmithJointGGXVisibilityTerm (d.NdotL, d.NdotV, roughness);

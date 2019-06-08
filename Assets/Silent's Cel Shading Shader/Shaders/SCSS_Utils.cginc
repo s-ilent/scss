@@ -121,4 +121,65 @@ float GeometricNormalFiltering(float perceptualSmoothness, float3 geometricNorma
     return NormalFiltering(perceptualSmoothness, variance, threshold);
 }
 
+// RCP SQRT
+// Source: https://github.com/michaldrobot/ShaderFastLibs/blob/master/ShaderFastMathLib.h
+
+#define IEEE_INT_RCP_SQRT_CONST_NR0         0x5f3759df
+#define IEEE_INT_RCP_SQRT_CONST_NR1         0x5F375A86 
+#define IEEE_INT_RCP_SQRT_CONST_NR2         0x5F375A86  
+
+// Approximate guess using integer float arithmetics based on IEEE floating point standard
+float rcpSqrtIEEEIntApproximation(float inX, const int inRcpSqrtConst)
+{
+	int x = asint(inX);
+	x = inRcpSqrtConst - (x >> 1);
+	return asfloat(x);
+}
+
+float rcpSqrtNewtonRaphson(float inXHalf, float inRcpX)
+{
+	return inRcpX * (-inXHalf * (inRcpX * inRcpX) + 1.5f);
+}
+
+//
+// Using 0 Newton Raphson iterations
+// Relative error : ~3.4% over full
+// Precise format : ~small float
+// 2 ALU
+//
+float fastRcpSqrtNR0(float inX)
+{
+	float  xRcpSqrt = rcpSqrtIEEEIntApproximation(inX, IEEE_INT_RCP_SQRT_CONST_NR0);
+	return xRcpSqrt;
+}
+
+//
+// Using 1 Newton Raphson iterations
+// Relative error : ~0.2% over full
+// Precise format : ~half float
+// 6 ALU
+//
+float fastRcpSqrtNR1(float inX)
+{
+	float  xhalf = 0.5f * inX;
+	float  xRcpSqrt = rcpSqrtIEEEIntApproximation(inX, IEEE_INT_RCP_SQRT_CONST_NR1);
+	xRcpSqrt = rcpSqrtNewtonRaphson(xhalf, xRcpSqrt);
+	return xRcpSqrt;
+}
+
+//
+// Using 2 Newton Raphson iterations
+// Relative error : ~4.6e-004%  over full
+// Precise format : ~full float
+// 9 ALU
+//
+float fastRcpSqrtNR2(float inX)
+{
+	float  xhalf = 0.5f * inX;
+	float  xRcpSqrt = rcpSqrtIEEEIntApproximation(inX, IEEE_INT_RCP_SQRT_CONST_NR2);
+	xRcpSqrt = rcpSqrtNewtonRaphson(xhalf, xRcpSqrt);
+	xRcpSqrt = rcpSqrtNewtonRaphson(xhalf, xRcpSqrt);
+	return xRcpSqrt;
+}
+
 #endif // SCSS_UTILS_INCLUDED
