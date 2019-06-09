@@ -75,6 +75,13 @@ namespace SilentCelShading.Unity
             None
         }
 
+        public enum VertexColorType
+        {
+            Color,
+            OutlineColor,
+            AdditionalData
+        }
+
         public static class Styles
         {
             public static string mainOptionsTitle = "Main Options";
@@ -164,6 +171,7 @@ namespace SilentCelShading.Unity
             public static GUIContent lightRampType = new GUIContent("Lighting Ramp Type", "For if you use lightramps that run from bottom to top instead of left to right, or none at all.");
             public static GUIContent lightingCalculationType = new GUIContent("Lighting Calculation", "Changes how the direct/indirect lighting calculation is performed.");
             public static GUIContent shadowMaskType = new GUIContent("Shadow Mask Style", "Changes how the shadow mask is used.");
+            public static GUIContent vertexColorType = new GUIContent("Vertex Colour Type", "Sets how the vertex colour should be used. Outline only affects the colour of outlines. Additional data uses the red channel for outline width and the green for ramp softness. ");
 
             public static GUIContent lightSkew = new GUIContent("Light Skew", "Skews the direction of the received lighting. The default is (1, 0.1, 1, 0), which corresponds to normal strength on the X and Z axis, while reducing the effect of the Y axis. This essentially stops you from getting those harsh lights from above or below that look so weird on cel shaded models. But that's just a default...");
             public static GUIContent pixelSampleMode = new GUIContent("Pixel Art Mode", "Treats the main texture as pixel art. Great for retro avatars! Note: When using this, you should make sure mipmaps are Enabled and texture sampling is set to Trilinear.");
@@ -250,6 +258,7 @@ namespace SilentCelShading.Unity
         protected MaterialProperty lightRampType;
         protected MaterialProperty lightingCalculationType;
         protected MaterialProperty shadowMaskType;
+        protected MaterialProperty vertexColorType;
 
         protected MaterialProperty lightSkew;
         protected MaterialProperty pixelSampleMode;
@@ -328,6 +337,7 @@ namespace SilentCelShading.Unity
                 lightRampType = FindProperty("_LightRampType", props);
                 lightingCalculationType = FindProperty("_LightingCalculationType", props);
                 shadowMaskType = FindProperty("_ShadowMaskType", props);
+                vertexColorType = FindProperty("_VertexColorType", props);
 
                 lightSkew = FindProperty("_LightSkew", props);
                 pixelSampleMode = FindProperty("_PixelSampleMode", props); 
@@ -677,6 +687,23 @@ namespace SilentCelShading.Unity
 
             } 
 
+            var vcMode = (VertexColorType)vertexColorType.floatValue;
+            EditorGUI.BeginChangeCheck();
+            
+            vcMode = (VertexColorType)EditorGUILayout.Popup("Vertex Colour Type", (int)vcMode, Enum.GetNames(typeof(VertexColorType)));
+
+            if (EditorGUI.EndChangeCheck())
+            {
+                materialEditor.RegisterPropertyChangeUndo("Vertex Colour Type");
+                vertexColorType.floatValue = (float)vcMode;
+
+                foreach (var obj in vertexColorType.targets)
+                {
+                    SetupMaterialWithVertexColorType((Material)obj, (VertexColorType)material.GetFloat("_VertexColorType"));
+                }
+
+            } 
+
             EditorGUI.BeginChangeCheck();
 
             materialEditor.ShaderProperty(pixelSampleMode, Styles.pixelSampleMode);
@@ -959,6 +986,24 @@ namespace SilentCelShading.Unity
                     break;
                 case LightRampType.None:
                     material.SetFloat("_LightRampType", 2);
+                    break;
+                default:
+                    break;
+            }
+        }
+
+        public static void SetupMaterialWithVertexColorType(Material material, VertexColorType vertexColorType)
+        {
+            switch ((VertexColorType)material.GetFloat("_VertexColorType"))
+            {
+                case VertexColorType.Color:
+                    material.SetFloat("_VertexColorType", 0);
+                    break;
+                case VertexColorType.OutlineColor:
+                    material.SetFloat("_VertexColorType", 1);
+                    break;
+                case VertexColorType.AdditionalData:
+                    material.SetFloat("_VertexColorType", 2);
                     break;
                 default:
                     break;

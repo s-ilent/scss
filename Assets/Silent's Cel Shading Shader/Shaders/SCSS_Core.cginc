@@ -157,21 +157,29 @@ half3 GetSHLength ()
     return x + x1;
 }
 
-float3 sampleRampWithOptions(float rampPosition) 
+// Sample ramp with the specified options.
+// rampPosition: 0-1 position on the light ramp from light to dark
+// softness: 0-1 position on the light ramp on the other axis
+float3 sampleRampWithOptions(float rampPosition, half softness) 
 {
 	if (_LightRampType == 2) // None
 	{
-		float shadeWidth = max(fwidth(rampPosition), 0.002);
+		float shadeWidth = max(fwidth(rampPosition), 0.002 * (1+softness*10));
 
 		const float shadeOffset = (UNITY_PI/10.0); 
 		float lightContribution = smoothstep(shadeOffset-shadeWidth, shadeOffset+shadeWidth, frac(rampPosition)); 
 		lightContribution += floor(rampPosition);
 		return saturate(lightContribution);
 	}
-	else {
-		float2 rampUV = float2(rampPosition*(1-_LightRampType), rampPosition*_LightRampType);
+	if (_LightRampType == 1) // Vertical
+	{
+		float2 rampUV = float2(softness, rampPosition);
 		return tex2D(_Ramp, saturate(rampUV));
-
+	}
+	else // Horizontal
+	{
+		float2 rampUV = float2(rampPosition, softness);
+		return tex2D(_Ramp, saturate(rampUV));
 	}
 }
 
@@ -231,7 +239,7 @@ float3 getSubsurfaceScatteringLight (SCSS_Light l, float3 normalDirection, float
 }
 
 half3 calcDiffuse(float3 tonemap, float occlusion, half3 normal, half perceptualRoughness, half attenuation, 
-	half smoothness, SCSS_LightParam d, SCSS_Light l)
+	half smoothness, half softness, SCSS_LightParam d, SCSS_Light l)
 {
 #if defined(UNITY_PASS_FORWARDADD)
 	attenuation = 1; // Attenuation is applied later for ForwardAdd.
@@ -243,7 +251,7 @@ half3 calcDiffuse(float3 tonemap, float occlusion, half3 normal, half perceptual
 	remappedLight *= (1 - _Shadow) * occlusion + _Shadow;
 	remappedLight = _ShadowLift + remappedLight * (1-_ShadowLift);
 
-	float3 lightContribution = sampleRampWithOptions(remappedLight);
+	float3 lightContribution = sampleRampWithOptions(remappedLight, softness);
 
 	float3 directLighting = 0.0;
 	float3 indirectLighting = 0.0;
@@ -293,23 +301,23 @@ half3 calcDiffuse(float3 tonemap, float occlusion, half3 normal, half perceptual
 	float3 ambientLightDirection = Unity_SafeNormalize((unity_SHAr.xyz + unity_SHAg.xyz + unity_SHAb.xyz) * _LightSkew.xyz);
 	float ambientLight = dot(normal, ambientLightDirection);
 	ambientLight = ambientLight * 0.5 + 0.5;
-	lightContribution += lerp(indirectLighting, directLighting, sampleRampWithOptions(ambientLight));
+	lightContribution += lerp(indirectLighting, directLighting, sampleRampWithOptions(ambientLight, softness));
 #endif
 
 	return lightContribution;	
 }
 
-half3 calcVertexLight(float4 vertexAttenuation, float occlusion, float3 tonemap)
+half3 calcVertexLight(float4 vertexAttenuation, float occlusion, float3 tonemap, half softness)
 {
 	float3 vertexContribution = 0;
 	#if defined(UNITY_PASS_FORWARDBASE)
 		// Vertex lighting based on Shade4PointLights
 		vertexAttenuation *= (1 - _Shadow) * occlusion + _Shadow;
 
-	    vertexContribution += unity_LightColor[0] * (sampleRampWithOptions(vertexAttenuation.x)+tonemap) * vertexAttenuation.x;
-	    vertexContribution += unity_LightColor[1] * (sampleRampWithOptions(vertexAttenuation.y)+tonemap) * vertexAttenuation.y;
-	    vertexContribution += unity_LightColor[2] * (sampleRampWithOptions(vertexAttenuation.z)+tonemap) * vertexAttenuation.z;
-	    vertexContribution += unity_LightColor[3] * (sampleRampWithOptions(vertexAttenuation.w)+tonemap) * vertexAttenuation.w;
+	    vertexContribution += unity_LightColor[0] * (sampleRampWithOptions(vertexAttenuation.x, softness)+tonemap) * vertexAttenuation.x;
+	    vertexContribution += unity_LightColor[1] * (sampleRampWithOptions(vertexAttenuation.y, softness)+tonemap) * vertexAttenuation.y;
+	    vertexContribution += unity_LightColor[2] * (sampleRampWithOptions(vertexAttenuation.z, softness)+tonemap) * vertexAttenuation.z;
+	    vertexContribution += unity_LightColor[3] * (sampleRampWithOptions(vertexAttenuation.w, softness)+tonemap) * vertexAttenuation.w;
 	#endif
 	return vertexContribution;
 }
@@ -418,9 +426,9 @@ float3 SCSS_ApplyLighting(SCSS_Input c, SCSS_LightParam d, VertexOutput i, float
 	}
 
 	float3 finalColor = c.albedo*calcDiffuse(c.tonemap, c.occlusion, c.normal, 
-		perceptualRoughness, attenuation, c.smoothness, d, l);
+		perceptualRoughness, attenuation, c.smoothness, c.softness, d, l);
 
-	finalColor += calcVertexLight(i.vertexLight, c.occlusion, c.tonemap)*c.albedo;
+	finalColor += c.albedo*calcVertexLight(i.vertexLight, c.occlusion, c.tonemap, c.softness);
 		
 	if (_UseFresnel == 1 && i.is_outline == 0)
 	{

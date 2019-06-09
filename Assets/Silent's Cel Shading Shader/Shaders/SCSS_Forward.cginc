@@ -42,7 +42,6 @@ void geom(triangle v2g IN[3], inout TriangleStream<VertexOutput> tristream)
 	#if !NO_OUTLINE
 	for (int i = 2; i >= 0; i--)
 	{
-		o.pos = UnityObjectToClipPos(IN[i].vertex + normalize(IN[i].normal) * (_outline_width * .01));
 		o.uv0 = IN[i].uv0;
 		o.uv1 = IN[i].uv1;
 		o.posWorld = mul(unity_ObjectToWorld, IN[i].vertex);
@@ -51,12 +50,20 @@ void geom(triangle v2g IN[3], inout TriangleStream<VertexOutput> tristream)
 		o.bitangentDir = IN[i].bitangentDir;
 		o.is_outline = true;
 		float _outline_width_var = _outline_width * .01; // Convert to cm
+		if (_VertexColorType == 2) {
+			_outline_width_var *= IN[i].color.r;
+			IN[i].color = float4(1.0, 1.0, 1.0,IN[i].color.g);
+		} else {
+			_outline_width_var *= IN[i].color.a;			
+		}
 		// Scale outlines relative to the distance from the camera. Outlines close up look ugly in VR because
 		// they can have holes, being shells. This is also why it is clamped to not make them bigger.
 		// That looks good at a distance, but not perfect. 
 		_outline_width_var *= min(distance(o.posWorld,_WorldSpaceCameraPos)*4, 1); 
 
 		o.pos = UnityObjectToClipPos(IN[i].vertex + normalize(IN[i].normal) * _outline_width_var);
+		o.pos.z *= sign(o.pos.z) * (2*any(_outline_width_var))-1;
+
 
 		// Pass-through the shadow coordinates if this pass has shadows.
 		#if defined (SHADOWS_SCREEN) || ( defined (SHADOWS_DEPTH) && defined (SPOT) ) || defined (SHADOWS_CUBE) || (defined (UNITY_LIGHT_PROBE_PROXY_VOLUME) && UNITY_VERSION<600)
@@ -78,7 +85,7 @@ void geom(triangle v2g IN[3], inout TriangleStream<VertexOutput> tristream)
 	}
 
 	tristream.RestartStrip();
-	#endif
+	#endif // !NO_OUTLINE 
 
 	for (int ii = 0; ii < 3; ii++)
 	{
@@ -135,14 +142,27 @@ float4 frag(VertexOutput i, uint facing : SV_IsFrontFace) : SV_Target
 
 	c.albedo = Albedo(texcoords);
 
+	// Vertex colour application. 
+	if (_VertexColorType == 0) // Colour as colour, alpha as width
+	{
+		c.albedo *= i.color.rgb;
+		c.softness = 0;
+	}
+	if (_VertexColorType == 1 && i.is_outline) // Colour as outline colour, alpha as width
+	{
+		c.albedo = i.color.rgb;
+		c.softness = 0;
+	}
 	#if COLORED_OUTLINE
 	if(i.is_outline) 
 	{
 		c.albedo = i.color.rgb; 
 	}
-	#else 
-	c.albedo *= i.color.rgb;
 	#endif
+	if (_VertexColorType == 2) // Red as width, green as softness. Shifted to A in vertex function.
+	{
+		c.softness = i.color.a;
+	}
 
 	c.alpha = Alpha(texcoords.xy);
 
@@ -225,8 +245,9 @@ float4 frag(VertexOutput i, uint facing : SV_IsFrontFace) : SV_Target
 	float3 finalColor = SCSS_ApplyLighting(c, d, i, viewDir, l, texcoords);
 
 	#if defined(UNITY_PASS_FORWARDBASE)
-	finalColor += Emission(texcoords.xy);
-	finalColor += _CustomFresnelColor.xyz * (pow(d.rlPow4.y, rcp(_CustomFresnelColor.w+0.0001)));
+	float3 emissionMask = Emission(texcoords.xy);
+	finalColor += emissionMask * _EmissionColor.rgb;
+	finalColor += emissionMask * _CustomFresnelColor.xyz * (pow(d.rlPow4.y, rcp(_CustomFresnelColor.w+0.0001)));
 	#endif
 
 	float3 lightmap = float4(1.0,1.0,1.0,1.0);

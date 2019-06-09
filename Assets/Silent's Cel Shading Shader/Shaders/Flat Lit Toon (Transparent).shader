@@ -61,6 +61,7 @@ Shader "Silent's Cel Shading/Transparent"
 		[ToggleOff(_SPECULARHIGHLIGHTS_OFF)]_SpecularHighlights ("Specular Highlights", Float) = 1.0
 		[ToggleOff(_GLOSSYREFLECTIONS_OFF)]_GlossyReflections ("Glossy Reflections", Float) = 1.0
 		_UVSec ("UV Set Secondary", Float) = 0
+		[Enum(VertexColourType)]_VertexColourType ("Vertex Colour Type", Float) = 0.0
 
         // Advanced options.
         [Enum(RenderingMode)] _Mode("Rendering Mode", Float) = 0                                     // "Opaque"
