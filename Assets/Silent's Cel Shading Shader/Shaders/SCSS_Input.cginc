@@ -73,6 +73,7 @@ uniform float _SSSAmbient;
 
 uniform float4 _LightSkew;
 uniform float _PixelSampleMode;
+uniform float _VertexColorType;
 
 //-------------------------------------------------------------------------------------
 // Input functions
@@ -125,6 +126,7 @@ struct SCSS_Input
 	half alpha;
 	half3 tonemap;
 	half occlusion;
+	half softness;
 };
 
 struct SCSS_LightParam
@@ -226,7 +228,7 @@ half4 SpecularGloss(float4 texcoords)
 
 half3 Emission(float2 uv)
 {
-    return UNITY_SAMPLE_TEX2D_SAMPLER(_EmissionMap, _MainTex, uv).rgb * _EmissionColor.rgb;
+    return UNITY_SAMPLE_TEX2D_SAMPLER(_EmissionMap, _MainTex, uv).rgb;
 }
 
 half3 NormalInTangentSpace(float2 texcoords, half mask)
