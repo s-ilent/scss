@@ -118,12 +118,8 @@ namespace SilentCelShading.Unity
             public static GUIContent mainTexture = new GUIContent("Main Texture", "Main Color Texture (RGBA)");
             public static GUIContent alphaCutoff = new GUIContent("Alpha Cutoff", "Threshold for transparency cutoff");
             public static GUIContent alphaSharp = new GUIContent("Disable Dithering", "Treats transparency cutoff as a hard edge, instead of a soft dithered one.");
-            public static GUIContent colorMask = new GUIContent("Tint Mask", "Masks material colour tinting (G) and detail normal map (A).");
+            public static GUIContent colorMask = new GUIContent("Tint Mask", "Masks material colour tinting (G) and detail maps (A).");
             public static GUIContent normalMap = new GUIContent("Normal Map", "Normal Map (RGB)");
-
-            public static GUIContent useDetailNormalMap = new GUIContent("Use Detail Normal Map", "Enable a normal map combined with the main normal map to add extra detail.");
-            public static GUIContent detailNormalMap = new GUIContent("Detail Normal Map", "Detail Normal Map (RGB)");
-            public static GUIContent detailNormalMapScale = new GUIContent("Detail Normal Map Scale", "Strength of the detail normal map.");
 
             public static GUIContent specularMap = new GUIContent("Specular Map", "Specular Map (RGBA, RGB: Specular/Metalness, A: Smoothness)");
             public static GUIContent emissionMap = new GUIContent("Emission", "Emission (RGB)");
@@ -132,10 +128,6 @@ namespace SilentCelShading.Unity
             public static GUIContent specularType = new GUIContent("Specular Style", "Allows you to set the shading used for specular. ");
             public static GUIContent smoothness = new GUIContent("Smoothness", "The smoothness of the material. The specular map's alpha channel is used for this, with this slider being a multiplier.");
             public static GUIContent anisotropy = new GUIContent("Anisotropy", "Direction of the anisotropic specular highlights.");
-
-            public static GUIContent useSpecularDetailMask = new GUIContent("Use Specular Detail Mask", "Applies a detail pattern to the specular map.");
-            public static GUIContent specularDetailMask = new GUIContent("Specular Detail Mask", "The detail pattern to use over the specular map.");
-            public static GUIContent specularDetailStrength = new GUIContent("Specular Detail Strength", "The strength of the detail pattern applied to the specular.");
 
             public static GUIContent useFresnel = new GUIContent("Use Ambient Fresnel", "Applies an additional rim lighting effect.");
             public static GUIContent fresnelWidth = new GUIContent("Ambient Fresnel Width", "Sets the width of the ambient fresnel lighting.");
@@ -176,7 +168,12 @@ namespace SilentCelShading.Unity
             public static GUIContent lightSkew = new GUIContent("Light Skew", "Skews the direction of the received lighting. The default is (1, 0.1, 1, 0), which corresponds to normal strength on the X and Z axis, while reducing the effect of the Y axis. This essentially stops you from getting those harsh lights from above or below that look so weird on cel shaded models. But that's just a default...");
             public static GUIContent pixelSampleMode = new GUIContent("Pixel Art Mode", "Treats the main texture as pixel art. Great for retro avatars! Note: When using this, you should make sure mipmaps are Enabled and texture sampling is set to Trilinear.");
 
-            public static GUIContent uvSet = new GUIContent("UV Set");
+            public static GUIContent useDetailMaps = new GUIContent("Use Detail Maps", "Applies detail maps over the top of other textures for a more detailed appearance.");
+            public static GUIContent detailAlbedoMap = new GUIContent("Detail Albedo x2", "An albedo map multiplied over the main albedo map to provide extra detail.");
+            public static GUIContent detailNormalMap = new GUIContent("Detail Normal", "A normal map combined with the main normal map to add extra detail.");
+            public static GUIContent specularDetailMask = new GUIContent("Specular Detail Mask", "The detail pattern to use over the specular map.");
+            public static GUIContent uvSet = new GUIContent("Secondary UV Source", "Selects which UV channel to use for detail maps.");
+
             public static GUIContent highlights = new GUIContent("Specular Highlights", "Toggles specular highlights. Only applicable if specular is active.");
             public static GUIContent reflections = new GUIContent("Reflections", "Toggles glossy reflections. Only applicable if specular is active.");
             public static GUIContent manualButton = new GUIContent("This shader has a manual. Check it out!","For information on new features, old features, and just how to use the shader in general, check out the manual on the shader wiki!");
@@ -209,9 +206,15 @@ namespace SilentCelShading.Unity
         protected MaterialProperty customFresnelColor;
 
         protected MaterialProperty normalMap;
-        protected MaterialProperty useDetailNormalMap;
+
+        protected MaterialProperty useDetailMaps;
+        protected MaterialProperty detailAlbedoMap;
+        protected MaterialProperty detailAlbedoMapScale;
         protected MaterialProperty detailNormalMap;
         protected MaterialProperty detailNormalMapScale;
+        protected MaterialProperty specularDetailMask;
+        protected MaterialProperty specularDetailStrength;
+        protected MaterialProperty uvSetSecondary;
 
         protected MaterialProperty specularMap;
         protected MaterialProperty smoothness;
@@ -228,9 +231,6 @@ namespace SilentCelShading.Unity
 
         protected MaterialProperty useEnergyConservation;
         protected MaterialProperty specularType;
-        protected MaterialProperty useSpecularDetailMask;
-        protected MaterialProperty specularDetailMask;
-        protected MaterialProperty specularDetailStrength;
 
         protected MaterialProperty useMatcap;
         protected MaterialProperty additiveMatcap;
@@ -264,7 +264,6 @@ namespace SilentCelShading.Unity
         protected MaterialProperty pixelSampleMode;
         protected MaterialProperty highlights;
         protected MaterialProperty reflections;
-        protected MaterialProperty uvSetSecondary;
 
         protected void FindProperties(MaterialProperty[] props)
             { 
@@ -304,18 +303,20 @@ namespace SilentCelShading.Unity
                 fresnelStrength = FindProperty("_FresnelStrength", props);
                 fresnelTint = FindProperty("_FresnelTint", props);
                 normalMap = FindProperty("_BumpMap", props);
-                useDetailNormalMap = FindProperty("_UseDetailNormal", props);
-                detailNormalMap = FindProperty("_DetailNormalMap", props);
-                detailNormalMapScale = FindProperty("_DetailNormalMapScale", props);
                 alphaCutoff = FindProperty("_Cutoff", props);
                 alphaSharp = FindProperty("_AlphaSharp", props);
 
-                useEnergyConservation = FindProperty("_UseEnergyConservation", props);
-                specularType = FindProperty("_SpecularType", props);
-
-                useSpecularDetailMask = FindProperty("_UseSpecularDetailMask", props);
+                useDetailMaps = FindProperty("_UseDetailMaps", props);
+                detailAlbedoMap = FindProperty("_DetailAlbedoMap", props);
+                detailAlbedoMapScale = FindProperty("_DetailAlbedoMapScale", props);
+                detailNormalMap = FindProperty("_DetailNormalMap", props);
+                detailNormalMapScale = FindProperty("_DetailNormalMapScale", props);
                 specularDetailMask = FindProperty("_SpecularDetailMask", props);
                 specularDetailStrength = FindProperty("_SpecularDetailStrength", props);
+                uvSetSecondary = FindProperty("_UVSec", props);
+
+                useEnergyConservation = FindProperty("_UseEnergyConservation", props);
+                specularType = FindProperty("_SpecularType", props);
 
                 useMatcap = FindProperty("_UseMatcap", props);
                 additiveMatcap = FindProperty("_AdditiveMatcap", props);
@@ -344,7 +345,6 @@ namespace SilentCelShading.Unity
 
                 highlights = FindProperty("_SpecularHighlights", props, false);
                 reflections = FindProperty("_GlossyReflections", props, false);
-                uvSetSecondary = FindProperty("_UVSec", props);
             }
 
         public override void OnGUI(MaterialEditor materialEditor, MaterialProperty[] props)
@@ -360,6 +360,7 @@ namespace SilentCelShading.Unity
             RenderingOptions(materialEditor, material);
             MatcapOptions(materialEditor, material);
             SubsurfaceOptions(materialEditor, material);
+            DetailMapOptions(materialEditor, material);
             OutlineOptions(materialEditor, material);
             AdvancedOptions(materialEditor, material);
 
@@ -452,17 +453,6 @@ namespace SilentCelShading.Unity
                 if (EditorGUI.EndChangeCheck())
                     emissionMap.textureScaleAndOffset = mainTexture.textureScaleAndOffset;          
                 EditorGUILayout.Space();
-
-                EditorGUI.BeginChangeCheck();
-                materialEditor.ShaderProperty(useDetailNormalMap, Styles.useDetailNormalMap);
-
-                    if (PropertyEnabled(useDetailNormalMap)) 
-                    {
-                        materialEditor.TexturePropertySingleLine(Styles.detailNormalMap, detailNormalMap);
-                        materialEditor.TextureScaleOffsetProperty(detailNormalMap);
-                        materialEditor.ShaderProperty(detailNormalMapScale, Styles.detailNormalMapScale);
-                        materialEditor.ShaderProperty(uvSetSecondary, Styles.uvSet);
-                }
                 EditorGUI.EndChangeCheck();
         }
 
@@ -548,7 +538,6 @@ namespace SilentCelShading.Unity
                         materialEditor.ShaderProperty(smoothness, Styles.smoothness);
                         materialEditor.ShaderProperty(useMetallic, Styles.useMetallic);
                         materialEditor.ShaderProperty(useEnergyConservation, Styles.useEnergyConservation);
-                        SpecularMaskOptions(materialEditor, material);
                         break;
                     case SpecularType.Anisotropic:
                         materialEditor.TexturePropertySingleLine(Styles.specularMap, specularMap);
@@ -556,7 +545,6 @@ namespace SilentCelShading.Unity
                         materialEditor.ShaderProperty(anisotropy, Styles.anisotropy);
                         materialEditor.ShaderProperty(useMetallic, Styles.useMetallic);
                         materialEditor.ShaderProperty(useEnergyConservation, Styles.useEnergyConservation);
-                        SpecularMaskOptions(materialEditor, material);
                         break;
                     case SpecularType.Disable:
                     default:
@@ -566,20 +554,24 @@ namespace SilentCelShading.Unity
                 EditorGUILayout.Space();
         }
 
-        protected void SpecularMaskOptions(MaterialEditor materialEditor, Material material)
+        protected void DetailMapOptions(MaterialEditor materialEditor, Material material)
         {     
+                EditorGUILayout.Space();
 
                 EditorGUI.BeginChangeCheck();
-                {
-                    materialEditor.ShaderProperty(useSpecularDetailMask, Styles.useSpecularDetailMask);
+                materialEditor.ShaderProperty(useDetailMaps, Styles.useDetailMaps);
 
-                    if (PropertyEnabled(useSpecularDetailMask))
-                    {
-                        materialEditor.TexturePropertySingleLine(Styles.specularDetailMask, specularDetailMask);
-                        materialEditor.TextureScaleOffsetProperty(specularDetailMask);
-                        materialEditor.ShaderProperty(specularDetailStrength, Styles.specularDetailStrength);
-                    }
-                } 
+                if (PropertyEnabled(useDetailMaps)) 
+                {
+                    materialEditor.TexturePropertySingleLine(Styles.detailAlbedoMap, detailAlbedoMap, detailAlbedoMapScale);
+                    materialEditor.TexturePropertySingleLine(Styles.detailNormalMap, detailNormalMap, detailNormalMapScale);
+                    materialEditor.TexturePropertySingleLine(Styles.specularDetailMask, specularDetailMask, specularDetailStrength);
+                
+                    materialEditor.TextureScaleOffsetProperty(detailAlbedoMap);
+                    materialEditor.ShaderProperty(uvSetSecondary, Styles.uvSet);
+                }
+                EditorGUILayout.Space();
+                
                 EditorGUI.EndChangeCheck();    
         }
 

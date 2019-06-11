@@ -425,15 +425,17 @@ float3 SCSS_ApplyLighting(SCSS_Input c, SCSS_LightParam d, VertexOutput i, float
 		c.albedo += matcaps.add;
 	}
 
-	float3 finalColor = c.albedo*calcDiffuse(c.tonemap, c.occlusion, c.normal, 
+	float3 finalColor = calcDiffuse(c.tonemap, c.occlusion, c.normal, 
 		perceptualRoughness, attenuation, c.smoothness, c.softness, d, l);
 
-	finalColor += c.albedo*calcVertexLight(i.vertexLight, c.occlusion, c.tonemap, c.softness);
+	finalColor += calcVertexLight(i.vertexLight, c.occlusion, c.tonemap, c.softness);
 		
 	if (_UseFresnel == 1 && i.is_outline == 0)
 	{
 		finalColor *= 1+sharpFresnelLight(d);
 	}
+
+	finalColor *= c.albedo;
 
 	if (_SpecularType != 0 && i.is_outline == 0)
 	{

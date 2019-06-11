@@ -18,7 +18,25 @@ v2g vert(appdata_full v) {
 	float4 objPos = mul(unity_ObjectToWorld, float4(0, 0, 0, 1));
 	o.posWorld = mul(unity_ObjectToWorld, v.vertex);
 	o.vertex = v.vertex;
-	o.color = v.color;
+
+	// Extra data handling
+	// R: Outline width | G: Ramp softness
+	if (_VertexColorType == 2) 
+	{
+		o.color = 1.0;
+		o.extraData.rg = v.color.rg;
+	} else {
+		o.color = v.color;
+		o.extraData.r = v.color.a;
+		o.extraData.g = 0.0; 
+	}
+
+	o.extraData.r *= _outline_width * .01; // Apply outline width and convert to cm
+	
+	// Scale outlines relative to the distance from the camera. Outlines close up look ugly in VR because
+	// they can have holes, being shells. This is also why it is clamped to not make them bigger.
+	// That looks good at a distance, but not perfect. 
+	o.extraData.r *= min(distance(o.posWorld,_WorldSpaceCameraPos)*4, 1); 
 
 	#if (UNITY_VERSION<600)
 	TRANSFER_SHADOW(o);
@@ -39,9 +57,15 @@ v2g vert(appdata_full v) {
 void geom(triangle v2g IN[3], inout TriangleStream<VertexOutput> tristream)
 {
 	VertexOutput o = (VertexOutput)0;
-	#if !NO_OUTLINE
+	#if !defined(NO_OUTLINE)
 	for (int i = 2; i >= 0; i--)
 	{
+		// If the outline triangle is too small, don't emit it.
+		if (IN[i].extraData.r <= 1.e-9)
+		{
+			continue;
+		}
+
 		o.uv0 = IN[i].uv0;
 		o.uv1 = IN[i].uv1;
 		o.posWorld = mul(unity_ObjectToWorld, IN[i].vertex);
@@ -49,21 +73,9 @@ void geom(triangle v2g IN[3], inout TriangleStream<VertexOutput> tristream)
 		o.tangentDir = IN[i].tangentDir;
 		o.bitangentDir = IN[i].bitangentDir;
 		o.is_outline = true;
-		float _outline_width_var = _outline_width * .01; // Convert to cm
-		if (_VertexColorType == 2) {
-			_outline_width_var *= IN[i].color.r;
-			IN[i].color = float4(1.0, 1.0, 1.0,IN[i].color.g);
-		} else {
-			_outline_width_var *= IN[i].color.a;			
-		}
-		// Scale outlines relative to the distance from the camera. Outlines close up look ugly in VR because
-		// they can have holes, being shells. This is also why it is clamped to not make them bigger.
-		// That looks good at a distance, but not perfect. 
-		_outline_width_var *= min(distance(o.posWorld,_WorldSpaceCameraPos)*4, 1); 
 
-		o.pos = UnityObjectToClipPos(IN[i].vertex + normalize(IN[i].normal) * _outline_width_var);
-		o.pos.z *= sign(o.pos.z) * (2*any(_outline_width_var))-1;
-
+		o.pos = UnityObjectToClipPos(IN[i].vertex + normalize(IN[i].normal) * IN[i].extraData.r);
+		//o.pos.z *= sign(o.pos.z) * (2*any(_outline_width_var))-1; // 
 
 		// Pass-through the shadow coordinates if this pass has shadows.
 		#if defined (SHADOWS_SCREEN) || ( defined (SHADOWS_DEPTH) && defined (SPOT) ) || defined (SHADOWS_CUBE) || (defined (UNITY_LIGHT_PROBE_PROXY_VOLUME) && UNITY_VERSION<600)
@@ -78,6 +90,7 @@ void geom(triangle v2g IN[3], inout TriangleStream<VertexOutput> tristream)
 		// Pass-through the vertex light information.
 		o.vertexLight = IN[i].vertexLight;
 		o.color = fixed4( _outline_color.r, _outline_color.g, _outline_color.b, 1)*IN[i].color;
+		o.extraData = IN[i].extraData;
 
 		UNITY_TRANSFER_INSTANCE_ID(IN[i], o);
 
@@ -112,6 +125,7 @@ void geom(triangle v2g IN[3], inout TriangleStream<VertexOutput> tristream)
 		// Pass-through the vertex light information.
 		o.vertexLight = IN[ii].vertexLight;
 		o.color = IN[ii].color;
+		o.extraData = IN[ii].extraData;
 
 		UNITY_TRANSFER_INSTANCE_ID(IN[i], o);
 
@@ -130,7 +144,9 @@ float4 frag(VertexOutput i, uint facing : SV_IsFrontFace) : SV_Target
 
 	SCSS_Input c = (SCSS_Input) 0;
 
-    half3 normalTangent = NormalInTangentSpace(i.uv0, DetailMask(texcoords.xy));
+	half detailMask = DetailMask(texcoords.xy);
+
+    half3 normalTangent = NormalInTangentSpace(texcoords, detailMask);
     c.normal = normalize(i.tangentDir * normalTangent.x + i.bitangentDir * normalTangent.y + i.normalDir * normalTangent.z); 
 
 	// Backface correction. If a polygon is facing away from the camera, it's lit incorrectly.
@@ -143,25 +159,19 @@ float4 frag(VertexOutput i, uint facing : SV_IsFrontFace) : SV_Target
 	c.albedo = Albedo(texcoords);
 
 	// Vertex colour application. 
-	if (_VertexColorType == 0) // Colour as colour, alpha as width
-	{
-		c.albedo *= i.color.rgb;
-		c.softness = 0;
-	}
-	if (_VertexColorType == 1 && i.is_outline) // Colour as outline colour, alpha as width
-	{
-		c.albedo = i.color.rgb;
-		c.softness = 0;
-	}
+	c.albedo *= i.color.rgb;
+	c.softness = i.extraData.g;
+
 	#if COLORED_OUTLINE
 	if(i.is_outline) 
 	{
 		c.albedo = i.color.rgb; 
 	}
 	#endif
-	if (_VertexColorType == 2) // Red as width, green as softness. Shifted to A in vertex function.
+
+	if (_VertexColorType == 1 && i.is_outline) 
 	{
-		c.softness = i.color.a;
+		c.albedo = i.color.rgb;
 	}
 
 	c.alpha = Alpha(texcoords.xy);
@@ -205,7 +215,7 @@ float4 frag(VertexOutput i, uint facing : SV_IsFrontFace) : SV_Target
 	// Specular variable setup
 	if (_SpecularType != 0 )
 	{
-		half4 specGloss = SpecularGloss(texcoords);
+		half4 specGloss = SpecularGloss(texcoords, detailMask);
 
 		c.specColor = specGloss.rgb;
 		c.smoothness = specGloss.a;

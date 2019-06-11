@@ -10,7 +10,7 @@ Shader "Silent's Cel Shading/Transparent"
 		_ShadowLift("Shadow Offset", Range(-1, 1)) = 0.0
 		_IndirectLightingBoost("Indirect Lighting Boost", Range(0, 1)) = 0.0
 		[Enum(ShadowMaskType)] _ShadowMaskType ("Shadow Mask Type", Float) = 0.0
-		_ShadowMask("ShadowMask", 2D) = "white" {}
+		_ShadowMask("ShadowMask", 2D) = "white" {} 
 		_ShadowMaskColor("ShadowMask Color", Color) = (1,1,1,1)
 		_Ramp ("Lighting Ramp", 2D) = "white" {}
 		_outline_width("outline_width", Float) = 0.1
@@ -20,8 +20,6 @@ Shader "Silent's Cel Shading/Transparent"
 		[HDR]_EmissionColor("Emission Color", Color) = (0,0,0,1)
 		[HDR]_CustomFresnelColor("Emissive Fresnel Color", Color) = (0,0,0,1)
 		_SpecGlossMap ("Specular Map", 2D) = "black" {}
-		_SpecularDetailMask ("Specular Detail Mask", 2D) = "white" {}
-		_SpecularDetailStrength ("Specular Detail Strength", Range(0, 1)) = 1.0
 		[Toggle(_)]_UseEnergyConservation ("Energy Conservation", Float) = 0.0
 		_Smoothness ("Smoothness", Range(0, 1)) = 1
 		_Anisotropy("Anisotropy", Range(-1,1)) = 0.8
@@ -30,9 +28,14 @@ Shader "Silent's Cel Shading/Transparent"
 		_FresnelStrength ("Fresnel Softness", Range(0.1, 0.9999)) = 0.5
 		[HDR]_FresnelTint("Fresnel Tint", Color) = (1,1,1,1)
 		_BumpMap("BumpMap", 2D) = "bump" {}
-		[Toggle(_DETAIL)]_UseDetailNormal("Enable Detail Normal Map", Float ) = 0.0
+		[Toggle(_DETAIL_MULX2)]_UseDetailMaps("Enable Detail Maps", Float ) = 0.0
+		_DetailAlbedoMap ("Detail Albedo Map", 2D) = "gray" {}
+		_DetailAlbedoMapScale ("Detail Albedo Map Scale", Float) = 1.0
 		_DetailNormalMap("Detail Normal Map", 2D) = "bump" {}
 		_DetailNormalMapScale("Detail Normal Map Scale", Float) = 1.0
+		_SpecularDetailMask ("Specular Detail Mask", 2D) = "white" {}
+		_SpecularDetailStrength ("Specular Detail Strength", Range(0, 1)) = 1.0
+		[Enum(UV0,0,UV1,1)]_UVSec ("UV Set Secondary", Float) = 0
 		_Cutoff("Alpha cutoff", Range(0,1)) = 0.5
 		[Toggle(_)]_AlphaSharp("Disable Dithering", Float) = 0.0
 		[HideInInspector] _OutlineMode("__outline_mode", Float) = 0.0
@@ -45,7 +48,6 @@ Shader "Silent's Cel Shading/Transparent"
 		[Enum(LightRampType)]_LightRampType ("Light Ramp Type", Float) = 0.0
 		[Toggle(_)]_UseMetallic ("Use Metallic", Float) = 0.0
 		[Enum(SpecularType)] _SpecularType ("Specular Type", Float) = 0.0
-		[Toggle(_SPECULAR_DETAIL)] _UseSpecularDetailMask ("Use Specular Detail Mask", Float) = 0.0
 		[Enum(LightingCalculationType)] _LightingCalculationType ("Lighting Calculation Type", Float) = 0.0
 		[Toggle(_)]_UseSubsurfaceScattering ("Use Subsurface Scattering", Float) = 0.0
 		_ThicknessMap("Thickness Map", 2D) = "black" {}
@@ -60,8 +62,7 @@ Shader "Silent's Cel Shading/Transparent"
 		[Toggle(_)]_PixelSampleMode("Sharp Sampling Mode", Float) = 0.0
 		[ToggleOff(_SPECULARHIGHLIGHTS_OFF)]_SpecularHighlights ("Specular Highlights", Float) = 1.0
 		[ToggleOff(_GLOSSYREFLECTIONS_OFF)]_GlossyReflections ("Glossy Reflections", Float) = 1.0
-		_UVSec ("UV Set Secondary", Float) = 0
-		[Enum(VertexColourType)]_VertexColourType ("Vertex Colour Type", Float) = 0.0
+		[Enum(VertexColorType)]_VertexColorType ("Vertex Colour Type", Float) = 0.0
 
         // Advanced options.
         [Enum(RenderingMode)] _Mode("Rendering Mode", Float) = 0                                     // "Opaque"
@@ -100,13 +101,12 @@ Shader "Silent's Cel Shading/Transparent"
 
 			#define UNITY_PASS_FORWARDBASE
 
-			#pragma shader_feature NO_OUTLINE TINTED_OUTLINE COLORED_OUTLINE
+			#pragma shader_feature _ TINTED_OUTLINE COLORED_OUTLINE
 			#pragma shader_feature _ _ALPHATEST_ON _ALPHABLEND_ON _ALPHAPREMULTIPLY_ON
-			#pragma shader_feature _DETAIL
-			#pragma shader_feature _SPECULAR_DETAIL
-			#pragma shader_feature _SMOOTHNESS_TEXTURE_ALBEDO_CHANNEL_A
-			#pragma shader_feature _SPECULARHIGHLIGHTS_OFF
-			#pragma shader_feature _GLOSSYREFLECTIONS_OFF
+			#pragma shader_feature ___ _DETAIL_MULX2
+			#pragma shader_feature _ _SMOOTHNESS_TEXTURE_ALBEDO_CHANNEL_A
+			#pragma shader_feature _ _SPECULARHIGHLIGHTS_OFF
+			#pragma shader_feature _ _GLOSSYREFLECTIONS_OFF
 
 			// When sampling lighting, Unity assume L2 probe sampling will be done
 			// in the vertex shader. However, this would be problematic due to 
@@ -143,13 +143,12 @@ Shader "Silent's Cel Shading/Transparent"
 
 			#define UNITY_PASS_FORWARDADD
 
-			#pragma shader_feature NO_OUTLINE TINTED_OUTLINE COLORED_OUTLINE
+			#pragma shader_feature _ TINTED_OUTLINE COLORED_OUTLINE
 			#pragma shader_feature _ _ALPHATEST_ON _ALPHABLEND_ON _ALPHAPREMULTIPLY_ON
-			#pragma shader_feature _DETAIL
-			#pragma shader_feature _SPECULAR_DETAIL
-			#pragma shader_feature _SMOOTHNESS_TEXTURE_ALBEDO_CHANNEL_A
-			#pragma shader_feature _SPECULARHIGHLIGHTS_OFF
-			#pragma shader_feature _GLOSSYREFLECTIONS_OFF
+			#pragma shader_feature ___ _DETAIL_MULX2
+			#pragma shader_feature _ _SMOOTHNESS_TEXTURE_ALBEDO_CHANNEL_A
+			#pragma shader_feature _ _SPECULARHIGHLIGHTS_OFF
+			#pragma shader_feature _ _GLOSSYREFLECTIONS_OFF
 
 			#include "SCSS_Core.cginc"
 
