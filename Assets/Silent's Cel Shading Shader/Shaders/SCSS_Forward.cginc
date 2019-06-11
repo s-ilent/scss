@@ -159,7 +159,7 @@ float4 frag(VertexOutput i, uint facing : SV_IsFrontFace) : SV_Target
 	c.albedo = Albedo(texcoords);
 
 	// Vertex colour application. 
-	c.albedo *= i.color.rgb;
+	c.albedo = _VertexColorType? c.albedo : c.albedo * i.color.rgb;
 	c.softness = i.extraData.g;
 
 	#if COLORED_OUTLINE
@@ -167,12 +167,12 @@ float4 frag(VertexOutput i, uint facing : SV_IsFrontFace) : SV_Target
 	{
 		c.albedo = i.color.rgb; 
 	}
-	#endif
-
+	#else
 	if (_VertexColorType == 1 && i.is_outline) 
 	{
 		c.albedo = i.color.rgb;
 	}
+	#endif
 
 	c.alpha = Alpha(texcoords.xy);
 
