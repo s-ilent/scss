@@ -5,6 +5,19 @@
 #include "AutoLight.cginc"
 #include "Lighting.cginc"
 
+//---------------------------------------
+
+// Keyword squeezing. 
+#if (_DETAIL_MULX2 || _DETAIL_MUL || _DETAIL_ADD || _DETAIL_LERP)
+    #define _DETAIL 1
+#endif
+
+#if !(TINTED_OUTLINE || COLORED_OUTLINE)
+	#define NO_OUTLINE
+#endif
+
+//---------------------------------------
+
 UNITY_DECLARE_TEX2D(_MainTex); uniform half4 _MainTex_ST; uniform half4 _MainTex_TexelSize;
 UNITY_DECLARE_TEX2D_NOSAMPLER(_DetailAlbedoMap); uniform half4 _DetailAlbedoMap_ST; uniform half4 _DetailAlbedoMap_TexelSize;
 UNITY_DECLARE_TEX2D_NOSAMPLER(_ColorMask); uniform half4 _ColorMask_ST;
@@ -26,7 +39,9 @@ uniform float _Cutoff;
 uniform float _AlphaSharp;
 uniform float _UVSec;
 
+uniform float _DetailAlbedoMapScale;
 uniform float _DetailNormalMapScale;
+uniform float _SpecularDetailStrength;
 
 uniform float _LightRampType;
 
@@ -60,8 +75,6 @@ uniform float _UseMatcap;
 uniform float _AdditiveMatcapStrength;
 uniform float _MultiplyMatcapStrength;
 
-uniform float _SpecularDetailStrength;
-
 uniform float _UseSubsurfaceScattering;
 uniform float _ThicknessMapPower;
 uniform float _ThicknessMapInvert;
@@ -92,8 +105,9 @@ struct v2g
 	float4 pos : CLIP_POS;
 	half4 vertexLight : TEXCOORD6;
 	fixed4 color : COLOR;
-	UNITY_SHADOW_COORDS(7)
-	UNITY_FOG_COORDS(8)
+	half2 extraData : TEXCOORD7;
+	UNITY_SHADOW_COORDS(8)
+	UNITY_FOG_COORDS(9)
 
     UNITY_VERTEX_INPUT_INSTANCE_ID
     UNITY_VERTEX_OUTPUT_STEREO
@@ -110,9 +124,10 @@ struct VertexOutput
 	float3 bitangentDir : TEXCOORD5;
 	half4 vertexLight : TEXCOORD6;
 	float4 color : COLOR;
+	half2 extraData : TEXCOORD7;
 	bool is_outline : IS_OUTLINE;
-	UNITY_SHADOW_COORDS(7)
-	UNITY_FOG_COORDS(8)
+	UNITY_SHADOW_COORDS(8)
+	UNITY_FOG_COORDS(9)
 
     UNITY_VERTEX_INPUT_INSTANCE_ID
     UNITY_VERTEX_OUTPUT_STEREO
@@ -174,15 +189,17 @@ half3 Albedo(float4 texcoords)
     half3 albedo = UNITY_SAMPLE_TEX2D (_MainTex, texcoords.xy).rgb * LerpWhiteTo(_Color.rgb, ColorMask(texcoords.xy));
 #if _DETAIL
     half mask = DetailMask(texcoords.xy);
-    half3 detailAlbedo = UNITY_SAMPLE_TEX2D_SAMPLER (_DetailAlbedoMap, _MainTex, texcoords.zw).rgb;
+    half4 detailAlbedo = UNITY_SAMPLE_TEX2D_SAMPLER (_DetailAlbedoMap, _MainTex, texcoords.zw);
+    mask *= detailAlbedo.a;
+    mask *= _DetailAlbedoMapScale;
     #if _DETAIL_MULX2
-        albedo *= LerpWhiteTo (detailAlbedo * unity_ColorSpaceDouble.rgb, mask);
+        albedo *= LerpWhiteTo (detailAlbedo.rgb * unity_ColorSpaceDouble.rgb, mask);
     #elif _DETAIL_MUL
-        albedo *= LerpWhiteTo (detailAlbedo, mask);
+        albedo *= LerpWhiteTo (detailAlbedo.rgb, mask);
     #elif _DETAIL_ADD
-        albedo += detailAlbedo * mask;
+        albedo += detailAlbedo.rgb * mask;
     #elif _DETAIL_LERP
-        albedo = lerp (albedo, detailAlbedo, mask);
+        albedo = lerp (albedo, detailAlbedo.rgb, mask);
     #endif
 #endif
     return albedo;
@@ -198,7 +215,7 @@ half Alpha(float2 uv)
 }
 
 
-half4 SpecularGloss(float4 texcoords)
+half4 SpecularGloss(float4 texcoords, half mask)
 {
     half4 sg;
 #if 1 //def _SPECGLOSSMAP
@@ -218,9 +235,9 @@ half4 SpecularGloss(float4 texcoords)
     #endif
 #endif
 
-#if defined(_SPECULAR_DETAIL)
-	float4 sdm = UNITY_SAMPLE_TEX2D_SAMPLER(_SpecularDetailMask,_MainTex,TRANSFORM_TEX(texcoords.zw, _SpecularDetailMask));
-	sg *= saturate(sdm + 1-_SpecularDetailStrength);
+#if _DETAIL 
+		float4 sdm = UNITY_SAMPLE_TEX2D_SAMPLER(_SpecularDetailMask,_MainTex,texcoords.zw);
+		sg *= saturate(sdm + 1-(_SpecularDetailStrength*mask));		
 #endif
 
     return sg;
@@ -231,11 +248,11 @@ half3 Emission(float2 uv)
     return UNITY_SAMPLE_TEX2D_SAMPLER(_EmissionMap, _MainTex, uv).rgb;
 }
 
-half3 NormalInTangentSpace(float2 texcoords, half mask)
+half3 NormalInTangentSpace(float4 texcoords, half mask)
 {
 	float3 normalTangent = UnpackScaleNormal(UNITY_SAMPLE_TEX2D_SAMPLER(_BumpMap, _MainTex, TRANSFORM_TEX(texcoords.xy, _MainTex)), 1.0);
 #if _DETAIL 
-    half3 detailNormalTangent = UnpackScaleNormal(UNITY_SAMPLE_TEX2D_SAMPLER (_DetailNormalMap, _MainTex, TRANSFORM_TEX(texcoords.xy, _DetailNormalMap)), _DetailNormalMapScale);
+    half3 detailNormalTangent = UnpackScaleNormal(UNITY_SAMPLE_TEX2D_SAMPLER (_DetailNormalMap, _MainTex, texcoords.zw), _DetailNormalMapScale);
     #if _DETAIL_LERP
         normalTangent = lerp(
             normalTangent,
