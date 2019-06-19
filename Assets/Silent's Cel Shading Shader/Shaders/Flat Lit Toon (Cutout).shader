@@ -20,10 +20,10 @@ Shader "Silent's Cel Shading/Cutout"
 		[HDR]_EmissionColor("Emission Color", Color) = (0,0,0,1)
 		[HDR]_CustomFresnelColor("Emissive Fresnel Color", Color) = (0,0,0,1)
 		_SpecGlossMap ("Specular Map", 2D) = "black" {}
-		[Toggle(_)]_UseEnergyConservation ("Energy Conservation", Float) = 0.0
+		[Toggle(_)]_UseEnergyConservation ("Energy Conservation", Float) = 1.0
 		_Smoothness ("Smoothness", Range(0, 1)) = 1
 		_Anisotropy("Anisotropy", Range(-1,1)) = 0.8
-		[Toggle(_)]_UseFresnel ("Use Fresnel", Float) = 0.0
+		[Enum(AmbientFresnelType)]_UseFresnel ("Use Fresnel", Float) = 0.0
 		_FresnelWidth ("Fresnel Strength", Range(0, 20)) = .5
 		_FresnelStrength ("Fresnel Softness", Range(0.1, 0.9999)) = 0.5
 		[HDR]_FresnelTint("Fresnel Tint", Color) = (1,1,1,1)
@@ -101,6 +101,7 @@ Shader "Silent's Cel Shading/Cutout"
 			CGPROGRAM
 
 			#define UNITY_PASS_FORWARDBASE
+			#pragma multi_compile _ VERTEXLIGHT_ON
 
 			#pragma shader_feature _ TINTED_OUTLINE COLORED_OUTLINE
 			#pragma shader_feature _ _ALPHATEST_ON _ALPHABLEND_ON _ALPHAPREMULTIPLY_ON
@@ -108,16 +109,6 @@ Shader "Silent's Cel Shading/Cutout"
 			#pragma shader_feature _ _SMOOTHNESS_TEXTURE_ALBEDO_CHANNEL_A
 			#pragma shader_feature _ _SPECULARHIGHLIGHTS_OFF
 			#pragma shader_feature _ _GLOSSYREFLECTIONS_OFF
-
-			// When sampling lighting, Unity assume L2 probe sampling will be done
-			// in the vertex shader. However, this would be problematic due to 
-			// the requirements of cel shading. 
-			#define UNITY_SAMPLE_FULL_SH_PER_PIXEL 1
-			
-			#if defined(UNITY_SHOULD_SAMPLE_SH)
-    		#undef UNITY_SHOULD_SAMPLE_SH
-    		#define SAMPLE_SH_NONLINEAR
-			#endif
 			
 			#include "SCSS_Core.cginc"
 
