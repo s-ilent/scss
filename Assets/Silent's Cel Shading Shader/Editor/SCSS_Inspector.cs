@@ -75,6 +75,13 @@ namespace SilentCelShading.Unity
             None
         }
 
+        public enum AmbientFresnelType
+        {
+            Disable,
+            Lit,
+            Ambient
+        }
+
         public enum VertexColorType
         {
             Color,
@@ -129,11 +136,11 @@ namespace SilentCelShading.Unity
             public static GUIContent smoothness = new GUIContent("Smoothness", "The smoothness of the material. The specular map's alpha channel is used for this, with this slider being a multiplier.");
             public static GUIContent anisotropy = new GUIContent("Anisotropy", "Direction of the anisotropic specular highlights.");
 
-            public static GUIContent useFresnel = new GUIContent("Use Ambient Fresnel", "Applies an additional rim lighting effect.");
-            public static GUIContent fresnelWidth = new GUIContent("Ambient Fresnel Width", "Sets the width of the ambient fresnel lighting.");
-            public static GUIContent fresnelStrength = new GUIContent("Ambient Fresnel Softness", "Sets the sharpness of the fresnel. ");
-            public static GUIContent fresnelTint = new GUIContent("Ambient Fresnel Tint", "Tints the colours of the ambient fresnel. To make it brighter, change the brightness to a valur higher than 1.");
-            public static GUIContent customFresnelColor = new GUIContent("Emissive Fresnel", "RGB sets the colour of the additive fresnel. Alpha controls the power/width of the effect.");
+            public static GUIContent useFresnel = new GUIContent("Rim Lighting Style", "Applies a customisable rim lighting effect.");
+            public static GUIContent fresnelWidth = new GUIContent("Rim Width", "Sets the width of the rim lighting.");
+            public static GUIContent fresnelStrength = new GUIContent("Rim Softness", "Sets the sharpness of the rim edge. ");
+            public static GUIContent fresnelTint = new GUIContent("Rim Tint", "Tints the colours of the rim lighting. To make it brighter, change the brightness to a valur higher than 1.");
+            public static GUIContent customFresnelColor = new GUIContent("Emissive Rim", "RGB sets the colour of the additive rim light. Alpha controls the power/width of the effect.");
 
             public static GUIContent shadowLift = new GUIContent("Shadow Lift", "Increasing this warps the lighting received to make more things lit.");
             public static GUIContent indirectLightBoost = new GUIContent("Indirect Lighting Boost", "Blends the lighting of shadows with the lighting of direct light, making them brighter.");
@@ -141,7 +148,7 @@ namespace SilentCelShading.Unity
             public static GUIContent outlineColor = new GUIContent("Outline Colour", "Sets the colour used for outlines. In tint mode, this is multiplied against the texture.");
             public static GUIContent outlineWidth = new GUIContent("Outline Width", "Sets the width of outlines in cm.");
 
-            public static GUIContent useEnergyConservation = new GUIContent("Use Energy Conservation (仮)", "Reduces the intensity of the diffuse on specular areas, to realistically conserve energy.");
+            public static GUIContent useEnergyConservation = new GUIContent("Use Energy Conservation", "Reduces the intensity of the diffuse on specular areas, to realistically conserve energy.");
             public static GUIContent useMetallic = new GUIContent("Use as Metalness", "Metalness maps are greyscale maps that contain the metalness of a surface. This is different to specular maps, which are RGB (colour) maps that contain the specular parts of a surface.");
             public static GUIContent useMatcap = new GUIContent("Use Matcap", "Enables the use of material capture textures.");
             public static GUIContent additiveMatcap = new GUIContent("Additive Matcap", "Additive Matcap (RGB)");
@@ -430,8 +437,8 @@ namespace SilentCelShading.Unity
             EditorGUIUtility.labelWidth = 0f;
             EditorGUILayout.Space();
             
-            EditorGUI.BeginChangeCheck();
             {
+                EditorGUI.BeginChangeCheck();
                 GUILayout.Label(Styles.mainOptionsTitle, EditorStyles.boldLabel, new GUILayoutOption[0]);
 
                 materialEditor.TexturePropertySingleLine(Styles.mainTexture, mainTexture, color);
@@ -445,7 +452,7 @@ namespace SilentCelShading.Unity
                 EditorGUI.indentLevel -= 2;
                 materialEditor.TexturePropertySingleLine(Styles.normalMap, normalMap);
                 EditorGUILayout.Space();
-                    }
+            }
                 EditorGUI.EndChangeCheck();
 
                 EditorGUI.BeginChangeCheck();
@@ -453,7 +460,6 @@ namespace SilentCelShading.Unity
                 if (EditorGUI.EndChangeCheck())
                     emissionMap.textureScaleAndOffset = mainTexture.textureScaleAndOffset;          
                 EditorGUILayout.Space();
-                EditorGUI.EndChangeCheck();
         }
 
         protected void RenderingOptions(MaterialEditor materialEditor, Material material)
@@ -470,7 +476,7 @@ namespace SilentCelShading.Unity
                 {
                     materialEditor.ShaderProperty(fresnelWidth, Styles.fresnelWidth);
                     materialEditor.ShaderProperty(fresnelStrength, Styles.fresnelStrength);
-                    materialEditor.ShaderProperty(fresnelTint, Styles.fresnelTint, 2);         
+                    materialEditor.ShaderProperty(fresnelTint, Styles.fresnelTint);         
                 }
                 EditorGUILayout.Space();
 
@@ -585,10 +591,8 @@ namespace SilentCelShading.Unity
 
                 if (PropertyEnabled(useMatcap))
                 {
-                    materialEditor.TexturePropertySingleLine(Styles.additiveMatcap, additiveMatcap);
-                    materialEditor.ShaderProperty(additiveMatcapStrength, Styles.additiveMatcapStrength);
-                    materialEditor.TexturePropertySingleLine(Styles.multiplyMatcap, multiplyMatcap);
-                    materialEditor.ShaderProperty(multiplyMatcapStrength, Styles.multiplyMatcapStrength);
+                    materialEditor.TexturePropertySingleLine(Styles.additiveMatcap, additiveMatcap, additiveMatcapStrength);
+                    materialEditor.TexturePropertySingleLine(Styles.multiplyMatcap, multiplyMatcap, multiplyMatcapStrength);
                     materialEditor.TexturePropertySingleLine(Styles.matcapMask, matcapMask);
                 }
             } 

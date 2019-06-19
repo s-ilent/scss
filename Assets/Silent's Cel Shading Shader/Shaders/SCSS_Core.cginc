@@ -46,11 +46,11 @@ float4 Shade4PointLightsAtten (
     ndotl += toLightY * normal.y;
     ndotl += toLightZ * normal.z;
     // correct NdotL
-    float4 corr = 0; //rsqrt(lengthSq);
-    corr.x = fastRcpSqrtNR0(lengthSq.x);
-    corr.y = fastRcpSqrtNR0(lengthSq.y);
-    corr.z = fastRcpSqrtNR0(lengthSq.z);
-    corr.w = fastRcpSqrtNR0(lengthSq.x);
+    float4 corr = 0;//rsqrt(lengthSq);
+    corr.x = fastRcpSqrtNR1(lengthSq.x);
+    corr.y = fastRcpSqrtNR1(lengthSq.y);
+    corr.z = fastRcpSqrtNR1(lengthSq.z);
+    corr.w = fastRcpSqrtNR1(lengthSq.x);
 
     ndotl = corr * ndotl * 0.5 + 0.5; // Match with Forward for light ramp sampling
     ndotl = max (float4(0,0,0,0), ndotl);
@@ -244,6 +244,7 @@ half3 calcDiffuse(float3 tonemap, float occlusion, half3 normal, half perceptual
 #if defined(UNITY_PASS_FORWARDADD)
 	attenuation = 1; // Attenuation is applied later for ForwardAdd.
 #endif
+
 	float remappedLight = d.NdotL * attenuation
 		* DisneyDiffuse(d.NdotV, d.NdotL, d.LdotH, perceptualRoughness);
 	remappedLight = remappedLight * 0.5 + 0.5;
@@ -260,14 +261,18 @@ half3 calcDiffuse(float3 tonemap, float occlusion, half3 normal, half perceptual
 	directLighting = 
 	indirectLighting = l.color;
 
+	if (_UseFresnel == 1) 
+	{
+		float sharpFresnel = sharpFresnelLight(d);
+		directLighting += directLighting*sharpFresnel;
+	}
+
 	indirectLighting *= tonemap;
 
 	lightContribution = lerp(indirectLighting, directLighting, lightContribution);
 #endif
 
 #if defined(UNITY_PASS_FORWARDBASE)
-	lightContribution *= l.color;
-
 	if (_LightingCalculationType == 0) // Arktoon
 	{
 		directLighting   = GetSHLength();
@@ -290,6 +295,15 @@ half3 calcDiffuse(float3 tonemap, float occlusion, half3 normal, half perceptual
 		directLighting   = BetterSH9(ambientDir);
 		indirectLighting = BetterSH9(-ambientDir); 
 	}
+	
+	if (_UseFresnel == 1) 
+	{
+		float sharpFresnel = sharpFresnelLight(d);
+		lightContribution += lightContribution*sharpFresnel;
+		directLighting += directLighting*sharpFresnel;
+	}
+
+	lightContribution *= l.color;
 
 	indirectLighting *= 1+tonemap;
 
@@ -428,9 +442,11 @@ float3 SCSS_ApplyLighting(SCSS_Input c, SCSS_LightParam d, VertexOutput i, float
 	float3 finalColor = calcDiffuse(c.tonemap, c.occlusion, c.normal, 
 		perceptualRoughness, attenuation, c.smoothness, c.softness, d, l);
 
+	#if defined(VERTEXLIGHT_ON)
 	finalColor += calcVertexLight(i.vertexLight, c.occlusion, c.tonemap, c.softness);
+	#endif
 		
-	if (_UseFresnel == 1 && i.is_outline == 0)
+	if (_UseFresnel == 2 && i.is_outline == 0)
 	{
 		finalColor *= 1+sharpFresnelLight(d);
 	}
@@ -441,6 +457,21 @@ float3 SCSS_ApplyLighting(SCSS_Input c, SCSS_LightParam d, VertexOutput i, float
 	{
     	finalColor += calcSpecular(c.specColor, c.smoothness, c.normal, c.oneMinusReflectivity, perceptualRoughness, 
     		viewDir, attenuation, d, l, i);
+
+    // Apply specular lighting to vertex lights. This is cheaper than you might expect.
+	#if defined(UNITY_PASS_FORWARDBASE) && defined(VERTEXLIGHT_ON)
+    	for (int num = 0; num < 4; num++) {
+    		l.color = unity_LightColor[num].rgb;
+    		l.dir = normalize(float3(unity_4LightPosX0[num], unity_4LightPosY0[num], unity_4LightPosZ0[num]) - i.posWorld.xyz);
+    		d.NdotL = i.vertexLight[num];
+			d.halfDir = Unity_SafeNormalize (l.dir + viewDir);
+			d.LdotH = saturate(dot(l.dir, d.halfDir));
+			d.NdotH = saturate(dot(c.normal, d.halfDir));
+
+    		finalColor += calcSpecular(c.specColor, c.smoothness, c.normal, c.oneMinusReflectivity, perceptualRoughness, 
+    		viewDir, i.vertexLight[num], d, l, i);
+    	};
+	#endif
     };
 
 	#if defined(UNITY_PASS_FORWARDADD)

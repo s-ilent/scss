@@ -279,7 +279,7 @@ half3 Tonemap(float2 uv, inout float occlusion)
 	{
 		// RGB will boost shadow range. Raising _Shadow reduces its influence.
 		// Alpha will boost light range. Raising _Shadow reduces its influence.
-		tonemap = _ShadowMaskColor.rgb*saturate(_IndirectLightingBoost+1-_ShadowMask_var.w);
+		tonemap = _ShadowMaskColor.rgb*saturate(_IndirectLightingBoost+1-_ShadowMask_var.a);
 		occlusion = _ShadowMaskColor.a*_ShadowMask_var.r;
 	}
 	if (_ShadowMaskType == 1) 

@@ -62,6 +62,17 @@ bool inMirror()
 	return unity_CameraProjection[2][0] != 0.f || unity_CameraProjection[2][1] != 0.f;
 }
 
+// Only needed in Unity versions before Unity 2017.4.28 or so.
+// However, 2017.4.15 is a higher UNITY_VERSION.
+bool backfaceInMirror()
+{
+	#if ( (UNITY_VERSION <= 201711) || (UNITY_VERSION == 201755) )
+	return inMirror();
+	#else
+	return false;
+	#endif
+}
+
 //-----------------------------------------------------------------------------
 // Helper functions for roughness
 //-----------------------------------------------------------------------------
