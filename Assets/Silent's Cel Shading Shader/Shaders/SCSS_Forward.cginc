@@ -152,7 +152,7 @@ float4 frag(VertexOutput i, uint facing : SV_IsFrontFace) : SV_Target
 	// Backface correction. If a polygon is facing away from the camera, it's lit incorrectly.
 	// This will light it as though it is facing the camera (which it visually is), unless
 	// it's part of an outline, in which case it's invalid and deleted. 
-	facing = backfaceInMirror()? !facing : facing;
+	//facing = backfaceInMirror()? !facing : facing; // Only needed for older Unity versions.
 	c.normal.z *= facing? 1 : -1; 
 	if (i.is_outline && !facing) discard;
 
@@ -240,10 +240,6 @@ float4 frag(VertexOutput i, uint facing : SV_IsFrontFace) : SV_Target
 		if (_UseEnergyConservation == 1)
 		{
 			c.albedo.xyz = c.albedo.xyz * (c.oneMinusReflectivity); 
-		}
-
-		if (_UseEnergyConservation == 1)
-		{
 			c.tonemap = c.tonemap * (c.oneMinusReflectivity); 
 		}
 
