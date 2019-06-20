@@ -5,6 +5,8 @@
 #include "SCSS_Input.cginc"
 #include "SCSS_UnityGI.cginc"
 
+#define SCSS_UNIMPORTANT_LIGHTS_FRAGMENT 1
+
 struct SCSS_Light
 {
     half3 color;
@@ -47,17 +49,21 @@ float4 Shade4PointLightsAtten (
     ndotl += toLightZ * normal.z;
     // correct NdotL
     float4 corr = 0;//rsqrt(lengthSq);
-    corr.x = fastRcpSqrtNR1(lengthSq.x);
-    corr.y = fastRcpSqrtNR1(lengthSq.y);
-    corr.z = fastRcpSqrtNR1(lengthSq.z);
-    corr.w = fastRcpSqrtNR1(lengthSq.x);
+    corr.x = fastRcpSqrtNR0(lengthSq.x);
+    corr.y = fastRcpSqrtNR0(lengthSq.y);
+    corr.z = fastRcpSqrtNR0(lengthSq.z);
+    corr.w = fastRcpSqrtNR0(lengthSq.x);
 
-    ndotl = corr * ndotl * 0.5 + 0.5; // Match with Forward for light ramp sampling
+    ndotl = corr * (ndotl * 0.5 + 0.5); // Match with Forward for light ramp sampling
     ndotl = max (float4(0,0,0,0), ndotl);
     // attenuation
     float4 atten = 1.0 / (1.0 + lengthSq * lightAttenSq);
     float4 diff = ndotl * atten;
+    #if defined(SCSS_UNIMPORTANT_LIGHTS_FRAGMENT)
+    return atten;
+    #else
     return diff;
+    #endif
 }
 
 // Based on Standard Shader's forwardbase vertex lighting calculations in VertexGIForward
@@ -238,13 +244,8 @@ float3 getSubsurfaceScatteringLight (SCSS_Light l, float3 normalDirection, float
 				
 }
 
-half3 calcDiffuse(float3 tonemap, float occlusion, half3 normal, half perceptualRoughness, half attenuation, 
-	half smoothness, half softness, SCSS_LightParam d, SCSS_Light l)
+float getRemappedLight(half occlusion, half perceptualRoughness, half attenuation, SCSS_LightParam d)
 {
-#if defined(UNITY_PASS_FORWARDADD)
-	attenuation = 1; // Attenuation is applied later for ForwardAdd.
-#endif
-
 	float remappedLight = d.NdotL * attenuation
 		* DisneyDiffuse(d.NdotV, d.NdotL, d.LdotH, perceptualRoughness);
 	remappedLight = remappedLight * 0.5 + 0.5;
@@ -252,27 +253,19 @@ half3 calcDiffuse(float3 tonemap, float occlusion, half3 normal, half perceptual
 	remappedLight *= (1 - _Shadow) * occlusion + _Shadow;
 	remappedLight = _ShadowLift + remappedLight * (1-_ShadowLift);
 
+	return remappedLight;
+}
+
+half3 calcDiffuseBase(float3 tonemap, float occlusion, half3 normal, half perceptualRoughness, half attenuation, 
+	half smoothness, half softness, SCSS_LightParam d, SCSS_Light l)
+{
+	float remappedLight = getRemappedLight(occlusion, perceptualRoughness, attenuation, d);
+
 	float3 lightContribution = sampleRampWithOptions(remappedLight, softness);
 
 	float3 directLighting = 0.0;
 	float3 indirectLighting = 0.0;
 
-#if defined(UNITY_PASS_FORWARDADD)
-	directLighting = 
-	indirectLighting = l.color;
-
-	if (_UseFresnel == 1) 
-	{
-		float sharpFresnel = sharpFresnelLight(d);
-		directLighting += directLighting*sharpFresnel;
-	}
-
-	indirectLighting *= tonemap;
-
-	lightContribution = lerp(indirectLighting, directLighting, lightContribution);
-#endif
-
-#if defined(UNITY_PASS_FORWARDBASE)
 	if (_LightingCalculationType == 0) // Arktoon
 	{
 		directLighting   = GetSHLength();
@@ -316,9 +309,28 @@ half3 calcDiffuse(float3 tonemap, float occlusion, half3 normal, half perceptual
 	float ambientLight = dot(normal, ambientLightDirection);
 	ambientLight = ambientLight * 0.5 + 0.5;
 	lightContribution += lerp(indirectLighting, directLighting, sampleRampWithOptions(ambientLight, softness));
-#endif
 
 	return lightContribution;	
+}
+
+half3 calcDiffuseAdd(float3 tonemap, float occlusion, half perceptualRoughness, 
+	half smoothness, half softness, SCSS_LightParam d, SCSS_Light l)
+{
+	float remappedLight = getRemappedLight(occlusion, perceptualRoughness, 1.0, d);
+
+	float3 lightContribution = sampleRampWithOptions(remappedLight, softness);
+
+	float3 directLighting = l.color;
+	float3 indirectLighting = l.color * tonemap;
+
+	if (_UseFresnel == 1) 
+	{
+		float sharpFresnel = sharpFresnelLight(d);
+		directLighting += directLighting*sharpFresnel;
+	}
+
+	lightContribution = lerp(indirectLighting, directLighting, lightContribution);
+	return lightContribution;
 }
 
 half3 calcVertexLight(float4 vertexAttenuation, float occlusion, float3 tonemap, half softness)
@@ -327,30 +339,21 @@ half3 calcVertexLight(float4 vertexAttenuation, float occlusion, float3 tonemap,
 	#if defined(UNITY_PASS_FORWARDBASE)
 		// Vertex lighting based on Shade4PointLights
 		vertexAttenuation *= (1 - _Shadow) * occlusion + _Shadow;
+		float4 vertexAttenuationFalloff = saturate(vertexAttenuation * 10);
 
-	    vertexContribution += unity_LightColor[0] * (sampleRampWithOptions(vertexAttenuation.x, softness)+tonemap) * vertexAttenuation.x;
-	    vertexContribution += unity_LightColor[1] * (sampleRampWithOptions(vertexAttenuation.y, softness)+tonemap) * vertexAttenuation.y;
-	    vertexContribution += unity_LightColor[2] * (sampleRampWithOptions(vertexAttenuation.z, softness)+tonemap) * vertexAttenuation.z;
-	    vertexContribution += unity_LightColor[3] * (sampleRampWithOptions(vertexAttenuation.w, softness)+tonemap) * vertexAttenuation.w;
+	    vertexContribution += unity_LightColor[0] * (sampleRampWithOptions(vertexAttenuation.x, softness)+tonemap) * vertexAttenuationFalloff.x;
+	    vertexContribution += unity_LightColor[1] * (sampleRampWithOptions(vertexAttenuation.y, softness)+tonemap) * vertexAttenuationFalloff.y;
+	    vertexContribution += unity_LightColor[2] * (sampleRampWithOptions(vertexAttenuation.z, softness)+tonemap) * vertexAttenuationFalloff.z;
+	    vertexContribution += unity_LightColor[3] * (sampleRampWithOptions(vertexAttenuation.w, softness)+tonemap) * vertexAttenuationFalloff.w;
 	#endif
 	return vertexContribution;
 }
 
-half3 calcSpecular(float3 specColor, float smoothness, float3 normal, float oneMinusReflectivity, float perceptualRoughness,
-	float3 viewDir, float attenuation, SCSS_LightParam d, SCSS_Light l, VertexOutput i)
+void getSpecularVD(float roughness, float3 normal, float3 viewDir, SCSS_LightParam d, SCSS_Light l, VertexOutput i,
+	out half V, out half D)
 {
-
-	UnityGI gi = (UnityGI)0;
-	
-	half V = 0; half D = 0; float3 shiftedTangent = 0;
-	float roughness = PerceptualRoughnessToRoughness(perceptualRoughness);
-	//float roughness = (perceptualRoughness);
-
-	// "GGX with roughness to 0 would mean no specular at all, using max(roughness, 0.002) here to match HDrenderloop roughness remapping."
-	// This also fixes issues with the other specular types.
-	roughness = max(roughness, 0.002);
-
-    #ifndef SHADER_TARGET_GLSL
+	V = 0; D = 0; float3 shiftedTangent = 0;
+	#ifndef SHADER_TARGET_GLSL
 	[call]
 	#endif
 	switch(_SpecularType)
@@ -399,6 +402,23 @@ half3 calcSpecular(float3 specColor, float smoothness, float3 normal, float oneM
 			_Anisotropy*10, 0.05 );
 	    break;
 	}
+	return;
+}
+
+half3 calcSpecularBase(float3 specColor, float smoothness, float3 normal, float oneMinusReflectivity, float perceptualRoughness,
+	float3 viewDir, float attenuation, SCSS_LightParam d, SCSS_Light l, VertexOutput i)
+{
+	UnityGI gi = (UnityGI)0;
+	
+	half V = 0; half D = 0; 
+	float roughness = PerceptualRoughnessToRoughness(perceptualRoughness);
+	//float roughness = (perceptualRoughness);
+
+	// "GGX with roughness to 0 would mean no specular at all, using max(roughness, 0.002) here to match HDrenderloop roughness remapping."
+	// This also fixes issues with the other specular types.
+	roughness = max(roughness, 0.002);
+
+	getSpecularVD(roughness, normal, viewDir, d, l, i, /*out*/ V, /*out*/ D);
 
 	half specularTerm = V*D * UNITY_PI; // Torrance-Sparrow model, Fresnel is applied later
 	specularTerm = max(0, specularTerm * d.NdotL);
@@ -423,15 +443,43 @@ half3 calcSpecular(float3 specColor, float smoothness, float3 normal, float oneM
 	
 }
 
+half3 calcSpecularAdd(float3 specColor, float smoothness, float3 normal, float oneMinusReflectivity, float perceptualRoughness,
+	float3 viewDir, SCSS_LightParam d, SCSS_Light l, VertexOutput i)
+{
+	#if defined(_SPECULARHIGHLIGHTS_OFF)
+		return 0.0;
+	#endif
+	
+	half V = 0; half D = 0; 
+	float roughness = PerceptualRoughnessToRoughness(perceptualRoughness);
+
+	// "GGX with roughness to 0 would mean no specular at all, using max(roughness, 0.002) here to match HDrenderloop roughness remapping."
+	// This also fixes issues with the other specular types.
+	roughness = max(roughness, 0.002);
+
+	getSpecularVD(roughness, normal, viewDir, d, l, i, /*out*/ V, /*out*/ D);
+
+	half specularTerm = V*D * UNITY_PI; // Torrance-Sparrow model, Fresnel is applied later
+	specularTerm = max(0, specularTerm * d.NdotL);
+
+    // To provide true Lambert lighting, we need to be able to kill specular completely.
+    specularTerm *= any(specColor) ? 1.0 : 0.0;
+
+	float grazingTerm = saturate(smoothness + (1-oneMinusReflectivity));
+
+	return
+	specularTerm * l.color * FresnelTerm(specColor, d.LdotH);
+	
+}
+
 float3 SCSS_ApplyLighting(SCSS_Input c, SCSS_LightParam d, VertexOutput i, float3 viewDir, SCSS_Light l,
 	float2 texcoords)
 {
 	UNITY_LIGHT_ATTENUATION(attenuation, i, i.posWorld.xyz);
 
-	// Perceptual roughness transformation...
+	// Perceptual roughness transformation. Without this, roughness handling is wrong.
 	float perceptualRoughness = SmoothnessToPerceptualRoughness(c.smoothness);
 
-	// Matcap handling
 	if (_UseMatcap == 1) 
 	{
 		MatcapOutput matcaps = getMatcapEffect(c.normal, l, viewDir, texcoords.xy);
@@ -439,13 +487,23 @@ float3 SCSS_ApplyLighting(SCSS_Input c, SCSS_LightParam d, VertexOutput i, float
 		c.albedo += matcaps.add;
 	}
 
-	float3 finalColor = calcDiffuse(c.tonemap, c.occlusion, c.normal, 
-		perceptualRoughness, attenuation, c.smoothness, c.softness, d, l);
+	float3 finalColor; 
 
-	#if defined(VERTEXLIGHT_ON)
+	#if defined(UNITY_PASS_FORWARDBASE)
+	finalColor = calcDiffuseBase(c.tonemap, c.occlusion, c.normal, 
+		perceptualRoughness, attenuation, c.smoothness, c.softness, d, l);
+	#endif
+
+	#if defined(UNITY_PASS_FORWARDADD)
+	finalColor = calcDiffuseAdd(c.tonemap, c.occlusion, 
+		perceptualRoughness, c.smoothness, c.softness, d, l);
+	#endif
+
+	// Proper cheap vertex lights. 
+	#if defined(VERTEXLIGHT_ON) && !defined(SCSS_UNIMPORTANT_LIGHTS_FRAGMENT)
 	finalColor += calcVertexLight(i.vertexLight, c.occlusion, c.tonemap, c.softness);
 	#endif
-		
+
 	if (_UseFresnel == 2 && i.is_outline == 0)
 	{
 		finalColor *= 1+sharpFresnelLight(d);
@@ -455,24 +513,27 @@ float3 SCSS_ApplyLighting(SCSS_Input c, SCSS_LightParam d, VertexOutput i, float
 
 	if (_SpecularType != 0 && i.is_outline == 0)
 	{
-    	finalColor += calcSpecular(c.specColor, c.smoothness, c.normal, c.oneMinusReflectivity, perceptualRoughness, 
+    	finalColor += calcSpecularBase(c.specColor, c.smoothness, c.normal, c.oneMinusReflectivity, perceptualRoughness, 
     		viewDir, attenuation, d, l, i);
-
-    // Apply specular lighting to vertex lights. This is cheaper than you might expect.
-	#if defined(UNITY_PASS_FORWARDBASE) && defined(VERTEXLIGHT_ON)
-    	for (int num = 0; num < 4; num++) {
-    		l.color = unity_LightColor[num].rgb;
-    		l.dir = normalize(float3(unity_4LightPosX0[num], unity_4LightPosY0[num], unity_4LightPosZ0[num]) - i.posWorld.xyz);
-    		d.NdotL = i.vertexLight[num];
-			d.halfDir = Unity_SafeNormalize (l.dir + viewDir);
-			d.LdotH = saturate(dot(l.dir, d.halfDir));
-			d.NdotH = saturate(dot(c.normal, d.halfDir));
-
-    		finalColor += calcSpecular(c.specColor, c.smoothness, c.normal, c.oneMinusReflectivity, perceptualRoughness, 
-    		viewDir, i.vertexLight[num], d, l, i);
-    	};
-	#endif
     };
+
+    // Apply full lighting to unimportant lights. This is cheaper than you might expect.
+	#if defined(UNITY_PASS_FORWARDBASE) && defined(VERTEXLIGHT_ON) && defined(SCSS_UNIMPORTANT_LIGHTS_FRAGMENT)
+    for (int num = 0; num < 4; num++) {
+    	l.color = unity_LightColor[num].rgb;
+    	l.dir = normalize(float3(unity_4LightPosX0[num], unity_4LightPosY0[num], unity_4LightPosZ0[num]) - i.posWorld.xyz);
+
+    	d.NdotL = saturate(dot(l.dir, c.normal)); // Calculate NdotL
+		d.halfDir = Unity_SafeNormalize (l.dir + viewDir);
+		d.LdotH = saturate(dot(l.dir, d.halfDir));
+		d.NdotH = saturate(dot(c.normal, d.halfDir));
+
+    	finalColor += calcDiffuseAdd(c.tonemap, c.occlusion, perceptualRoughness, c.smoothness, c.softness, d, l) * c.albedo * i.vertexLight[num];
+
+    	finalColor += calcSpecularAdd(c.specColor, c.smoothness, c.normal, c.oneMinusReflectivity, perceptualRoughness, 
+    	viewDir, d, l, i) * i.vertexLight[num];
+    };
+	#endif
 
 	#if defined(UNITY_PASS_FORWARDADD)
 		finalColor *= attenuation;
