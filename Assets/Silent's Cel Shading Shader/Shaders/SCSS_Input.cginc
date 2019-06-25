@@ -32,6 +32,7 @@ UNITY_DECLARE_TEX2D_NOSAMPLER(_ThicknessMap); uniform half4 _ThicknessMap_ST;
 
 uniform sampler2D _Ramp; uniform half4 _Ramp_ST;
 uniform sampler2D _AdditiveMatcap; uniform half4 _AdditiveMatcap_ST; 
+uniform sampler2D _MidBlendMatcap; uniform half4 _MidBlendMatcap_ST; 
 uniform sampler2D _MultiplyMatcap; uniform half4 _MultiplyMatcap_ST; 
 
 uniform float4 _Color;
@@ -73,6 +74,7 @@ uniform float _LightingCalculationType;
 
 uniform float _UseMatcap;
 uniform float _AdditiveMatcapStrength;
+uniform float _MidBlendMatcapStrength;
 uniform float _MultiplyMatcapStrength;
 
 uniform float _UseSubsurfaceScattering;
