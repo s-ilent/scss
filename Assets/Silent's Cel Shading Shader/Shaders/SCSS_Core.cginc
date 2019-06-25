@@ -202,6 +202,7 @@ float3 sharpFresnelLight(SCSS_LightParam d) {
 struct MatcapOutput 
 {
 	half3 add;
+	half3 mid;
 	half3 multiply;
 };
 
@@ -215,6 +216,7 @@ MatcapOutput getMatcapEffect(float3 normal, SCSS_Light l, float3 viewDir, float2
 	half2 matcapUV = half2(dot(worldViewRight, normal), dot(worldViewUp, normal)) * 0.5 + 0.5;
 	
 	float3 AdditiveMatcap = tex2D(_AdditiveMatcap, matcapUV);
+	float3 MidBlendMatcap = tex2D(_MidBlendMatcap, matcapUV);
 	float3 MultiplyMatcap = tex2D(_MultiplyMatcap, matcapUV);
 	float4 _MatcapMask_var = MatcapMask(texcoords.xy);
 	matcaps.add = 
@@ -225,6 +227,14 @@ MatcapOutput getMatcapEffect(float3 normal, SCSS_Light l, float3 viewDir, float2
 		(l.color)
 		#endif
 		*AdditiveMatcap*_AdditiveMatcapStrength*_MatcapMask_var.g;
+	matcaps.mid = 
+		#if defined(UNITY_PASS_FORWARDBASE)
+		(BetterSH9(half4(0.0,  0.0, 0.0, 1.0))+l.color)
+		#endif
+		#if defined(UNITY_PASS_FORWARDADD)
+		(l.color)
+		#endif
+		*MidBlendMatcap*_MidBlendMatcapStrength*_MatcapMask_var.b;
 	matcaps.multiply = LerpWhiteTo(MultiplyMatcap, _MultiplyMatcapStrength * _MatcapMask_var.w);
 	return matcaps;
 }
@@ -465,8 +475,6 @@ half3 calcSpecularAdd(float3 specColor, float smoothness, float3 normal, float o
     // To provide true Lambert lighting, we need to be able to kill specular completely.
     specularTerm *= any(specColor) ? 1.0 : 0.0;
 
-	float grazingTerm = saturate(smoothness + (1-oneMinusReflectivity));
-
 	return
 	specularTerm * l.color * FresnelTerm(specColor, d.LdotH);
 	
@@ -483,6 +491,7 @@ float3 SCSS_ApplyLighting(SCSS_Input c, SCSS_LightParam d, VertexOutput i, float
 	if (_UseMatcap == 1) 
 	{
 		MatcapOutput matcaps = getMatcapEffect(c.normal, l, viewDir, texcoords.xy);
+		c.albedo += matcaps.mid * c.albedo;
 		c.albedo *= matcaps.multiply;
 		c.albedo += matcaps.add;
 	}
@@ -530,8 +539,11 @@ float3 SCSS_ApplyLighting(SCSS_Input c, SCSS_LightParam d, VertexOutput i, float
 
     	finalColor += calcDiffuseAdd(c.tonemap, c.occlusion, perceptualRoughness, c.smoothness, c.softness, d, l) * c.albedo * i.vertexLight[num];
 
+		if (_SpecularType != 0 && i.is_outline == 0)
+		{
     	finalColor += calcSpecularAdd(c.specColor, c.smoothness, c.normal, c.oneMinusReflectivity, perceptualRoughness, 
     	viewDir, d, l, i) * i.vertexLight[num];
+    	}
     };
 	#endif
 

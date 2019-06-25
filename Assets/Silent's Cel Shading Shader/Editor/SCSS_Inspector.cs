@@ -153,6 +153,8 @@ namespace SilentCelShading.Unity
             public static GUIContent useMatcap = new GUIContent("Use Matcap", "Enables the use of material capture textures.");
             public static GUIContent additiveMatcap = new GUIContent("Additive Matcap", "Additive Matcap (RGB)");
             public static GUIContent additiveMatcapStrength = new GUIContent("Additive Matcap Strength", "Power of the additive matcap. Higher is brighter.");
+            public static GUIContent midBlendMatcap = new GUIContent("Median Matcap", "Median Matcap (RGB)");
+            public static GUIContent midBlendMatcapStrength = new GUIContent("Median Matcap Strength", "Power of the median matcap. Higher is brighter.");
             public static GUIContent multiplyMatcap = new GUIContent("Multiply Matcap", "Multiply Matcap (RGB)");
             public static GUIContent multiplyMatcapStrength = new GUIContent("Multiply Matcap Strength", "Power of the multiplicative matcap. Higher is darker.");
             public static GUIContent matcapMask = new GUIContent("Matcap Mask", "Matcap Mask (RGBA, G: Additive strength, A: Multiplicative strength)");
@@ -241,8 +243,10 @@ namespace SilentCelShading.Unity
 
         protected MaterialProperty useMatcap;
         protected MaterialProperty additiveMatcap;
+        protected MaterialProperty midBlendMatcap;
         protected MaterialProperty multiplyMatcap;
         protected MaterialProperty additiveMatcapStrength;
+        protected MaterialProperty midBlendMatcapStrength;
         protected MaterialProperty multiplyMatcapStrength;
         protected MaterialProperty matcapMask;
 
@@ -327,8 +331,10 @@ namespace SilentCelShading.Unity
 
                 useMatcap = FindProperty("_UseMatcap", props);
                 additiveMatcap = FindProperty("_AdditiveMatcap", props);
+                midBlendMatcap = FindProperty("_MidBlendMatcap", props);
                 multiplyMatcap = FindProperty("_MultiplyMatcap", props);
                 additiveMatcapStrength = FindProperty("_AdditiveMatcapStrength", props);
+                midBlendMatcapStrength = FindProperty("_MidBlendMatcapStrength", props);
                 multiplyMatcapStrength = FindProperty("_MultiplyMatcapStrength", props);
                 matcapMask = FindProperty("_MatcapMask", props);
 
@@ -592,6 +598,7 @@ namespace SilentCelShading.Unity
                 if (PropertyEnabled(useMatcap))
                 {
                     materialEditor.TexturePropertySingleLine(Styles.additiveMatcap, additiveMatcap, additiveMatcapStrength);
+                    materialEditor.TexturePropertySingleLine(Styles.midBlendMatcap, midBlendMatcap, midBlendMatcapStrength);
                     materialEditor.TexturePropertySingleLine(Styles.multiplyMatcap, multiplyMatcap, multiplyMatcapStrength);
                     materialEditor.TexturePropertySingleLine(Styles.matcapMask, matcapMask);
                 }

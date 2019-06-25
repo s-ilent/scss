@@ -42,6 +42,8 @@ Shader "Silent's Cel Shading/Transparent"
 		[Toggle(_)]_UseMatcap ("Use Matcap", Float) = 0.0
 		_AdditiveMatcap("AdditiveMatcapTex", 2D) = "black" {}
 		_AdditiveMatcapStrength("Additive Matcap Strength", Range(0, 2)) = 1.0
+		_MidBlendMatcap("MidBlendMatcapTex", 2D) = "black" {}
+		_MidBlendMatcapStrength("MidBlend Matcap Strength", Range(0, 2)) = 1.0
 		_MultiplyMatcap("MultiplyMatcapTex", 2D) = "white" {}
 		_MultiplyMatcapStrength("Multiply Matcap Strength", Range(0, 2)) = 1.0
 		_MatcapMask("Matcap Mask", 2D) = "white" {}
