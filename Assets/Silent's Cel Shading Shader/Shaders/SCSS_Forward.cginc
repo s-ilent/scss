@@ -138,7 +138,6 @@ void geom(triangle v2g IN[3], inout TriangleStream<VertexOutput> tristream)
 float4 frag(VertexOutput i, uint facing : SV_IsFrontFace) : SV_Target
 {
     UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(i);
-	float3x3 tangentTransform = float3x3(i.tangentDir, i.bitangentDir, i.normalDir);
 
 	float4 texcoords = TexCoords(i);
 
@@ -182,7 +181,7 @@ float4 frag(VertexOutput i, uint facing : SV_IsFrontFace) : SV_Target
 			float mask = (T(intensity(i.pos.xy + _SinTime.x%4)));
 			c.alpha *= c.alpha;
 			c.alpha = saturate(c.alpha + c.alpha * mask); 
-			clip (c.alpha - _Cutoff);
+			clip (c.alpha);
 		}
 		if (_AlphaSharp  == 1) {
 			c.alpha = ((c.alpha - _Cutoff) / max(fwidth(c.alpha), 0.0001) + 0.5);
