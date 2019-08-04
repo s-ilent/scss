@@ -132,6 +132,8 @@ Shader "Silent's Cel Shading/Cutout"
 		{
 			Name "FORWARD_DELTA"
 			Tags { "LightMode" = "ForwardAdd" }
+			
+            AlphaToMask On
 			Blend [_SrcBlend] One
 
 			CGPROGRAM

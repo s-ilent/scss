@@ -121,6 +121,7 @@ float D_GGX_Anisotropic(float NoH, const float3 h,
     float3 v = float3(ab * ToH, at * BoH, a2 * NoH);
     float v2 = dot(v, v);
     float w2 = a2 / v2;
+    w2 = max(0.001, w2);
     return a2 * w2 * w2 * UNITY_INV_PI;
 }
 
@@ -168,6 +169,10 @@ half3 GetSHLength ()
 // softness: 0-1 position on the light ramp on the other axis
 float3 sampleRampWithOptions(float rampPosition, half softness) 
 {
+	if (_LightRampType == 3) // No sampling
+	{
+		return saturate(rampPosition*2-1);
+	}
 	if (_LightRampType == 2) // None
 	{
 		float shadeWidth = max(fwidth(rampPosition), 0.002 * (1+softness*10));
@@ -307,8 +312,8 @@ half3 calcDiffuseBase(float3 tonemap, float occlusion, half3 normal, half percep
 	}
 
 	lightContribution *= l.color;
-
-	indirectLighting *= 1+tonemap;
+	
+	indirectLighting = lerp(indirectLighting, directLighting, tonemap);
 
 	float ambientProbeIntensity = (unity_SHAr.w + unity_SHAg.w + unity_SHAb.w);
 
@@ -380,8 +385,8 @@ void getSpecularVD(float roughness, float3 normal, float3 viewDir, SCSS_LightPar
 
 	case 3: // GGX anisotropic
 	    float anisotropy = _Anisotropy;
-	    float at = max(roughness * (1.0 + anisotropy), 0.001);
-	    float ab = max(roughness * (1.0 - anisotropy), 0.001);
+	    float at = max(roughness * (1.0 + anisotropy), 0.002);
+	    float ab = max(roughness * (1.0 - anisotropy), 0.002);
 
 		#if 0
 	    float TdotL = dot(i.tangentDir, l.dir);
