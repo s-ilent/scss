@@ -20,23 +20,23 @@ v2g vert(appdata_full v) {
 	o.vertex = v.vertex;
 
 	// Extra data handling
-	// R: Outline width | G: Ramp softness
+	// X: Outline width | Y: Ramp softness
 	if (_VertexColorType == 2) 
 	{
-		o.color = 1.0;
-		o.extraData.rg = v.color.rg;
+		o.color = 1.0; // Reset
+		o.extraData.xy = v.color.rg;
 	} else {
 		o.color = v.color;
-		o.extraData.r = v.color.a;
-		o.extraData.g = 0.0; 
+		o.extraData.x = v.color.a;
+		o.extraData.y = 0.0; 
 	}
 
-	o.extraData.r *= _outline_width * .01; // Apply outline width and convert to cm
+	o.extraData.x *= _outline_width * .01; // Apply outline width and convert to cm
 	
 	// Scale outlines relative to the distance from the camera. Outlines close up look ugly in VR because
 	// they can have holes, being shells. This is also why it is clamped to not make them bigger.
 	// That looks good at a distance, but not perfect. 
-	o.extraData.r *= min(distance(o.posWorld,_WorldSpaceCameraPos)*4, 1); 
+	o.extraData.x *= min(distance(o.posWorld,_WorldSpaceCameraPos)*4, 1); 
 
 	#if (UNITY_VERSION<600)
 	TRANSFER_SHADOW(o);
@@ -161,15 +161,15 @@ float4 frag(VertexOutput i, uint facing : SV_IsFrontFace) : SV_Target
 	c.albedo = _VertexColorType? c.albedo : c.albedo * i.color.rgb;
 	c.softness = i.extraData.g;
 
-	#if COLORED_OUTLINE
+	#if defined(COLORED_OUTLINE)
 	if(i.is_outline) 
 	{
 		c.albedo = i.color.rgb; 
 	}
-	#else
-	if (_VertexColorType == 1 && i.is_outline) 
+	#else // TINTED or none
+	if (i.is_outline) 
 	{
-		c.albedo = i.color.rgb;
+		c.albedo *= i.color.rgb;
 	}
 	#endif
 
