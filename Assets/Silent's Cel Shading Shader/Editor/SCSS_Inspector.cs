@@ -186,6 +186,7 @@ namespace SilentCelShading.Unity
             public static GUIContent highlights = new GUIContent("Specular Highlights", "Toggles specular highlights. Only applicable if specular is active.");
             public static GUIContent reflections = new GUIContent("Reflections", "Toggles glossy reflections. Only applicable if specular is active.");
             public static GUIContent manualButton = new GUIContent("This shader has a manual. Check it out!","For information on new features, old features, and just how to use the shader in general, check out the manual on the shader wiki!");
+            public static GUIContent gradientEditorButton = new GUIContent("Open Gradient Editor","Opens the gradient editor window with the current material focused. This allows you to create a new lighting ramp and view the results on this material in realtime.");
 
         } 
 
@@ -493,10 +494,18 @@ namespace SilentCelShading.Unity
                 EditorGUILayout.LabelField(Styles.shadingOptionsTitle, EditorStyles.boldLabel);
                 if (((LightRampType)material.GetFloat("_LightRampType")) != LightRampType.None) 
                 {
+
+                    GUILayout.BeginHorizontal();
                     materialEditor.TexturePropertySingleLine(Styles.lightingRamp, lightingRamp);
+                    if (GUILayout.Button(Styles.gradientEditorButton, "button"))
+                    {
+                        XSGradientEditor.callGradientEditor(material);
+                    }
+                    GUILayout.EndHorizontal();
                 }
                 materialEditor.ShaderProperty(shadowLift, Styles.shadowLift);
                 materialEditor.ShaderProperty(indirectLightBoost, Styles.indirectLightBoost);
+                //
                 EditorGUILayout.Space();
 
                 materialEditor.TexturePropertySingleLine(Styles.shadowMask, shadowMask, shadowMaskColor);

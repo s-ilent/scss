@@ -98,6 +98,7 @@ struct v2g
 	UNITY_POSITION(vertex);
 	float3 normal : NORMAL;
 	float4 tangent : TANGENT;
+	fixed4 color : COLOR;
 	float2 uv0 : TEXCOORD0;
 	float2 uv1 : TEXCOORD1;
 	float4 posWorld : TEXCOORD2;
@@ -106,7 +107,6 @@ struct v2g
 	float3 bitangentDir : TEXCOORD5;
 	float4 pos : CLIP_POS;
 	half4 vertexLight : TEXCOORD6;
-	fixed4 color : COLOR;
 	half2 extraData : TEXCOORD7;
 	UNITY_SHADOW_COORDS(8)
 	UNITY_FOG_COORDS(9)
@@ -118,6 +118,7 @@ struct v2g
 struct VertexOutput
 {
 	UNITY_POSITION(pos);
+	float4 color : COLOR;
 	float2 uv0 : TEXCOORD0;
 	float2 uv1 : TEXCOORD1;
 	float4 posWorld : TEXCOORD2;
@@ -125,7 +126,6 @@ struct VertexOutput
 	float3 tangentDir : TEXCOORD4;
 	float3 bitangentDir : TEXCOORD5;
 	half4 vertexLight : TEXCOORD6;
-	float4 color : COLOR;
 	half2 extraData : TEXCOORD7;
 	bool is_outline : IS_OUTLINE;
 	UNITY_SHADOW_COORDS(8)
