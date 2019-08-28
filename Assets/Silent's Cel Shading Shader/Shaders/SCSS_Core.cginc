@@ -310,16 +310,14 @@ half3 calcDiffuseBase(float3 tonemap, float occlusion, half3 normal, half percep
 		lightContribution += lightContribution*sharpFresnel;
 		directLighting += directLighting*sharpFresnel;
 	}
-
-	lightContribution *= l.color;
 	
 	indirectLighting = lerp(indirectLighting, directLighting, tonemap);
 
 	float ambientProbeIntensity = (unity_SHAr.w + unity_SHAg.w + unity_SHAb.w);
 
-	lightContribution += (1 - lightContribution) * tonemap
-	 * saturate((ambientProbeIntensity)/(l.intensity+1));
-
+	lightContribution = lerp(tonemap, 1.0, lightContribution);
+	lightContribution *= l.color;
+	
 	float3 ambientLightDirection = Unity_SafeNormalize((unity_SHAr.xyz + unity_SHAg.xyz + unity_SHAb.xyz) * _LightSkew.xyz);
 	float ambientLight = dot(normal, ambientLightDirection);
 	ambientLight = ambientLight * 0.5 + 0.5;
