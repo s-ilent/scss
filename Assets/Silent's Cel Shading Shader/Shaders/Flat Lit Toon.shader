@@ -17,7 +17,9 @@ Shader "Silent's Cel Shading/Opaque"
 		_outline_color("outline_color", Color) = (0.5,0.5,0.5,1)
 		_outline_tint("outline_tint", Range(0, 1)) = 0.5
 		_EmissionMap("Emission Map", 2D) = "white" {}
+		_DetailEmissionMap("Emission Map", 2D) = "white" {}
 		[HDR]_EmissionColor("Emission Color", Color) = (0,0,0,1)
+		[HDR]_EmissionDetailParams("Emission Detail Params", Vector) = (0,0,0,0)
 		[HDR]_CustomFresnelColor("Emissive Fresnel Color", Color) = (0,0,0,1)
 		_SpecGlossMap ("Specular Map", 2D) = "black" {}
 		[Toggle(_)]_UseEnergyConservation ("Energy Conservation", Float) = 1.0
@@ -110,6 +112,7 @@ Shader "Silent's Cel Shading/Opaque"
 			#pragma shader_feature _ TINTED_OUTLINE COLORED_OUTLINE
 			#pragma shader_feature _ _ALPHATEST_ON _ALPHABLEND_ON _ALPHAPREMULTIPLY_ON
 			#pragma shader_feature ___ _DETAIL_MULX2
+			#pragma shader_feature ___ _METALLICGLOSSMAP
 			#pragma shader_feature _ _SMOOTHNESS_TEXTURE_ALBEDO_CHANNEL_A
 			#pragma shader_feature _ _SPECULARHIGHLIGHTS_OFF
 			#pragma shader_feature _ _GLOSSYREFLECTIONS_OFF			
@@ -142,6 +145,7 @@ Shader "Silent's Cel Shading/Opaque"
 			#pragma shader_feature _ TINTED_OUTLINE COLORED_OUTLINE
 			#pragma shader_feature _ _ALPHATEST_ON _ALPHABLEND_ON _ALPHAPREMULTIPLY_ON
 			#pragma shader_feature ___ _DETAIL_MULX2
+			#pragma shader_feature ___ _METALLICGLOSSMAP
 			#pragma shader_feature _ _SMOOTHNESS_TEXTURE_ALBEDO_CHANNEL_A
 			#pragma shader_feature _ _SPECULARHIGHLIGHTS_OFF
 			#pragma shader_feature _ _GLOSSYREFLECTIONS_OFF

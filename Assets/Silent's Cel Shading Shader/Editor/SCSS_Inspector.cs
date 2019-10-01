@@ -79,7 +79,8 @@ namespace SilentCelShading.Unity
         {
             Disable,
             Lit,
-            Ambient
+            Ambient,
+            AmbientAlt
         }
 
         public enum VertexColorType
@@ -130,6 +131,8 @@ namespace SilentCelShading.Unity
 
             public static GUIContent specularMap = new GUIContent("Specular Map", "Specular Map (RGBA, RGB: Specular/Metalness, A: Smoothness)");
             public static GUIContent emissionMap = new GUIContent("Emission", "Emission (RGB)");
+            public static GUIContent emissionDetailMask = new GUIContent("Emission Detail Mask", "A map combined with the main emission map to add detail.");
+            public static GUIContent emissionDetailParams = new GUIContent("Emission Detail Parameters", "XY: Scroll pow");
             public static GUIContent lightingRamp = new GUIContent("Lighting Ramp", "Specifies the falloff of the lighting. In other words, it controls how light affects your model and how soft or sharp the transition between light and shadow is. \nNote: If a Lighting Ramp is not set, the material will have no shading.");
             public static GUIContent shadowMask = new GUIContent("Shadow Mask", "In Occlusion mode, specifies areas of shadow influence. RGB darkens, alpha lightens. In Tone mode, specifies colour of shading to use. RGB tints, alpha darkens.");
             public static GUIContent specularType = new GUIContent("Specular Style", "Allows you to set the shading used for specular. ");
@@ -212,6 +215,8 @@ namespace SilentCelShading.Unity
         protected MaterialProperty outlineWidth;
         protected MaterialProperty outlineColor;
         protected MaterialProperty emissionMap;
+        protected MaterialProperty emissionDetailMask;
+        protected MaterialProperty emissionDetailParams;
         protected MaterialProperty emissionColor;
         protected MaterialProperty customFresnelColor;
 
@@ -304,6 +309,8 @@ namespace SilentCelShading.Unity
                 outlineWidth = FindProperty("_outline_width", props);
                 outlineColor = FindProperty("_outline_color", props);
                 emissionMap = FindProperty("_EmissionMap", props);
+                emissionDetailMask = FindProperty("_DetailEmissionMap", props);
+                emissionDetailParams = FindProperty("_EmissionDetailParams", props);
                 emissionColor = FindProperty("_EmissionColor", props);
                 customFresnelColor = FindProperty("_CustomFresnelColor", props);
                 specularMap = FindProperty("_SpecGlossMap", props);
@@ -584,12 +591,17 @@ namespace SilentCelShading.Unity
 
                 if (PropertyEnabled(useDetailMaps)) 
                 {
+                    material.EnableKeyword("_DETAIL_MULX2");
                     materialEditor.TexturePropertySingleLine(Styles.detailAlbedoMap, detailAlbedoMap, detailAlbedoMapScale);
                     materialEditor.TexturePropertySingleLine(Styles.detailNormalMap, detailNormalMap, detailNormalMapScale);
                     materialEditor.TexturePropertySingleLine(Styles.specularDetailMask, specularDetailMask, specularDetailStrength);
+                    materialEditor.TexturePropertySingleLine(Styles.emissionDetailMask, emissionDetailMask);
+                    materialEditor.ShaderProperty(emissionDetailParams, Styles.emissionDetailParams);
                 
                     materialEditor.TextureScaleOffsetProperty(detailAlbedoMap);
                     materialEditor.ShaderProperty(uvSetSecondary, Styles.uvSet);
+                } else {
+                    material.DisableKeyword("_DETAIL_MULX2");
                 }
                 EditorGUILayout.Space();
                 
@@ -956,15 +968,19 @@ namespace SilentCelShading.Unity
             {
                 case SpecularType.Standard:
                     material.SetFloat("_SpecularType", 1);
+                    material.EnableKeyword("_METALLICGLOSSMAP");
                     break;
                 case SpecularType.Cloth:
                     material.SetFloat("_SpecularType", 2);
+                    material.EnableKeyword("_METALLICGLOSSMAP");
                     break;
                 case SpecularType.Anisotropic:
                     material.SetFloat("_SpecularType", 3);
+                    material.EnableKeyword("_METALLICGLOSSMAP");
                     break;
                 case SpecularType.Disable:
                     material.SetFloat("_SpecularType", 0);
+                    material.DisableKeyword("_METALLICGLOSSMAP");
                     break;
                 default:
                     break;
@@ -1047,10 +1063,15 @@ namespace SilentCelShading.Unity
         {
             // Note: keywords must be based on Material value not on MaterialProperty due to multi-edit & material animation
             // (MaterialProperty value might come from renderer material property block)
-            SetKeyword(material, "_NORMALMAP", material.GetTexture("_BumpMap") || material.GetTexture("_DetailNormalMap"));
+            SetKeyword(material, "_NORMALMAP", material.GetTexture("_BumpMap") && material.GetTexture("_DetailNormalMap"));
+            /*
             SetKeyword(material, "_SPECGLOSSMAP", material.GetTexture("_SpecGlossMap"));
-//            SetKeyword(material, "_PARALLAXMAP", material.GetTexture("_ParallaxMap"));
-            SetKeyword(material, "_DETAIL_MULX2", material.GetTexture("_DetailAlbedoMap") || material.GetTexture("_DetailNormalMap"));
+            SetKeyword(material, "_PARALLAXMAP", material.GetTexture("_ParallaxMap"));
+            SetKeyword(material, "_DETAIL_MULX2", material.GetTexture("_DetailAlbedoMap") 
+                && material.GetTexture("_DetailNormalMap")
+                && material.GetTexture("_DetailEmissionMap")
+                && material.GetTexture("_SpecularDetailMask"));
+            */
 
             // A material's GI flag internally keeps track of whether emission is enabled at all, it's enabled but has no effect
             // or is enabled and may be modified at runtime. This state depends on the values of the current flag and emissive color.
