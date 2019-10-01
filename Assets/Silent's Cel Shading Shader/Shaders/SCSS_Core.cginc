@@ -1,6 +1,10 @@
 #ifndef SCSS_CORE_INCLUDED
 #define SCSS_CORE_INCLUDED
 
+#include "UnityCG.cginc"
+#include "AutoLight.cginc"
+#include "Lighting.cginc"
+
 #include "SCSS_Utils.cginc"
 #include "SCSS_Input.cginc"
 #include "SCSS_UnityGI.cginc"
@@ -87,82 +91,6 @@ inline half4 VertexLightContribution(float3 posWorld, half3 normalWorld)
 	return vertexLight;
 }
 
-// BRDF based on implementation in Filament.
-// https://github.com/google/filament
-
-float D_Ashikhmin(float linearRoughness, float NoH) {
-    // Ashikhmin 2007, "Distribution-based BRDFs"
-	float a2 = linearRoughness * linearRoughness;
-	float cos2h = NoH * NoH;
-	float sin2h = max(1.0 - cos2h, 0.0078125); // 2^(-14/2), so sin2h^2 > 0 in fp16
-	float sin4h = sin2h * sin2h;
-	float cot2 = -cos2h / (a2 * sin2h);
-	return 1.0 / (UNITY_PI * (4.0 * a2 + 1.0) * sin4h) * (4.0 * exp(cot2) + sin4h);
-}
-
-float D_Charlie(float linearRoughness, float NoH) {
-    // Estevez and Kulla 2017, "Production Friendly Microfacet Sheen BRDF"
-    float invAlpha  = 1.0 / linearRoughness;
-    float cos2h = NoH * NoH;
-    float sin2h = max(1.0 - cos2h, 0.0078125); // 2^(-14/2), so sin2h^2 > 0 in fp16
-    return (2.0 + invAlpha) * pow(sin2h, invAlpha * 0.5) / (2.0 * UNITY_PI);
-}
-
-float V_Neubelt(float NoV, float NoL) {
-    // Neubelt and Pettineo 2013, "Crafting a Next-gen Material Pipeline for The Order: 1886"
-    return saturate(1.0 / (4.0 * (NoL + NoV - NoL * NoV)));
-}
-
-float D_GGX_Anisotropic(float NoH, const float3 h,
-        const float3 t, const float3 b, float at, float ab) {
-    float ToH = dot(t, h);
-    float BoH = dot(b, h);
-    float a2 = at * ab;
-    float3 v = float3(ab * ToH, at * BoH, a2 * NoH);
-    float v2 = dot(v, v);
-    float w2 = a2 / v2;
-    w2 = max(0.001, w2);
-    return a2 * w2 * w2 * UNITY_INV_PI;
-}
-
-float V_SmithGGXCorrelated_Anisotropic(float at, float ab, float ToV, float BoV,
-        float ToL, float BoL, float NoV, float NoL) {
-    // Heitz 2014, "Understanding the Masking-Shadowing Function in Microfacet-Based BRDFs"
-    float lambdaV = NoL * length(float3(at * ToV, ab * BoV, NoV));
-    float lambdaL = NoV * length(float3(at * ToL, ab * BoL, NoL));
-    float v = 0.5 / (lambdaV + lambdaL + 1e-7f);
-    return v;
-}
-
-// From "From mobile to high-end PC: Achieving high quality anime style rendering on Unity"
-float3 ShiftTangent (float3 T, float3 N, float shift) 
-{
-	float3 shiftedT = T + shift * N;
-	return normalize(shiftedT);
-}
-
-float StrandSpecular(float3 T, float3 V, float3 L, float3 H, float exponent, float strength)
-{
-	//float3 H = normalize(L+V);
-	float dotTH = dot(T, H);
-	float sinTH = sqrt(1.0-dotTH*dotTH);
-	float dirAtten = smoothstep(-1.0, 0.0, dotTH);
-	return dirAtten * pow(sinTH, exponent) * strength;
-}
-
-// Get the maximum SH contribution
-// synqark's Arktoon shader's shading method
-half3 GetSHLength ()
-{
-    half3 x, x1;
-    x.r = length(unity_SHAr);
-    x.g = length(unity_SHAg);
-    x.b = length(unity_SHAb);
-    x1.r = length(unity_SHBr);
-    x1.g = length(unity_SHBg);
-    x1.b = length(unity_SHBb);
-    return x + x1;
-}
 
 // Sample ramp with the specified options.
 // rampPosition: 0-1 position on the light ramp from light to dark
@@ -501,6 +429,11 @@ float3 SCSS_ApplyLighting(SCSS_Input c, SCSS_LightParam d, VertexOutput i, float
 
 	float3 finalColor; 
 
+	if (_UseFresnel == 3 && i.is_outline == 0)
+	{
+		d.NdotL = saturate(max(d.NdotL, sharpFresnelLight(d)));
+	}
+
 	#if defined(UNITY_PASS_FORWARDBASE)
 	finalColor = calcDiffuseBase(c.tonemap, c.occlusion, c.normal, 
 		perceptualRoughness, attenuation, c.smoothness, c.softness, d, l);
@@ -523,11 +456,14 @@ float3 SCSS_ApplyLighting(SCSS_Input c, SCSS_LightParam d, VertexOutput i, float
 
 	finalColor *= c.albedo;
 
-	if (_SpecularType != 0 && i.is_outline == 0)
+	//if (_SpecularType != 0 && i.is_outline == 0)
+	#if defined(_METALLICGLOSSMAP)
+	if (i.is_outline == 0)
 	{
     	finalColor += calcSpecularBase(c.specColor, c.smoothness, c.normal, c.oneMinusReflectivity, perceptualRoughness, 
     		viewDir, attenuation, d, l, i);
     };
+    #endif
 
     // Apply full lighting to unimportant lights. This is cheaper than you might expect.
 	#if defined(UNITY_PASS_FORWARDBASE) && defined(VERTEXLIGHT_ON) && defined(SCSS_UNIMPORTANT_LIGHTS_FRAGMENT)
@@ -542,11 +478,14 @@ float3 SCSS_ApplyLighting(SCSS_Input c, SCSS_LightParam d, VertexOutput i, float
 
     	finalColor += calcDiffuseAdd(c.tonemap, c.occlusion, perceptualRoughness, c.smoothness, c.softness, d, l) * c.albedo * i.vertexLight[num];
 
-		if (_SpecularType != 0 && i.is_outline == 0)
+		//if (_SpecularType != 0 && i.is_outline == 0)
+		#if defined(_METALLICGLOSSMAP)
+		if (i.is_outline == 0)
 		{
     	finalColor += calcSpecularAdd(c.specColor, c.smoothness, c.normal, c.oneMinusReflectivity, perceptualRoughness, 
     	viewDir, d, l, i) * i.vertexLight[num];
     	}
+    	#endif
     };
 	#endif
 

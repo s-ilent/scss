@@ -212,7 +212,8 @@ float4 frag(VertexOutput i, uint facing : SV_IsFrontFace) : SV_Target
 	c.tonemap = Tonemap(texcoords.xy, c.occlusion);
 
 	// Specular variable setup
-	if (_SpecularType != 0 )
+	//if (_SpecularType != 0 )
+	#if defined(_METALLICGLOSSMAP)
 	{
 		half4 specGloss = SpecularGloss(texcoords, detailMask);
 
@@ -245,14 +246,19 @@ float4 frag(VertexOutput i, uint facing : SV_IsFrontFace) : SV_Target
 		// Geometric Specular AA from HDRP
 	    c.smoothness = GeometricNormalFiltering(c.smoothness, i.normalDir.xyz, 0.25, 0.5);
 	}
+	#endif
 
 	// Lighting handling
 	float3 finalColor = SCSS_ApplyLighting(c, d, i, viewDir, l, texcoords);
 
 	#if defined(UNITY_PASS_FORWARDBASE)
 	float3 emissionMask = Emission(texcoords.xy);
-	finalColor += emissionMask * _EmissionColor.rgb;
-	finalColor += emissionMask * _CustomFresnelColor.xyz * (pow(d.rlPow4.y, rcp(_CustomFresnelColor.w+0.0001)));
+	float4 emissionDetail = EmissionDetail(texcoords.zw);
+	//finalColor *= saturate(emissionDetail.w + (1-emissionMask.rgb));
+	finalColor = max(0, finalColor - saturate((1-emissionDetail.w)- (1-emissionMask.rgb)));
+	finalColor += emissionDetail.rgb * emissionMask * _EmissionColor.rgb;
+	// Emissive rim. To restore masking behaviour, multiply by emissionMask.
+	finalColor += _CustomFresnelColor.xyz * (pow(d.rlPow4.y, rcp(_CustomFresnelColor.w+0.0001)));
 	#endif
 
 	float3 lightmap = float4(1.0,1.0,1.0,1.0);

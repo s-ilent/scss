@@ -1,10 +1,6 @@
 #ifndef SCSS_INPUT_INCLUDED
 #define SCSS_INPUT_INCLUDED
 
-#include "UnityCG.cginc"
-#include "AutoLight.cginc"
-#include "Lighting.cginc"
-
 //---------------------------------------
 
 // Keyword squeezing. 
@@ -19,11 +15,12 @@
 //---------------------------------------
 
 UNITY_DECLARE_TEX2D(_MainTex); uniform half4 _MainTex_ST; uniform half4 _MainTex_TexelSize;
-UNITY_DECLARE_TEX2D_NOSAMPLER(_DetailAlbedoMap); uniform half4 _DetailAlbedoMap_ST; uniform half4 _DetailAlbedoMap_TexelSize;
+UNITY_DECLARE_TEX2D(_DetailAlbedoMap); uniform half4 _DetailAlbedoMap_ST; uniform half4 _DetailAlbedoMap_TexelSize;
 UNITY_DECLARE_TEX2D_NOSAMPLER(_ColorMask); uniform half4 _ColorMask_ST;
 UNITY_DECLARE_TEX2D_NOSAMPLER(_BumpMap); uniform half4 _BumpMap_ST;
 UNITY_DECLARE_TEX2D_NOSAMPLER(_DetailNormalMap); uniform half4 _DetailNormalMap_ST;
 UNITY_DECLARE_TEX2D_NOSAMPLER(_EmissionMap); uniform half4 _EmissionMap_ST;
+UNITY_DECLARE_TEX2D_NOSAMPLER(_DetailEmissionMap); uniform half4 _DetailEmissionMap_ST;
 UNITY_DECLARE_TEX2D_NOSAMPLER(_SpecGlossMap); uniform half4 _SpecGlossMap_ST;
 UNITY_DECLARE_TEX2D_NOSAMPLER(_ShadowMask); uniform half4 _ShadowMask_ST;
 UNITY_DECLARE_TEX2D_NOSAMPLER(_MatcapMask); uniform half4 _MatcapMask_ST; 
@@ -47,6 +44,7 @@ uniform float _SpecularDetailStrength;
 uniform float _LightRampType;
 
 uniform float4 _EmissionColor;
+uniform float4 _EmissionDetailParams;
 
 uniform float _UseMetallic;
 uniform float _SpecularType;
@@ -98,7 +96,7 @@ struct v2g
 	UNITY_POSITION(vertex);
 	float3 normal : NORMAL;
 	float4 tangent : TANGENT;
-	fixed4 color : COLOR;
+	fixed4 color : COLOR0_centroid;
 	float2 uv0 : TEXCOORD0;
 	float2 uv1 : TEXCOORD1;
 	float4 posWorld : TEXCOORD2;
@@ -191,7 +189,7 @@ half3 Albedo(float4 texcoords)
     half3 albedo = UNITY_SAMPLE_TEX2D (_MainTex, texcoords.xy).rgb * LerpWhiteTo(_Color.rgb, ColorMask(texcoords.xy));
 #if _DETAIL
     half mask = DetailMask(texcoords.xy);
-    half4 detailAlbedo = UNITY_SAMPLE_TEX2D_SAMPLER (_DetailAlbedoMap, _MainTex, texcoords.zw);
+    half4 detailAlbedo = UNITY_SAMPLE_TEX2D_SAMPLER (_DetailAlbedoMap, _DetailAlbedoMap, texcoords.zw);
     mask *= detailAlbedo.a;
     mask *= _DetailAlbedoMapScale;
     #if _DETAIL_MULX2
@@ -238,7 +236,7 @@ half4 SpecularGloss(float4 texcoords, half mask)
 #endif
 
 #if _DETAIL 
-		float4 sdm = UNITY_SAMPLE_TEX2D_SAMPLER(_SpecularDetailMask,_MainTex,texcoords.zw);
+		float4 sdm = UNITY_SAMPLE_TEX2D_SAMPLER(_SpecularDetailMask,_DetailAlbedoMap,texcoords.zw);
 		sg *= saturate(sdm + 1-(_SpecularDetailStrength*mask));		
 #endif
 
@@ -248,6 +246,18 @@ half4 SpecularGloss(float4 texcoords, half mask)
 half3 Emission(float2 uv)
 {
     return UNITY_SAMPLE_TEX2D_SAMPLER(_EmissionMap, _MainTex, uv).rgb;
+}
+
+half4 EmissionDetail(float2 uv)
+{
+#if _DETAIL 
+	uv += _EmissionDetailParams.xy * _Time.y;
+	half4 ed = UNITY_SAMPLE_TEX2D_SAMPLER(_DetailEmissionMap, _DetailAlbedoMap, uv);
+	ed.rgb = _EmissionDetailParams.z? (sin(ed.rgb * _EmissionDetailParams.w + _Time.y * _EmissionDetailParams.z))+1 : ed.rgb;
+	return ed;
+#else
+	return 1;
+#endif
 }
 
 half3 NormalInTangentSpace(float4 texcoords, half mask)
