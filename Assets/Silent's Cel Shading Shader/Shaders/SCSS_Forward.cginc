@@ -57,7 +57,6 @@ v2g vert(appdata_full v) {
 void geom(triangle v2g IN[3], inout TriangleStream<VertexOutput> tristream)
 {
 	VertexOutput o = (VertexOutput)0;
-	#if !defined(NO_OUTLINE)
 	for (int i = 2; i >= 0; i--)
 	{
 		// If the outline triangle is too small, don't emit it.
@@ -98,7 +97,6 @@ void geom(triangle v2g IN[3], inout TriangleStream<VertexOutput> tristream)
 	}
 
 	tristream.RestartStrip();
-	#endif // !NO_OUTLINE 
 
 	for (int ii = 0; ii < 3; ii++)
 	{
@@ -135,9 +133,67 @@ void geom(triangle v2g IN[3], inout TriangleStream<VertexOutput> tristream)
 	tristream.RestartStrip();
 }
 
+VertexOutput vert_nogeom(appdata_full v) {
+	VertexOutput o = (VertexOutput)0;
+
+    UNITY_SETUP_INSTANCE_ID(v);
+    UNITY_INITIALIZE_OUTPUT(VertexOutput, o);
+    UNITY_TRANSFER_INSTANCE_ID(v, o);
+    UNITY_INITIALIZE_VERTEX_OUTPUT_STEREO(o);
+
+	o.pos = UnityObjectToClipPos(v.vertex);
+	o.uv0 = v.texcoord;
+	o.uv1 = v.texcoord1;
+	o.normalDir = UnityObjectToWorldNormal(v.normal);
+	o.tangentDir = UnityObjectToWorldDir(v.tangent.xyz);
+    half sign = v.tangent.w * unity_WorldTransformParams.w;
+	o.bitangentDir = cross(o.normalDir, o.tangentDir) * sign;
+	float4 objPos = mul(unity_ObjectToWorld, float4(0, 0, 0, 1));
+	o.posWorld = mul(unity_ObjectToWorld, v.vertex);
+	o.is_outline = false;
+
+	// Extra data handling
+	// X: Outline width | Y: Ramp softness
+	if (_VertexColorType == 2) 
+	{
+		o.color = 1.0; // Reset
+		o.extraData.xy = v.color.rg;
+	} else {
+		o.color = v.color;
+		o.extraData.x = v.color.a;
+		o.extraData.y = 0.0; 
+	}
+
+	#if (UNITY_VERSION<600)
+	TRANSFER_SHADOW(o);
+	#else
+	UNITY_TRANSFER_SHADOW(o, v.texcoord);
+	#endif
+
+	UNITY_TRANSFER_FOG(o, o.pos);
+#if VERTEXLIGHT_ON
+	o.vertexLight = VertexLightContribution(o.posWorld, o.normalDir);
+#else
+	o.vertexLight = 0;
+#endif
+	return o;
+}
+
 float4 frag(VertexOutput i, uint facing : SV_IsFrontFace) : SV_Target
 {
     UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(i);
+
+	// Backface correction. If a polygon is facing away from the camera, it's lit incorrectly.
+	// This will light it as though it is facing the camera (which it visually is), unless
+	// it's part of an outline, in which case it's invalid and deleted. 
+	//facing = backfaceInMirror()? !facing : facing; // Only needed for older Unity versions.
+	if (!facing) 
+	{
+		i.normalDir *= -1;
+		i.tangentDir *= -1;
+		i.bitangentDir *= -1;
+	}
+	if (i.is_outline && !facing) discard;
 
 	float4 texcoords = TexCoords(i);
 
@@ -146,14 +202,25 @@ float4 frag(VertexOutput i, uint facing : SV_IsFrontFace) : SV_Target
 	half detailMask = DetailMask(texcoords.xy);
 
     half3 normalTangent = NormalInTangentSpace(texcoords, detailMask);
-    c.normal = normalize(i.tangentDir * normalTangent.x + i.bitangentDir * normalTangent.y + i.normalDir * normalTangent.z); 
 
-	// Backface correction. If a polygon is facing away from the camera, it's lit incorrectly.
-	// This will light it as though it is facing the camera (which it visually is), unless
-	// it's part of an outline, in which case it's invalid and deleted. 
-	//facing = backfaceInMirror()? !facing : facing; // Only needed for older Unity versions.
-	c.normal.z *= facing? 1 : -1; 
-	if (i.is_outline && !facing) discard;
+    // Thanks, Xiexe!
+    half3 tspace0 = half3(i.tangentDir.x, i.bitangentDir.x, i.normalDir.x);
+    half3 tspace1 = half3(i.tangentDir.y, i.bitangentDir.y, i.normalDir.y);
+    half3 tspace2 = half3(i.tangentDir.z, i.bitangentDir.z, i.normalDir.z);
+
+    half3 calcedNormal;
+    calcedNormal.x = dot(tspace0, normalTangent);
+    calcedNormal.y = dot(tspace1, normalTangent);
+    calcedNormal.z = dot(tspace2, normalTangent);
+    
+    calcedNormal = normalize(calcedNormal);
+    half3 bumpedTangent = (cross(i.bitangentDir, calcedNormal));
+    half3 bumpedBitangent = (cross(calcedNormal, bumpedTangent));
+
+    // For our purposes, we'd like to keep the original normal in i, but warp the bi/tangents.
+    c.normal = calcedNormal;
+    i.tangentDir = bumpedTangent;
+    i.bitangentDir = bumpedBitangent;
 
 	c.albedo = Albedo(texcoords);
 
@@ -161,17 +228,14 @@ float4 frag(VertexOutput i, uint facing : SV_IsFrontFace) : SV_Target
 	c.albedo = _VertexColorType? c.albedo : c.albedo * i.color.rgb;
 	c.softness = i.extraData.g;
 
-	#if defined(COLORED_OUTLINE)
-	if(i.is_outline) 
+	if(i.is_outline && _OutlineMode == 2) 
 	{
 		c.albedo = i.color.rgb; 
 	}
-	#else // TINTED or none
 	if (i.is_outline) 
 	{
 		c.albedo *= i.color.rgb;
 	}
-	#endif
 
 	c.alpha = Alpha(texcoords.xy);
 
@@ -206,7 +270,7 @@ float4 frag(VertexOutput i, uint facing : SV_IsFrontFace) : SV_Target
 	d.NdotL = saturate(dot(l.dir, c.normal)); // Calculate NdotL
 	d.NdotV = saturate(dot(viewDir,  c.normal)); // Calculate NdotV
 	d.LdotH = saturate(dot(l.dir, d.halfDir));
-	d.NdotH = saturate(dot(c.normal, d.halfDir));
+	d.NdotH = (dot(c.normal, d.halfDir)); // Saturate seems to cause artifacts
 	d.rlPow4 = Pow4(float2(dot(d.reflDir, l.dir), 1 - d.NdotV));  
 
 	c.tonemap = Tonemap(texcoords.xy, c.occlusion);
@@ -245,6 +309,9 @@ float4 frag(VertexOutput i, uint facing : SV_IsFrontFace) : SV_Target
 
 		// Geometric Specular AA from HDRP
 	    c.smoothness = GeometricNormalFiltering(c.smoothness, i.normalDir.xyz, 0.25, 0.5);
+
+	    i.tangentDir = ShiftTangent(normalize(i.tangentDir), c.normal, c.smoothness);
+	    i.bitangentDir = normalize(i.bitangentDir);
 	}
 	#endif
 

@@ -83,6 +83,13 @@ namespace SilentCelShading.Unity
             AmbientAlt
         }
 
+        public enum MatcapBlendModes
+        {
+            Additive,
+            Multiply,
+            Median,
+        }
+
         public enum VertexColorType
         {
             Color,
@@ -154,13 +161,12 @@ namespace SilentCelShading.Unity
             public static GUIContent useEnergyConservation = new GUIContent("Use Energy Conservation", "Reduces the intensity of the diffuse on specular areas, to realistically conserve energy.");
             public static GUIContent useMetallic = new GUIContent("Use as Metalness", "Metalness maps are greyscale maps that contain the metalness of a surface. This is different to specular maps, which are RGB (colour) maps that contain the specular parts of a surface.");
             public static GUIContent useMatcap = new GUIContent("Use Matcap", "Enables the use of material capture textures.");
-            public static GUIContent additiveMatcap = new GUIContent("Additive Matcap", "Additive Matcap (RGB)");
-            public static GUIContent additiveMatcapStrength = new GUIContent("Additive Matcap Strength", "Power of the additive matcap. Higher is brighter.");
-            public static GUIContent midBlendMatcap = new GUIContent("Median Matcap", "Median Matcap (RGB)");
-            public static GUIContent midBlendMatcapStrength = new GUIContent("Median Matcap Strength", "Power of the median matcap. Higher is brighter.");
-            public static GUIContent multiplyMatcap = new GUIContent("Multiply Matcap", "Multiply Matcap (RGB)");
-            public static GUIContent multiplyMatcapStrength = new GUIContent("Multiply Matcap Strength", "Power of the multiplicative matcap. Higher is darker.");
-            public static GUIContent matcapMask = new GUIContent("Matcap Mask", "Matcap Mask (RGBA, G: Additive strength, A: Multiplicative strength)");
+            public static GUIContent matcap1Tex = new GUIContent("Matcap 1", "Matcap (RGB). Controlled by the matcap mask's R channel.");
+            public static GUIContent matcap2Tex = new GUIContent("Matcap 2", "Matcap (RGB). Controlled by the matcap mask's G channel.");
+            public static GUIContent matcap3Tex = new GUIContent("Matcap 3", "Matcap (RGB). Controlled by the matcap mask's B channel.");
+            public static GUIContent matcap4Tex = new GUIContent("Matcap 4", "Matcap (RGB). Controlled by the matcap mask's A channel.");
+            public static GUIContent matcapStrength = new GUIContent("Matcap Strength", "Power of the matcap. Higher is stronger.");
+            public static GUIContent matcapMask = new GUIContent("Matcap Mask", "Determines the strength of the matcaps by the intensity of the different colour channels.");
 
             public static GUIContent useSubsurfaceScattering = new GUIContent("Use Subsurface Scattering", "Enables a light scattering effect useful for cloth and skin.");
             public static GUIContent thicknessMap = new GUIContent("Thickness Map", "Thickness Map (RGB)");
@@ -248,13 +254,20 @@ namespace SilentCelShading.Unity
         protected MaterialProperty specularType;
 
         protected MaterialProperty useMatcap;
-        protected MaterialProperty additiveMatcap;
-        protected MaterialProperty midBlendMatcap;
-        protected MaterialProperty multiplyMatcap;
-        protected MaterialProperty additiveMatcapStrength;
-        protected MaterialProperty midBlendMatcapStrength;
-        protected MaterialProperty multiplyMatcapStrength;
         protected MaterialProperty matcapMask;
+
+        protected MaterialProperty matcap1;
+        protected MaterialProperty matcap1Blend;
+        protected MaterialProperty matcap1Strength;
+        protected MaterialProperty matcap2;
+        protected MaterialProperty matcap2Blend;
+        protected MaterialProperty matcap2Strength;
+        protected MaterialProperty matcap3;
+        protected MaterialProperty matcap3Blend;
+        protected MaterialProperty matcap3Strength;
+        protected MaterialProperty matcap4;
+        protected MaterialProperty matcap4Blend;
+        protected MaterialProperty matcap4Strength;
 
         protected MaterialProperty useSubsurfaceScattering;
         protected MaterialProperty thicknessMap;
@@ -338,13 +351,20 @@ namespace SilentCelShading.Unity
                 specularType = FindProperty("_SpecularType", props);
 
                 useMatcap = FindProperty("_UseMatcap", props);
-                additiveMatcap = FindProperty("_AdditiveMatcap", props);
-                midBlendMatcap = FindProperty("_MidBlendMatcap", props);
-                multiplyMatcap = FindProperty("_MultiplyMatcap", props);
-                additiveMatcapStrength = FindProperty("_AdditiveMatcapStrength", props);
-                midBlendMatcapStrength = FindProperty("_MidBlendMatcapStrength", props);
-                multiplyMatcapStrength = FindProperty("_MultiplyMatcapStrength", props);
                 matcapMask = FindProperty("_MatcapMask", props);
+
+                matcap1 = FindProperty("_Matcap1", props);
+                matcap1Blend = FindProperty("_Matcap1Blend", props);
+                matcap1Strength = FindProperty("_Matcap1Strength", props);
+                matcap2 = FindProperty("_Matcap2", props);
+                matcap2Blend = FindProperty("_Matcap2Blend", props);
+                matcap2Strength = FindProperty("_Matcap2Strength", props);
+                matcap3 = FindProperty("_Matcap3", props);
+                matcap3Blend = FindProperty("_Matcap3Blend", props);
+                matcap3Strength = FindProperty("_Matcap3Strength", props);
+                matcap4 = FindProperty("_Matcap4", props);
+                matcap4Blend = FindProperty("_Matcap4Blend", props);
+                matcap4Strength = FindProperty("_Matcap4Strength", props);
 
                 useSubsurfaceScattering = FindProperty("_UseSubsurfaceScattering", props);
                 thicknessMap = FindProperty("_ThicknessMap", props);
@@ -400,6 +420,11 @@ namespace SilentCelShading.Unity
         {
             SetupMaterialWithAlbedo(material, mainTexture, albedoAlphaMode);
             SetupMaterialWithRenderingMode(material, (RenderingMode)renderingMode.floatValue, (CustomRenderingMode)customRenderingMode.floatValue, (int)renderQueueOverride.floatValue);
+            SetupMaterialWithOutlineMode(material, (OutlineMode)outlineMode.floatValue);
+
+            // Handle old materials
+            UpgradeMatcaps(material);
+
             SetMaterialKeywords(material);
         }
 
@@ -618,10 +643,11 @@ namespace SilentCelShading.Unity
 
                 if (PropertyEnabled(useMatcap))
                 {
-                    materialEditor.TexturePropertySingleLine(Styles.additiveMatcap, additiveMatcap, additiveMatcapStrength);
-                    materialEditor.TexturePropertySingleLine(Styles.midBlendMatcap, midBlendMatcap, midBlendMatcapStrength);
-                    materialEditor.TexturePropertySingleLine(Styles.multiplyMatcap, multiplyMatcap, multiplyMatcapStrength);
                     materialEditor.TexturePropertySingleLine(Styles.matcapMask, matcapMask);
+                    materialEditor.TexturePropertySingleLine(Styles.matcap1Tex, matcap1, matcap1Strength, matcap1Blend);
+                    materialEditor.TexturePropertySingleLine(Styles.matcap2Tex, matcap2, matcap2Strength, matcap2Blend);
+                    materialEditor.TexturePropertySingleLine(Styles.matcap3Tex, matcap3, matcap3Strength, matcap3Blend);
+                    materialEditor.TexturePropertySingleLine(Styles.matcap4Tex, matcap4, matcap4Strength, matcap4Blend);
                 }
             } 
             EditorGUI.EndChangeCheck();
@@ -820,6 +846,16 @@ namespace SilentCelShading.Unity
 
         protected static void SetupMaterialWithRenderingMode(Material material, RenderingMode mode, CustomRenderingMode customMode, int renderQueueOverride)
         {
+            // If we aren't switching to Custom, then set default values for all RenderingMode types. Otherwise keep whatever user had before
+            if (mode != RenderingMode.Custom)
+            {
+                material.SetInt(Styles.blendOperationName, (int)UnityEngine.Rendering.BlendOp.Add);
+                material.SetInt(Styles.depthTestName, (int)UnityEngine.Rendering.CompareFunction.LessEqual);
+                // material.SetFloat(Styles.depthOffsetFactorName, 0.0f);
+                // material.SetFloat(Styles.depthOffsetUnitsName, 0.0f);
+                material.SetInt(Styles.colorWriteMaskName, (int)UnityEngine.Rendering.ColorWriteMask.All);
+            }
+
             switch (mode)
             {
                 case RenderingMode.Opaque:
@@ -940,30 +976,50 @@ namespace SilentCelShading.Unity
 
         public static void SetupMaterialWithOutlineMode(Material material, OutlineMode outlineMode)
         {
-            switch ((OutlineMode)material.GetFloat("_OutlineMode"))
+            string[] oldShaderName = material.shader.name.Split('/');
+            const string noOutlineName = "☓ No Outline";
+            var currentlyNoOutline = oldShaderName[oldShaderName.Length - 2].Equals(noOutlineName);
+            switch ((OutlineMode)outlineMode)
             {
-                case OutlineMode.None:
-                    material.EnableKeyword("NO_OUTLINE");
-                    material.DisableKeyword("TINTED_OUTLINE");
-                    material.DisableKeyword("COLORED_OUTLINE");
-                    break;
-                case OutlineMode.Tinted:
-                    material.DisableKeyword("NO_OUTLINE");
-                    material.EnableKeyword("TINTED_OUTLINE");
-                    material.DisableKeyword("COLORED_OUTLINE");
-                    break;
-                case OutlineMode.Colored:
-                    material.DisableKeyword("NO_OUTLINE");
-                    material.DisableKeyword("TINTED_OUTLINE");
-                    material.EnableKeyword("COLORED_OUTLINE");
-                    break;
-                default:
-                    break;
+            case OutlineMode.None:
+                if (!currentlyNoOutline) {
+                    string[] newShaderName = new string[oldShaderName.Length + 1];
+                    for (int x = 0; x < oldShaderName.Length - 1; x++)
+                    {
+                        newShaderName[x] = oldShaderName[x];
+                    }
+                    newShaderName[newShaderName.Length - 2] = noOutlineName;
+                    newShaderName[newShaderName.Length - 1] = oldShaderName[oldShaderName.Length - 1];
+                    Shader finalShader = Shader.Find(String.Join("/", newShaderName));
+                    // If we can't find it, pass.
+                    if (finalShader != null) {
+                        material.shader = finalShader;
+                    }
+                }
+                break;
+            case OutlineMode.Tinted:
+            case OutlineMode.Colored:
+                if (currentlyNoOutline) {
+                    string[] newShaderName = new string[oldShaderName.Length - 1];
+                    for (int x = 0; x < oldShaderName.Length - 2; x++)
+                    {
+                        newShaderName[x] = oldShaderName[x];
+                    }
+                    newShaderName[oldShaderName.Length - 2] = oldShaderName[oldShaderName.Length - 1];
+                    Shader finalShader = Shader.Find(String.Join("/", newShaderName));
+                    // If we can't find it, pass.
+                    if (finalShader != null) {
+                        material.shader = finalShader;
+                    }
+                }
+                break;
             }
         }
 
         public static void SetupMaterialWithSpecularType(Material material, SpecularType specularType)
         {
+            // Note: _METALLICGLOSSMAP is used to avoid keyword problems with VRchat.
+            // It's only a coincidence that the metallic map needs to be present.
             switch ((SpecularType)material.GetFloat("_SpecularType"))
             {
                 case SpecularType.Standard:
@@ -1058,6 +1114,37 @@ namespace SilentCelShading.Unity
             }
         }
 
+protected void UpgradeMatcaps(Material material)
+{
+    // Check if the new properties exist.
+    bool oldMatcaps = 
+        (material.GetFloat("_Matcap1Strength") == 1.0 && material.GetFloat("_Matcap2Strength") == 1.0 &&
+         material.GetFloat("_Matcap3Strength") == 1.0 && material.GetFloat("_Matcap4Strength") == 1.0) &&
+        (matcap1.textureValue == null && matcap2.textureValue == null &&
+         matcap3.textureValue == null && matcap4.textureValue == null);
+    if (oldMatcaps)
+        {
+        // GetFloat is bugged but GetTexture is not, so we use GetFloatProperty so we can convert nulls into 1s.
+        float? additiveStrength = GetFloatProperty(material, "_AdditiveMatcapStrength");
+        float? multiplyStrength = GetFloatProperty(material, "_MultiplyMatcapStrength");
+        float? medianStrength = GetFloatProperty(material, "_MidBlendMatcapStrength");
+        Texture matcapTex = material.GetTexture("_AdditiveMatcap");
+        Texture multiplyMatcap = material.GetTexture("_MultiplyMatcap");
+        Texture medianMatcap = material.GetTexture("_MidBlendMatcap");
+
+        // Mask layout is RGBA
+        matcap2.textureValue = matcapTex;
+        matcap2Blend.floatValue = (float)MatcapBlendModes.Additive;
+        matcap2Strength.floatValue = additiveStrength ?? 1;
+        matcap4.textureValue = multiplyMatcap;
+        matcap4Blend.floatValue = (float)MatcapBlendModes.Multiply;
+        matcap4Strength.floatValue = multiplyStrength ?? 1;
+        matcap3.textureValue = medianMatcap;
+        matcap3Blend.floatValue = (float)MatcapBlendModes.Median;
+        matcap3Strength.floatValue = medianStrength ?? 1;
+        }
+}
+
         // Taken from Standard. Only Standard keywords are set here!
         protected static void SetMaterialKeywords(Material material)
         {
@@ -1114,6 +1201,26 @@ namespace SilentCelShading.Unity
             }
 
             return null;
+        }
+
+        protected static void SetShaderFeatureActive(Material material, string keywordName, string propertyName, float? propertyValue)
+        {
+            if (propertyValue.HasValue)
+            {
+                if (keywordName != null)
+                {
+                    if (!propertyValue.Value.Equals(0.0f))
+                    {
+                        material.EnableKeyword(keywordName);
+                    }
+                    else
+                    {
+                        material.DisableKeyword(keywordName);
+                    }
+                }
+
+                material.SetFloat(propertyName, propertyValue.Value);
+            }
         }
 
         protected static void SetFloatProperty(Material material, string keywordName, string propertyName, float? propertyValue)

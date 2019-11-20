@@ -40,14 +40,20 @@ Shader "Silent's Cel Shading/Cutout"
 		[Enum(UV0,0,UV1,1)]_UVSec ("UV Set Secondary", Float) = 0
 		_Cutoff("Alpha cutoff", Range(0,1)) = 0.5
 		[Toggle(_)]_AlphaSharp("Disable Dithering", Float) = 0.0
-		[HideInInspector] _OutlineMode("__outline_mode", Float) = 0.0
+		[Enum(OutlineMode)] _OutlineMode("_OutlineMode", Float) = 0.0
 		[Toggle(_)]_UseMatcap ("Use Matcap", Float) = 0.0
-		_AdditiveMatcap("AdditiveMatcapTex", 2D) = "black" {}
-		_AdditiveMatcapStrength("Additive Matcap Strength", Range(0, 2)) = 1.0
-		_MidBlendMatcap("MidBlendMatcapTex", 2D) = "black" {}
-		_MidBlendMatcapStrength("MidBlend Matcap Strength", Range(0, 2)) = 1.0
-		_MultiplyMatcap("MultiplyMatcapTex", 2D) = "white" {}
-		_MultiplyMatcapStrength("Multiply Matcap Strength", Range(0, 2)) = 1.0
+		_Matcap1("Matcap 1", 2D) = "black" {}
+		_Matcap1Strength("Matcap 1 Strength", Range(0, 2)) = 1.0
+		[Enum(MatcapBlendModes)]_Matcap1Blend("Matcap 1 Blend Mode", Float) = 0.0
+		_Matcap2("Matcap 2", 2D) = "black" {}
+		_Matcap2Strength("Matcap 2 Strength", Range(0, 2)) = 1.0
+		[Enum(MatcapBlendModes)]_Matcap2Blend("Matcap 2 Blend Mode", Float) = 0.0
+		_Matcap3("Matcap 3", 2D) = "black" {}
+		_Matcap3Strength("Matcap 3 Strength", Range(0, 2)) = 1.0
+		[Enum(MatcapBlendModes)]_Matcap3Blend("Matcap 3 Blend Mode", Float) = 0.0
+		_Matcap4("Matcap 4", 2D) = "black" {}
+		_Matcap4Strength("Matcap 4 Strength", Range(0, 2)) = 1.0
+		[Enum(MatcapBlendModes)]_Matcap4Blend("Matcap 4 Blend Mode", Float) = 0.0
 		_MatcapMask("Matcap Mask", 2D) = "white" {}
 		[Enum(LightRampType)]_LightRampType ("Light Ramp Type", Float) = 0.0
 		[Toggle(_)]_UseMetallic ("Use Metallic", Float) = 0.0
@@ -111,7 +117,6 @@ Shader "Silent's Cel Shading/Cutout"
 			#pragma multi_compile_fwdbase
 			#pragma multi_compile_fog
 
-			#pragma shader_feature _ TINTED_OUTLINE COLORED_OUTLINE
 			#pragma shader_feature _ _ALPHATEST_ON _ALPHABLEND_ON _ALPHAPREMULTIPLY_ON
 			#pragma shader_feature ___ _DETAIL_MULX2
 			#pragma shader_feature ___ _METALLICGLOSSMAP
@@ -146,7 +151,6 @@ Shader "Silent's Cel Shading/Cutout"
 			#pragma multi_compile_fwdadd_fullshadows
 			#pragma multi_compile_fog
 
-			#pragma shader_feature _ TINTED_OUTLINE COLORED_OUTLINE
 			#pragma shader_feature _ _ALPHATEST_ON _ALPHABLEND_ON _ALPHAPREMULTIPLY_ON
 			#pragma shader_feature ___ _DETAIL_MULX2
 			#pragma shader_feature ___ _METALLICGLOSSMAP

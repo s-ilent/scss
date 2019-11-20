@@ -1,4 +1,4 @@
-Shader "Silent's Cel Shading/Opaque"
+Shader "Silent's Cel Shading/☓ No Outline/Transparent"
 {
 	Properties
 	{
@@ -91,7 +91,7 @@ Shader "Silent's Cel Shading/Opaque"
 	{
 		Tags
 		{
-			"RenderType" = "Opaque"
+			"Queue"="Transparent+100" "RenderType" = "Transparent" "IgnoreProjector"="True"
 		}
 
         Blend[_SrcBlend][_DstBlend]
@@ -112,7 +112,7 @@ Shader "Silent's Cel Shading/Opaque"
 			#define UNITY_PASS_FORWARDBASE
 			#pragma multi_compile _ VERTEXLIGHT_ON
 
-			#pragma multi_compile_fwdbase
+			#pragma multi_compile_fwdbase nolightmap 
 			#pragma multi_compile_fog
 
 			#pragma shader_feature _ _ALPHATEST_ON _ALPHABLEND_ON _ALPHAPREMULTIPLY_ON
@@ -120,12 +120,11 @@ Shader "Silent's Cel Shading/Opaque"
 			#pragma shader_feature ___ _METALLICGLOSSMAP
 			#pragma shader_feature _ _SMOOTHNESS_TEXTURE_ALBEDO_CHANNEL_A
 			#pragma shader_feature _ _SPECULARHIGHLIGHTS_OFF
-			#pragma shader_feature _ _GLOSSYREFLECTIONS_OFF			
-			
+			#pragma shader_feature _ _GLOSSYREFLECTIONS_OFF
+
 			#include "SCSS_Core.cginc"
 
-			#pragma vertex vert
-			#pragma geometry geom
+			#pragma vertex vert_nogeom
 			#pragma fragment frag
 
 			#include "SCSS_Forward.cginc"
@@ -144,7 +143,7 @@ Shader "Silent's Cel Shading/Opaque"
 
 			#define UNITY_PASS_FORWARDADD
 
-			#pragma multi_compile_fwdadd_fullshadows
+			#pragma multi_compile_fwdadd nolightmap 
 			#pragma multi_compile_fog
 
 			#pragma shader_feature _ _ALPHATEST_ON _ALPHABLEND_ON _ALPHAPREMULTIPLY_ON
@@ -156,8 +155,7 @@ Shader "Silent's Cel Shading/Opaque"
 
 			#include "SCSS_Core.cginc"
 
-			#pragma vertex vert
-			#pragma geometry geom
+			#pragma vertex vert_nogeom
 			#pragma fragment frag
 
 			#include "SCSS_Forward.cginc"
@@ -167,7 +165,7 @@ Shader "Silent's Cel Shading/Opaque"
 
 		Pass
 		{
-			Name "SHADOW_CASTER"
+			Name "SHADOW_CASTER" 
 			Tags{ "LightMode" = "ShadowCaster" }
 
             Blend[_SrcBlend][_DstBlend]
@@ -183,7 +181,7 @@ Shader "Silent's Cel Shading/Opaque"
 			#pragma multi_compile_shadowcaster
 
 			#pragma shader_feature _ _ALPHATEST_ON _ALPHABLEND_ON _ALPHAPREMULTIPLY_ON
-			
+
 			#include "SCSS_Shadows.cginc"
 
 			#pragma vertex vertShadowCaster
