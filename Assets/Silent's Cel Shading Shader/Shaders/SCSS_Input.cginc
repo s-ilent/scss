@@ -8,10 +8,6 @@
     #define _DETAIL 1
 #endif
 
-#if !(TINTED_OUTLINE || COLORED_OUTLINE)
-	#define NO_OUTLINE
-#endif
-
 //---------------------------------------
 
 UNITY_DECLARE_TEX2D(_MainTex); uniform half4 _MainTex_ST; uniform half4 _MainTex_TexelSize;
@@ -28,9 +24,11 @@ UNITY_DECLARE_TEX2D_NOSAMPLER(_SpecularDetailMask); uniform half4 _SpecularDetai
 UNITY_DECLARE_TEX2D_NOSAMPLER(_ThicknessMap); uniform half4 _ThicknessMap_ST;
 
 uniform sampler2D _Ramp; uniform half4 _Ramp_ST;
-uniform sampler2D _AdditiveMatcap; uniform half4 _AdditiveMatcap_ST; 
-uniform sampler2D _MidBlendMatcap; uniform half4 _MidBlendMatcap_ST; 
-uniform sampler2D _MultiplyMatcap; uniform half4 _MultiplyMatcap_ST; 
+
+uniform sampler2D _Matcap1; uniform half4 _Matcap1_ST; 
+uniform sampler2D _Matcap2; uniform half4 _Matcap2_ST; 
+uniform sampler2D _Matcap3; uniform half4 _Matcap3_ST; 
+uniform sampler2D _Matcap4; uniform half4 _Matcap4_ST; 
 
 uniform float4 _Color;
 uniform float _Cutoff;
@@ -67,13 +65,19 @@ uniform float4 _CustomFresnelColor;
 
 uniform float _outline_width;
 uniform float4 _outline_color;
+uniform float _OutlineMode;
 
 uniform float _LightingCalculationType;
 
 uniform float _UseMatcap;
-uniform float _AdditiveMatcapStrength;
-uniform float _MidBlendMatcapStrength;
-uniform float _MultiplyMatcapStrength;
+uniform float _Matcap1Strength;
+uniform float _Matcap2Strength;
+uniform float _Matcap3Strength;
+uniform float _Matcap4Strength;
+uniform float _Matcap1Blend;
+uniform float _Matcap2Blend;
+uniform float _Matcap3Blend;
+uniform float _Matcap4Blend;
 
 uniform float _UseSubsurfaceScattering;
 uniform float _ThicknessMapPower;

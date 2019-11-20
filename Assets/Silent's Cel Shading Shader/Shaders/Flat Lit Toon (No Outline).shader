@@ -1,4 +1,4 @@
-Shader "Silent's Cel Shading/Opaque"
+Shader "Silent's Cel Shading/☓ No Outline/Opaque"
 {
 	Properties
 	{
@@ -124,8 +124,7 @@ Shader "Silent's Cel Shading/Opaque"
 			
 			#include "SCSS_Core.cginc"
 
-			#pragma vertex vert
-			#pragma geometry geom
+			#pragma vertex vert_nogeom
 			#pragma fragment frag
 
 			#include "SCSS_Forward.cginc"
@@ -156,8 +155,7 @@ Shader "Silent's Cel Shading/Opaque"
 
 			#include "SCSS_Core.cginc"
 
-			#pragma vertex vert
-			#pragma geometry geom
+			#pragma vertex vert_nogeom
 			#pragma fragment frag
 
 			#include "SCSS_Forward.cginc"

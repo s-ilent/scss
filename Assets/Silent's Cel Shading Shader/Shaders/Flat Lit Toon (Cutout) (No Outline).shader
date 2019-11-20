@@ -1,4 +1,4 @@
-Shader "Silent's Cel Shading/Opaque"
+Shader "Silent's Cel Shading/☓ No Outline/Cutout"
 {
 	Properties
 	{
@@ -91,7 +91,7 @@ Shader "Silent's Cel Shading/Opaque"
 	{
 		Tags
 		{
-			"RenderType" = "Opaque"
+			"Queue"="AlphaTest+0" "RenderType" = "TransparentCutout" "IgnoreProjector"="True"
 		}
 
         Blend[_SrcBlend][_DstBlend]
@@ -106,6 +106,8 @@ Shader "Silent's Cel Shading/Opaque"
 
 			Name "FORWARD"
 			Tags { "LightMode" = "ForwardBase" }
+			
+            AlphaToMask On
 
 			CGPROGRAM
 
@@ -120,12 +122,11 @@ Shader "Silent's Cel Shading/Opaque"
 			#pragma shader_feature ___ _METALLICGLOSSMAP
 			#pragma shader_feature _ _SMOOTHNESS_TEXTURE_ALBEDO_CHANNEL_A
 			#pragma shader_feature _ _SPECULARHIGHLIGHTS_OFF
-			#pragma shader_feature _ _GLOSSYREFLECTIONS_OFF			
+			#pragma shader_feature _ _GLOSSYREFLECTIONS_OFF
 			
 			#include "SCSS_Core.cginc"
 
-			#pragma vertex vert
-			#pragma geometry geom
+			#pragma vertex vert_nogeom
 			#pragma fragment frag
 
 			#include "SCSS_Forward.cginc"
@@ -138,6 +139,8 @@ Shader "Silent's Cel Shading/Opaque"
 		{
 			Name "FORWARD_DELTA"
 			Tags { "LightMode" = "ForwardAdd" }
+			
+            AlphaToMask On
 			Blend [_SrcBlend] One
 
 			CGPROGRAM
@@ -156,8 +159,7 @@ Shader "Silent's Cel Shading/Opaque"
 
 			#include "SCSS_Core.cginc"
 
-			#pragma vertex vert
-			#pragma geometry geom
+			#pragma vertex vert_nogeom
 			#pragma fragment frag
 
 			#include "SCSS_Forward.cginc"

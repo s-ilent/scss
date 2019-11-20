@@ -132,46 +132,27 @@ float3 sharpFresnelLight(SCSS_LightParam d) {
 	return fresnelEffect * _FresnelTint.rgb * _FresnelTint.a;
 }
 
-struct MatcapOutput 
+float3 applyBlendMode(int blendOp, half3 a, half3 b, half t)
 {
-	half3 add;
-	half3 mid;
-	half3 multiply;
-};
+	switch (blendOp) 
+	{
+		default:
+		case 0: return a + b * t;
+		case 1: return a * LerpWhiteTo(b, t);
+		case 2: return a + b * a * t;
+	}
+}
 
-MatcapOutput getMatcapEffect(float3 normal, SCSS_Light l, float3 viewDir, float2 texcoords)
+float3 applyMatcap(sampler2D src, float3 dst, float3 normal, float3 light, float3 viewDir, int blendMode, float blendStrength)
 {
-	MatcapOutput matcaps = (MatcapOutput) 0;
 	// Based on Masataka SUMI's implementation
 	half3 worldUp = float3(0, 1, 0);
 	half3 worldViewUp = normalize(worldUp - viewDir * dot(viewDir, worldUp));
 	half3 worldViewRight = normalize(cross(viewDir, worldViewUp));
 	half2 matcapUV = half2(dot(worldViewRight, normal), dot(worldViewUp, normal)) * 0.5 + 0.5;
 	
-	float3 AdditiveMatcap = tex2D(_AdditiveMatcap, matcapUV);
-	float3 MidBlendMatcap = tex2D(_MidBlendMatcap, matcapUV);
-	float3 MultiplyMatcap = tex2D(_MultiplyMatcap, matcapUV);
-	float4 _MatcapMask_var = MatcapMask(texcoords.xy);
-	matcaps.add = 
-		#if defined(UNITY_PASS_FORWARDBASE)
-		(BetterSH9(half4(0.0,  0.0, 0.0, 1.0))+l.color)
-		#endif
-		#if defined(UNITY_PASS_FORWARDADD)
-		(l.color)
-		#endif
-		*AdditiveMatcap*_AdditiveMatcapStrength*_MatcapMask_var.g;
-	matcaps.mid = 
-		#if defined(UNITY_PASS_FORWARDBASE)
-		(BetterSH9(half4(0.0,  0.0, 0.0, 1.0))+l.color)
-		#endif
-		#if defined(UNITY_PASS_FORWARDADD)
-		(l.color)
-		#endif
-		*MidBlendMatcap*_MidBlendMatcapStrength*_MatcapMask_var.b;
-	matcaps.multiply = LerpWhiteTo(MultiplyMatcap, _MultiplyMatcapStrength * _MatcapMask_var.w);
-	return matcaps;
+	return applyBlendMode(blendMode, dst, tex2D(src, matcapUV), blendStrength);
 }
-
 
 //SSS method from GDC 2011 conference by Colin Barre-Bresebois & Marc Bouchard and modified by Xiexe
 float3 getSubsurfaceScatteringLight (SCSS_Light l, float3 normalDirection, float3 viewDirection, 
@@ -187,50 +168,59 @@ float3 getSubsurfaceScatteringLight (SCSS_Light l, float3 normalDirection, float
 				
 }
 
-float getRemappedLight(half occlusion, half perceptualRoughness, half attenuation, SCSS_LightParam d)
+float applyShadowLift(float baseLight, float occlusion)
+{
+	baseLight *= (1 - _Shadow) * occlusion + _Shadow;
+	baseLight = _ShadowLift + baseLight * (1-_ShadowLift);
+	return baseLight;
+}
+
+float getRemappedLight(half perceptualRoughness, half attenuation, SCSS_LightParam d)
 {
 	float remappedLight = d.NdotL * attenuation
 		* DisneyDiffuse(d.NdotV, d.NdotL, d.LdotH, perceptualRoughness);
-	remappedLight = remappedLight * 0.5 + 0.5;
-
-	remappedLight *= (1 - _Shadow) * occlusion + _Shadow;
-	remappedLight = _ShadowLift + remappedLight * (1-_ShadowLift);
-
 	return remappedLight;
+}
+
+void getDirectIndirectLighting(float3 normal, inout float3 directLighting, inout float3 indirectLighting)
+{
+	switch (_LightingCalculationType)
+	{
+	case 0: // Arktoon
+		directLighting   = GetSHLength();
+		indirectLighting = BetterSH9(half4(0.0, 0.0, 0.0, 1.0)); 
+	break;
+	case 1: // Standard
+		directLighting = 
+		indirectLighting = BetterSH9(half4(normal, 1.0))
+						 + SHEvalLinearL2(half4(normal, 1.0));
+	break;
+	case 2: // Cubed
+		directLighting   = BetterSH9(half4(0.0,  1.0, 0.0, 1.0));
+		indirectLighting = BetterSH9(half4(0.0, -1.0, 0.0, 1.0)); 
+	break;
+	case 3: // True Directional
+		float4 ambientDir = float4(Unity_SafeNormalize(unity_SHAr.xyz + unity_SHAg.xyz + unity_SHAb.xyz), 1.0);
+		directLighting   = BetterSH9(ambientDir);
+		indirectLighting = BetterSH9(-ambientDir); 
+	break;
+	}
+
 }
 
 half3 calcDiffuseBase(float3 tonemap, float occlusion, half3 normal, half perceptualRoughness, half attenuation, 
 	half smoothness, half softness, SCSS_LightParam d, SCSS_Light l)
 {
-	float remappedLight = getRemappedLight(occlusion, perceptualRoughness, attenuation, d);
+	float remappedLight = getRemappedLight(perceptualRoughness, attenuation, d);
+	remappedLight = remappedLight * 0.5 + 0.5;
+	remappedLight = applyShadowLift(remappedLight, occlusion);
 
 	float3 lightContribution = sampleRampWithOptions(remappedLight, softness);
 
 	float3 directLighting = 0.0;
 	float3 indirectLighting = 0.0;
 
-	if (_LightingCalculationType == 0) // Arktoon
-	{
-		directLighting   = GetSHLength();
-		indirectLighting = BetterSH9(half4(0.0, 0.0, 0.0, 1.0)); 
-	}
-	if (_LightingCalculationType == 1) // Standard
-	{
-		directLighting = 
-		indirectLighting = BetterSH9(half4(normal, 1.0))
-						 + SHEvalLinearL2(half4(normal, 1.0));
-	} 
-	if (_LightingCalculationType == 2) // Cubed
-	{
-		directLighting   = BetterSH9(half4(0.0,  1.0, 0.0, 1.0));
-		indirectLighting = BetterSH9(half4(0.0, -1.0, 0.0, 1.0)); 
-	}
-	if (_LightingCalculationType == 3) // True Directional
-	{
-		float4 ambientDir = float4(Unity_SafeNormalize(unity_SHAr.xyz + unity_SHAg.xyz + unity_SHAb.xyz), 1.0);
-		directLighting   = BetterSH9(ambientDir);
-		indirectLighting = BetterSH9(-ambientDir); 
-	}
+	getDirectIndirectLighting(normal, /*out*/ directLighting, /*out*/ indirectLighting);
 	
 	if (_UseFresnel == 1) 
 	{
@@ -241,14 +231,14 @@ half3 calcDiffuseBase(float3 tonemap, float occlusion, half3 normal, half percep
 	
 	indirectLighting = lerp(indirectLighting, directLighting, tonemap);
 
-	float ambientProbeIntensity = (unity_SHAr.w + unity_SHAg.w + unity_SHAb.w);
-
 	lightContribution = lerp(tonemap, 1.0, lightContribution);
 	lightContribution *= l.color;
 	
 	float3 ambientLightDirection = Unity_SafeNormalize((unity_SHAr.xyz + unity_SHAg.xyz + unity_SHAb.xyz) * _LightSkew.xyz);
 	float ambientLight = dot(normal, ambientLightDirection);
 	ambientLight = ambientLight * 0.5 + 0.5;
+	ambientLight = applyShadowLift(ambientLight, occlusion);
+
 	lightContribution += lerp(indirectLighting, directLighting, sampleRampWithOptions(ambientLight, softness));
 
 	return lightContribution;	
@@ -257,7 +247,9 @@ half3 calcDiffuseBase(float3 tonemap, float occlusion, half3 normal, half percep
 half3 calcDiffuseAdd(float3 tonemap, float occlusion, half perceptualRoughness, 
 	half smoothness, half softness, SCSS_LightParam d, SCSS_Light l)
 {
-	float remappedLight = getRemappedLight(occlusion, perceptualRoughness, 1.0, d);
+	float remappedLight = getRemappedLight(perceptualRoughness, 1.0, d);
+	remappedLight = remappedLight * 0.5 + 0.5;
+	remappedLight = applyShadowLift(remappedLight, occlusion);
 
 	float3 lightContribution = sampleRampWithOptions(remappedLight, softness);
 
@@ -293,7 +285,8 @@ half3 calcVertexLight(float4 vertexAttenuation, float occlusion, float3 tonemap,
 void getSpecularVD(float roughness, float3 normal, float3 viewDir, SCSS_LightParam d, SCSS_Light l, VertexOutput i,
 	out half V, out half D)
 {
-	V = 0; D = 0; float3 shiftedTangent = 0;
+	V = 0; D = 0;
+
 	#ifndef SHADER_TARGET_GLSL
 	[call]
 	#endif
@@ -321,24 +314,23 @@ void getSpecularVD(float roughness, float3 normal, float3 viewDir, SCSS_LightPar
 	    float BdotV = dot(i.bitangentDir, l.dir);
 
 	    // Accurate but probably expensive
-		float V = V_SmithGGXCorrelated_Anisotropic (at, ab, TdotV, BdotV, TdotL, BdotL, d.NdotV, d.NdotL);
+		V = V_SmithGGXCorrelated_Anisotropic (at, ab, TdotV, BdotV, TdotL, BdotL, d.NdotV, d.NdotL);
 		#else
 		V = SmithJointGGXVisibilityTerm (d.NdotL, d.NdotV, roughness);
 		#endif
 		// Temporary
-		shiftedTangent = ShiftTangent(i.tangentDir, normal, roughness);
-	    D = D_GGX_Anisotropic(d.NdotH, d.halfDir, shiftedTangent, i.bitangentDir, at, ab);
+	    D = D_GGX_Anisotropic(d.NdotH, d.halfDir, i.tangentDir, i.bitangentDir, at, ab);
 	    break;
 
 	case 4: // Strand
 		V = SmithJointGGXVisibilityTerm (d.NdotL, d.NdotV, roughness);
 		// Temporary
-		shiftedTangent = ShiftTangent(i.tangentDir, normal, roughness);
+		//i.tangentDir = ShiftTangent(i.tangentDir, normal, roughness);
 	    // exponent, strength
-		D = StrandSpecular(shiftedTangent, 
+		D = StrandSpecular(i.tangentDir, 
 			viewDir, l.dir, d.halfDir, 
 			_Anisotropy*100, 1.0 );
-		D += StrandSpecular(shiftedTangent, 
+		D += StrandSpecular(i.tangentDir, 
 			viewDir, l.dir, d.halfDir, 
 			_Anisotropy*10, 0.05 );
 	    break;
@@ -419,12 +411,18 @@ float3 SCSS_ApplyLighting(SCSS_Input c, SCSS_LightParam d, VertexOutput i, float
 	// Perceptual roughness transformation. Without this, roughness handling is wrong.
 	float perceptualRoughness = SmoothnessToPerceptualRoughness(c.smoothness);
 
+	// Apply matcap before specular effect.
 	if (_UseMatcap == 1) 
 	{
-		MatcapOutput matcaps = getMatcapEffect(c.normal, l, viewDir, texcoords.xy);
-		c.albedo += matcaps.mid * c.albedo;
-		c.albedo *= matcaps.multiply;
-		c.albedo += matcaps.add;
+		float3 matcapLight = l.color;
+		#if defined(UNITY_PASS_FORWARDBASE)
+		matcapLight += BetterSH9(half4(0.0,  0.0, 0.0, 1.0));
+		#endif
+		float4 _MatcapMask_var = MatcapMask(texcoords.xy);
+		c.albedo = applyMatcap(_Matcap1, c.albedo, c.normal, matcapLight, viewDir, _Matcap1Blend, _Matcap1Strength * _MatcapMask_var.r);
+		c.albedo = applyMatcap(_Matcap2, c.albedo, c.normal, matcapLight, viewDir, _Matcap2Blend, _Matcap2Strength * _MatcapMask_var.g);
+		c.albedo = applyMatcap(_Matcap3, c.albedo, c.normal, matcapLight, viewDir, _Matcap3Blend, _Matcap3Strength * _MatcapMask_var.b);
+		c.albedo = applyMatcap(_Matcap4, c.albedo, c.normal, matcapLight, viewDir, _Matcap4Blend, _Matcap4Strength * _MatcapMask_var.a);
 	}
 
 	float3 finalColor; 
