@@ -1,6 +1,23 @@
 #ifndef SCSS_UTILS_INCLUDED
 #define SCSS_UTILS_INCLUDED
 
+struct SCSS_Light
+{
+    half3 color;
+    half3 dir;
+    half  intensity; 
+};
+
+SCSS_Light MainLight()
+{
+    SCSS_Light l;
+
+    l.color = _LightColor0.rgb;
+    l.intensity = _LightColor0.w;
+    l.dir = Unity_SafeNormalize(_WorldSpaceLightPos0.xyz); 
+    return l;
+}
+
 float interleaved_gradient(float2 uv : SV_POSITION) : SV_Target
 {
 	float3 magic = float3(0.06711056, 0.00583715, 52.9829189);
@@ -48,12 +65,18 @@ inline float3 BlendNormalsPD(float3 n1, float3 n2) {
 	return normalize(float3(n1.xy*n2.z + n2.xy*n1.z, n1.z*n2.z));
 }
 
-float2 sharpSample( float2 texResolution , float2 p )
+float2 invlerp(float2 A, float2 B, float2 T){
+    return (T - A)/(B - A);
+}
+
+// Returns pixel sharpened to nearest pixel boundary. 
+// texelSize is Unity _Texture_TexelSize; zw is w/h, xy is 1/wh
+float2 sharpSample( float4 texelSize , float2 p )
 {
-	p = p*texResolution;
-	float2 i = floor(p);
-	p = i + smoothstep(0, max(0.0001, fwidth(p)), frac(p));
-	p = (p - 0.5)/texResolution;
+	p = p*texelSize.zw;
+    float2 c = max(0.0001, fwidth(p));
+    p = floor(p) + saturate(frac(p) / c);
+	p = (p - 0.5)*texelSize.xy;
 	return p;
 }
 
@@ -193,7 +216,6 @@ float fastRcpSqrtNR2(float inX)
 	return xRcpSqrt;
 }
 
-
 // BRDF based on implementation in Filament.
 // https://github.com/google/filament
 
@@ -269,6 +291,29 @@ half3 GetSHLength ()
     x1.g = length(unity_SHBg);
     x1.b = length(unity_SHBb);
     return x + x1;
+}
+
+// Used for matcaps
+float3 applyBlendMode(int blendOp, half3 a, half3 b, half t)
+{
+    switch (blendOp) 
+    {
+        default:
+        case 0: return a + b * t;
+        case 1: return a * LerpWhiteTo(b, t);
+        case 2: return a + b * a * t;
+    }
+}
+
+float3 applyMatcap(sampler2D src, float3 dst, float3 normal, float3 light, float3 viewDir, int blendMode, float blendStrength)
+{
+    // Based on Masataka SUMI's implementation
+    half3 worldUp = float3(0, 1, 0);
+    half3 worldViewUp = normalize(worldUp - viewDir * dot(viewDir, worldUp));
+    half3 worldViewRight = normalize(cross(viewDir, worldViewUp));
+    half2 matcapUV = half2(dot(worldViewRight, normal), dot(worldViewUp, normal)) * 0.5 + 0.5;
+    
+    return applyBlendMode(blendMode, dst, tex2D(src, matcapUV), blendStrength);
 }
 
 #endif // SCSS_UTILS_INCLUDED

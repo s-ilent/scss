@@ -160,11 +160,11 @@ float4 TexCoords(VertexOutput v)
     float4 texcoord;
 	texcoord.xy = TRANSFORM_TEX(v.uv0, _MainTex);// Always source from uv0
 	texcoord.xy = _PixelSampleMode? 
-		sharpSample(_MainTex_TexelSize.zw * _MainTex_ST.xy, texcoord.xy) : texcoord.xy;
+		sharpSample(_MainTex_TexelSize * _MainTex_ST.xyxy, texcoord.xy) : texcoord.xy;
 
 	texcoord.zw = TRANSFORM_TEX(((_UVSec == 0) ? v.uv0 : v.uv1), _DetailAlbedoMap);
 	texcoord.zw = _PixelSampleMode? 
-		sharpSample(_DetailAlbedoMap_TexelSize.zw * _DetailAlbedoMap_ST.xy, texcoord.zw) : texcoord.zw;
+		sharpSample(_DetailAlbedoMap_TexelSize * _DetailAlbedoMap_ST.xyxy, texcoord.zw) : texcoord.zw;
     return texcoord;
 }
 

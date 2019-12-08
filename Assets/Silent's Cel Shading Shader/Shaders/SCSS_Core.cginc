@@ -11,23 +11,6 @@
 
 #define SCSS_UNIMPORTANT_LIGHTS_FRAGMENT 1
 
-struct SCSS_Light
-{
-    half3 color;
-    half3 dir;
-    half  intensity; 
-};
-
-SCSS_Light MainLight()
-{
-    SCSS_Light l;
-
-    l.color = _LightColor0.rgb;
-    l.intensity = _LightColor0.w;
-    l.dir = Unity_SafeNormalize(_WorldSpaceLightPos0.xyz); 
-    return l;
-}
-
 // Shade4PointLights from UnityCG.cginc but only returns their attenuation.
 float4 Shade4PointLightsAtten (
     float4 lightPosX, float4 lightPosY, float4 lightPosZ,
@@ -122,53 +105,41 @@ float3 sampleRampWithOptions(float rampPosition, half softness)
 	}
 }
 
-float3 sharpFresnelLight(SCSS_LightParam d) {
-	float fresnelEffect = d.rlPow4.y;
-	float2 fresStep = .5 + float2(-1, 1) * fwidth(d.rlPow4.y);
-	// Sharper rim lighting for the anime look.
-	fresnelEffect *= _FresnelWidth;
-	float2 fresStep_var = lerp(float2(0.0, 1.0), fresStep, 1-_FresnelStrength);
-	fresnelEffect = smoothstep(fresStep_var.x, fresStep_var.y, fresnelEffect);
-	return fresnelEffect * _FresnelTint.rgb * _FresnelTint.a;
+float sharpenLighting (float inLight, float width, float strength)
+{
+    inLight *= width;
+    float2 lightStep = .5 + float2(-1, 1) * fwidth(inLight);
+    lightStep = lerp(float2(0.0, 1.0), lightStep, 1-strength);
+    inLight = smoothstep(lightStep.x, lightStep.y, inLight);
+    return inLight;
 }
 
-float3 applyBlendMode(int blendOp, half3 a, half3 b, half t)
-{
-	switch (blendOp) 
-	{
-		default:
-		case 0: return a + b * t;
-		case 1: return a * LerpWhiteTo(b, t);
-		case 2: return a + b * a * t;
-	}
-}
-
-float3 applyMatcap(sampler2D src, float3 dst, float3 normal, float3 light, float3 viewDir, int blendMode, float blendStrength)
-{
-	// Based on Masataka SUMI's implementation
-	half3 worldUp = float3(0, 1, 0);
-	half3 worldViewUp = normalize(worldUp - viewDir * dot(viewDir, worldUp));
-	half3 worldViewRight = normalize(cross(viewDir, worldViewUp));
-	half2 matcapUV = half2(dot(worldViewRight, normal), dot(worldViewUp, normal)) * 0.5 + 0.5;
-	
-	return applyBlendMode(blendMode, dst, tex2D(src, matcapUV), blendStrength);
+float3 sharpFresnelLight(float fresnelEffect) {
+	return sharpenLighting(fresnelEffect, _FresnelWidth, _FresnelStrength) * _FresnelTint.rgb * _FresnelTint.a;
 }
 
 //SSS method from GDC 2011 conference by Colin Barre-Bresebois & Marc Bouchard and modified by Xiexe
 float3 getSubsurfaceScatteringLight (SCSS_Light l, float3 normalDirection, float3 viewDirection, 
-	float attenuation, float3 thickness, float3 indirectLight)
+    float attenuation, float3 thickness, float3 indirectLight)
 {
-	float3 vSSLight = l.dir + normalDirection * _SSSDist; // Distortion
-	float3 vdotSS = pow(saturate(dot(viewDirection, -vSSLight)), _SSSPow) 
-		* _SSSIntensity; 
-	
-	return lerp(1, attenuation, float(any(_WorldSpaceLightPos0.xyz))) 
-				* (vdotSS + _SSSAmbient) * abs(_ThicknessMapInvert-thickness)
-				* (l.color + indirectLight) * _SSSCol;
-				
+    float3 vSSLight = l.dir + normalDirection * _SSSDist; // Distortion
+    float3 vdotSS = pow(saturate(dot(viewDirection, -vSSLight)), _SSSPow) 
+        * _SSSIntensity; 
+    
+    return lerp(1, attenuation, float(any(_WorldSpaceLightPos0.xyz))) 
+                * (vdotSS + _SSSAmbient) * abs(_ThicknessMapInvert-thickness)
+                * (l.color + indirectLight) * _SSSCol;
+                
 }
 
 float applyShadowLift(float baseLight, float occlusion)
+{
+	baseLight *= (1 - _Shadow) * occlusion + _Shadow;
+	baseLight = _ShadowLift + baseLight * (1-_ShadowLift);
+	return baseLight;
+}
+
+float applyShadowLift(float4 baseLight, float occlusion)
 {
 	baseLight *= (1 - _Shadow) * occlusion + _Shadow;
 	baseLight = _ShadowLift + baseLight * (1-_ShadowLift);
@@ -224,7 +195,7 @@ half3 calcDiffuseBase(float3 tonemap, float occlusion, half3 normal, half percep
 	
 	if (_UseFresnel == 1) 
 	{
-		float sharpFresnel = sharpFresnelLight(d);
+		float sharpFresnel = sharpFresnelLight(d.rlPow4.y);
 		lightContribution += lightContribution*sharpFresnel;
 		directLighting += directLighting*sharpFresnel;
 	}
@@ -235,9 +206,14 @@ half3 calcDiffuseBase(float3 tonemap, float occlusion, half3 normal, half percep
 	lightContribution *= l.color;
 	
 	float3 ambientLightDirection = Unity_SafeNormalize((unity_SHAr.xyz + unity_SHAg.xyz + unity_SHAb.xyz) * _LightSkew.xyz);
+	// Remove secondary light shade in multi-light scenarios. 
+	#if DIRECTIONAL && SHADOWS_SCREEN 
+	float ambientLight = 0.5;
+	#else
 	float ambientLight = dot(normal, ambientLightDirection);
 	ambientLight = ambientLight * 0.5 + 0.5;
 	ambientLight = applyShadowLift(ambientLight, occlusion);
+	#endif
 
 	lightContribution += lerp(indirectLighting, directLighting, sampleRampWithOptions(ambientLight, softness));
 
@@ -258,7 +234,7 @@ half3 calcDiffuseAdd(float3 tonemap, float occlusion, half perceptualRoughness,
 
 	if (_UseFresnel == 1) 
 	{
-		float sharpFresnel = sharpFresnelLight(d);
+		float sharpFresnel = sharpFresnelLight(d.rlPow4.y);
 		directLighting += directLighting*sharpFresnel;
 	}
 
@@ -320,19 +296,6 @@ void getSpecularVD(float roughness, float3 normal, float3 viewDir, SCSS_LightPar
 		#endif
 		// Temporary
 	    D = D_GGX_Anisotropic(d.NdotH, d.halfDir, i.tangentDir, i.bitangentDir, at, ab);
-	    break;
-
-	case 4: // Strand
-		V = SmithJointGGXVisibilityTerm (d.NdotL, d.NdotV, roughness);
-		// Temporary
-		//i.tangentDir = ShiftTangent(i.tangentDir, normal, roughness);
-	    // exponent, strength
-		D = StrandSpecular(i.tangentDir, 
-			viewDir, l.dir, d.halfDir, 
-			_Anisotropy*100, 1.0 );
-		D += StrandSpecular(i.tangentDir, 
-			viewDir, l.dir, d.halfDir, 
-			_Anisotropy*10, 0.05 );
 	    break;
 	}
 	return;
@@ -403,13 +366,38 @@ half3 calcSpecularAdd(float3 specColor, float smoothness, float3 normal, float o
 	
 }
 
+half3 calcSpecularCel(float3 specColor, float smoothness, float3 normal, float oneMinusReflectivity, float perceptualRoughness,
+	float3 viewDir, float attenuation, SCSS_LightParam d, SCSS_Light l, VertexOutput i)
+{
+	if (_SpecularType == 4) {
+		float spec = pow(d.NdotH, (1-smoothness)*100) * smoothness;
+		return sharpenLighting(spec, 10, 0.01) * specColor *  l.color;
+	}
+	if (_SpecularType == 5) {
+		_Anisotropy = abs(_Anisotropy);
+		float spec = StrandSpecular(i.tangentDir, 
+			viewDir, l.dir, d.halfDir, 
+			_Anisotropy*100, 1.0 );
+		spec += StrandSpecular(i.tangentDir, 
+			viewDir, l.dir, d.halfDir, 
+			_Anisotropy*10, 0.05 );
+		return sharpenLighting(spec, 1, 0.01) * specColor *  l.color;
+	}
+	return 0;
+}
+
 float3 SCSS_ApplyLighting(SCSS_Input c, SCSS_LightParam d, VertexOutput i, float3 viewDir, SCSS_Light l,
 	float2 texcoords)
 {
 	UNITY_LIGHT_ATTENUATION(attenuation, i, i.posWorld.xyz);
 
+	#if defined(_METALLICGLOSSMAP)
 	// Perceptual roughness transformation. Without this, roughness handling is wrong.
 	float perceptualRoughness = SmoothnessToPerceptualRoughness(c.smoothness);
+	#else
+	// Disable DisneyDiffuse for cel specular.
+	float perceptualRoughness = 0;
+	#endif
 
 	// Apply matcap before specular effect.
 	if (_UseMatcap == 1) 
@@ -429,7 +417,7 @@ float3 SCSS_ApplyLighting(SCSS_Input c, SCSS_LightParam d, VertexOutput i, float
 
 	if (_UseFresnel == 3 && i.is_outline == 0)
 	{
-		d.NdotL = saturate(max(d.NdotL, sharpFresnelLight(d)));
+		d.NdotL = saturate(max(d.NdotL, sharpFresnelLight(d.rlPow4.y)));
 	}
 
 	#if defined(UNITY_PASS_FORWARDBASE)
@@ -449,16 +437,22 @@ float3 SCSS_ApplyLighting(SCSS_Input c, SCSS_LightParam d, VertexOutput i, float
 
 	if (_UseFresnel == 2 && i.is_outline == 0)
 	{
-		finalColor *= 1+sharpFresnelLight(d);
+		finalColor *= 1+sharpFresnelLight(d.rlPow4.y);
 	}
 
 	finalColor *= c.albedo;
 
-	//if (_SpecularType != 0 && i.is_outline == 0)
 	#if defined(_METALLICGLOSSMAP)
 	if (i.is_outline == 0)
 	{
     	finalColor += calcSpecularBase(c.specColor, c.smoothness, c.normal, c.oneMinusReflectivity, perceptualRoughness, 
+    		viewDir, attenuation, d, l, i);
+    };
+    #endif
+    #if defined(_SPECGLOSSMAP)
+	if (i.is_outline == 0)
+	{
+    	finalColor += calcSpecularCel(c.specColor, c.smoothness, c.normal, c.oneMinusReflectivity, perceptualRoughness, 
     		viewDir, attenuation, d, l, i);
     };
     #endif
@@ -484,6 +478,13 @@ float3 SCSS_ApplyLighting(SCSS_Input c, SCSS_LightParam d, VertexOutput i, float
     	viewDir, d, l, i) * i.vertexLight[num];
     	}
     	#endif
+	    #if defined(_SPECGLOSSMAP)
+		if (i.is_outline == 0)
+		{
+	    	finalColor += calcSpecularCel(c.specColor, c.smoothness, c.normal, c.oneMinusReflectivity, perceptualRoughness, 
+	    		viewDir, attenuation, d, l, i) * i.vertexLight[num];
+	    };
+	    #endif
     };
 	#endif
 

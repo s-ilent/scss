@@ -51,7 +51,9 @@ namespace SilentCelShading.Unity
             Disable,
             Standard,
             Cloth,
-            Anisotropic
+            Anisotropic,
+            Cel,
+            CelStrand
         }
 
         public enum LightingCalculationType
@@ -197,6 +199,15 @@ namespace SilentCelShading.Unity
             public static GUIContent manualButton = new GUIContent("This shader has a manual. Check it out!","For information on new features, old features, and just how to use the shader in general, check out the manual on the shader wiki!");
             public static GUIContent gradientEditorButton = new GUIContent("Open Gradient Editor","Opens the gradient editor window with the current material focused. This allows you to create a new lighting ramp and view the results on this material in realtime.");
 
+            public static string stencilComparisonName = "_StencilComp";
+            public static string stencilOperationName = "_StencilOp";
+            public static string stencilFailName = "_StencilFail";
+            public static string stencilZFailName = "_StencilZFail";
+            public static GUIContent stencilReference = new GUIContent("Stencil Test", "Raising this enables reading or writing a stencil. When set, contains calue to compare against (if Comparison is anything but Always) and/or the value to be written to the buffer (if wither Pass, Fail or ZFail is set to Replace)");
+            public static GUIContent stencilComparison = new GUIContent("Stencil Comparison", "The function to be used when reading the stencil value.");
+            public static GUIContent stencilOperation = new GUIContent("Stencil Operation", "The operation to be performed when the stencil test passes.");
+            public static GUIContent stencilFail = new GUIContent("Stencil Fail", "The operation to be performed when the stencil test fails.");
+            public static GUIContent stencilZFail = new GUIContent("Stencil ZFail", "The operation to be performed when the stencil test passes, but the geometry is occluded.");
         } 
 
         protected bool initialised;
@@ -295,6 +306,12 @@ namespace SilentCelShading.Unity
         protected MaterialProperty highlights;
         protected MaterialProperty reflections;
 
+        protected MaterialProperty stencilReference;
+        protected MaterialProperty stencilComparison;
+        protected MaterialProperty stencilOperation;
+        protected MaterialProperty stencilFail;
+        protected MaterialProperty stencilZFail;
+
         protected void FindProperties(MaterialProperty[] props)
             { 
                 renderingMode = FindProperty(Styles.renderingModeName, props);
@@ -383,6 +400,12 @@ namespace SilentCelShading.Unity
 
                 lightSkew = FindProperty("_LightSkew", props);
                 pixelSampleMode = FindProperty("_PixelSampleMode", props); 
+
+                stencilReference = FindProperty("_Stencil", props);
+                stencilComparison = FindProperty(Styles.stencilComparisonName, props);
+                stencilOperation = FindProperty(Styles.stencilOperationName, props);
+                stencilFail  = FindProperty(Styles.stencilFailName, props);
+                stencilZFail = FindProperty(Styles.stencilZFailName, props);
 
                 highlights = FindProperty("_SpecularHighlights", props, false);
                 reflections = FindProperty("_GlossyReflections", props, false);
@@ -587,12 +610,14 @@ namespace SilentCelShading.Unity
                 {
                     case SpecularType.Standard:
                     case SpecularType.Cloth:
+                    case SpecularType.Cel:
                         materialEditor.TexturePropertySingleLine(Styles.specularMap, specularMap);
                         materialEditor.ShaderProperty(smoothness, Styles.smoothness);
                         materialEditor.ShaderProperty(useMetallic, Styles.useMetallic);
                         materialEditor.ShaderProperty(useEnergyConservation, Styles.useEnergyConservation);
                         break;
                     case SpecularType.Anisotropic:
+                    case SpecularType.CelStrand:
                         materialEditor.TexturePropertySingleLine(Styles.specularMap, specularMap);
                         materialEditor.ShaderProperty(smoothness, Styles.smoothness);
                         materialEditor.ShaderProperty(anisotropy, Styles.anisotropy);
@@ -709,6 +734,29 @@ namespace SilentCelShading.Unity
                 }     
         }
 
+        protected void StencilOptions(MaterialEditor materialEditor, Material material)
+        {
+        materialEditor.ShaderProperty(stencilReference, Styles.stencilReference);
+
+            if (stencilReference.floatValue > 0)
+            {
+                materialEditor.ShaderProperty(stencilComparison, Styles.stencilComparison, 2);
+                materialEditor.ShaderProperty(stencilOperation, Styles.stencilOperation, 2);
+                materialEditor.ShaderProperty(stencilFail, Styles.stencilFail, 2);
+                materialEditor.ShaderProperty(stencilZFail, Styles.stencilZFail, 2);
+            }
+            else
+            {
+                // When stencil is disable, revert to the default stencil operations. Note, when tested on D3D11 hardware the stencil state 
+                // is still set even when the CompareFunction.Disabled is selected, but this does not seem to affect performance.
+                material.SetInt(Styles.stencilComparisonName, (int)UnityEngine.Rendering.CompareFunction.Disabled);
+                material.SetInt(Styles.stencilOperationName, (int)UnityEngine.Rendering.StencilOp.Keep);
+                material.SetInt(Styles.stencilFailName, (int)UnityEngine.Rendering.StencilOp.Keep);
+                material.SetInt(Styles.stencilZFailName, (int)UnityEngine.Rendering.StencilOp.Keep);
+            }
+            EditorGUILayout.Space();
+        }
+
         protected void AdvancedOptions(MaterialEditor materialEditor, Material material)
         {
             EditorGUILayout.Space();
@@ -804,6 +852,8 @@ namespace SilentCelShading.Unity
                 } 
 
             materialEditor.ShaderProperty(lightSkew, Styles.lightSkew);
+
+            StencilOptions(materialEditor, material);
 
             EditorGUI.BeginChangeCheck();
 
@@ -1020,23 +1070,39 @@ namespace SilentCelShading.Unity
         {
             // Note: _METALLICGLOSSMAP is used to avoid keyword problems with VRchat.
             // It's only a coincidence that the metallic map needs to be present.
+            // Note: _SPECGLOSSMAP is used to switch to a version that doesn't sample
+            // reflection probes. 
             switch ((SpecularType)material.GetFloat("_SpecularType"))
             {
                 case SpecularType.Standard:
                     material.SetFloat("_SpecularType", 1);
                     material.EnableKeyword("_METALLICGLOSSMAP");
+                    material.DisableKeyword("_SPECGLOSSMAP");
                     break;
                 case SpecularType.Cloth:
                     material.SetFloat("_SpecularType", 2);
                     material.EnableKeyword("_METALLICGLOSSMAP");
+                    material.DisableKeyword("_SPECGLOSSMAP");
                     break;
                 case SpecularType.Anisotropic:
                     material.SetFloat("_SpecularType", 3);
                     material.EnableKeyword("_METALLICGLOSSMAP");
+                    material.DisableKeyword("_SPECGLOSSMAP");
+                    break;
+                case SpecularType.Cel:
+                    material.SetFloat("_SpecularType", 4);
+                    material.EnableKeyword("_SPECGLOSSMAP");
+                    material.DisableKeyword("_METALLICGLOSSMAP");
+                    break;
+                case SpecularType.CelStrand:
+                    material.SetFloat("_SpecularType", 5);
+                    material.EnableKeyword("_SPECGLOSSMAP");
+                    material.DisableKeyword("_METALLICGLOSSMAP");
                     break;
                 case SpecularType.Disable:
                     material.SetFloat("_SpecularType", 0);
                     material.DisableKeyword("_METALLICGLOSSMAP");
+                    material.DisableKeyword("_SPECGLOSSMAP");
                     break;
                 default:
                     break;
@@ -1117,31 +1183,49 @@ namespace SilentCelShading.Unity
 protected void UpgradeMatcaps(Material material)
 {
     // Check if the new properties exist.
+    // NOTE: This is written with the current Unity behaviour in mind.
+    // - GetFloat returns NULL for properties not in the CURRENT shader.
+    // - GetTexture returns textures for properties not in the current shader.
+    // If GetFloat gets changed, intensity transfer will work.
+    // If GetTexture gets changed, the whole thing will break. 
+
     bool oldMatcaps = 
+        (material.GetFloat("_UseMatcap") == 1.0) &&
         (material.GetFloat("_Matcap1Strength") == 1.0 && material.GetFloat("_Matcap2Strength") == 1.0 &&
          material.GetFloat("_Matcap3Strength") == 1.0 && material.GetFloat("_Matcap4Strength") == 1.0) &&
         (matcap1.textureValue == null && matcap2.textureValue == null &&
-         matcap3.textureValue == null && matcap4.textureValue == null);
+         matcap3.textureValue == null && matcap4.textureValue == null) &&
+         material.GetTexture("_AdditiveMatcap"); // Only exists in old materials.
     if (oldMatcaps)
         {
-        // GetFloat is bugged but GetTexture is not, so we use GetFloatProperty so we can convert nulls into 1s.
+        // GetFloat is bugged but GetTexture is not, so we use GetFloatProperty so we can handle null.
         float? additiveStrength = GetFloatProperty(material, "_AdditiveMatcapStrength");
         float? multiplyStrength = GetFloatProperty(material, "_MultiplyMatcapStrength");
         float? medianStrength = GetFloatProperty(material, "_MidBlendMatcapStrength");
-        Texture matcapTex = material.GetTexture("_AdditiveMatcap");
+        Texture additiveMatcap = material.GetTexture("_AdditiveMatcap");
         Texture multiplyMatcap = material.GetTexture("_MultiplyMatcap");
         Texture medianMatcap = material.GetTexture("_MidBlendMatcap");
 
         // Mask layout is RGBA
-        matcap2.textureValue = matcapTex;
-        matcap2Blend.floatValue = (float)MatcapBlendModes.Additive;
-        matcap2Strength.floatValue = additiveStrength ?? 1;
-        matcap4.textureValue = multiplyMatcap;
-        matcap4Blend.floatValue = (float)MatcapBlendModes.Multiply;
-        matcap4Strength.floatValue = multiplyStrength ?? 1;
-        matcap3.textureValue = medianMatcap;
-        matcap3Blend.floatValue = (float)MatcapBlendModes.Median;
-        matcap3Strength.floatValue = medianStrength ?? 1;
+        if (additiveMatcap)
+        {
+            matcap2.textureValue = additiveMatcap;
+            matcap2Blend.floatValue = (float)MatcapBlendModes.Additive;
+            matcap2Strength.floatValue = additiveStrength ?? 1;
+        }
+        if (multiplyMatcap) 
+        {
+            matcap4.textureValue = multiplyMatcap;
+            matcap4Blend.floatValue = (float)MatcapBlendModes.Multiply;
+            matcap4Strength.floatValue = multiplyStrength ?? 0; 
+            // Multiply at 1.0 is usually wrong. This also prevents oldMatcaps fron being true.
+        }
+        if (medianMatcap) 
+        {
+            matcap3.textureValue = medianMatcap;
+            matcap3Blend.floatValue = (float)MatcapBlendModes.Median;
+            matcap3Strength.floatValue = medianStrength ?? 1;
+        }
         }
 }
 
