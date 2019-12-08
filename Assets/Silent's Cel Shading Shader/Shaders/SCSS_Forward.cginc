@@ -277,7 +277,7 @@ float4 frag(VertexOutput i, uint facing : SV_IsFrontFace) : SV_Target
 
 	// Specular variable setup
 	//if (_SpecularType != 0 )
-	#if defined(_METALLICGLOSSMAP)
+	#if (defined(_METALLICGLOSSMAP) || defined(_SPECGLOSSMAP))
 	{
 		half4 specGloss = SpecularGloss(texcoords, detailMask);
 

@@ -85,6 +85,15 @@ Shader "Silent's Cel Shading/Transparent"
         [Enum(UnityEngine.Rendering.ColorWriteMask)] _ColorWriteMask("Color Write Mask", Float) = 15 // "All"
         [Enum(UnityEngine.Rendering.CullMode)] _CullMode("Cull Mode", Float) = 2                     // "Back"
         _RenderQueueOverride("Render Queue Override", Range(-1.0, 5000)) = -1
+
+        // Stencil options.
+	    [IntRange] _Stencil ("Stencil ID [0;255]", Range(0,255)) = 0
+	    _ReadMask ("ReadMask [0;255]", Int) = 255
+	    _WriteMask ("WriteMask [0;255]", Int) = 255
+	    [Enum(UnityEngine.Rendering.CompareFunction)] _StencilComp ("Stencil Comparison", Int) = 0
+	    [Enum(UnityEngine.Rendering.StencilOp)] _StencilOp ("Stencil Operation", Int) = 0
+	    [Enum(UnityEngine.Rendering.StencilOp)] _StencilFail ("Stencil Fail", Int) = 0
+	    [Enum(UnityEngine.Rendering.StencilOp)] _StencilZFail ("Stencil ZFail", Int) = 0
 	}
 
 	SubShader
@@ -100,6 +109,17 @@ Shader "Silent's Cel Shading/Transparent"
         ZWrite[_ZWrite]
         Cull[_CullMode]
         ColorMask[_ColorWriteMask]
+
+        Stencil
+        {
+            Ref [_Stencil]
+            ReadMask [_ReadMask]
+            WriteMask [_WriteMask]
+            Comp [_StencilComp]
+            Pass [_StencilOp]
+            Fail [_StencilFail]
+            ZFail [_StencilZFail]
+        }
 
 		Pass
 		{
@@ -117,7 +137,7 @@ Shader "Silent's Cel Shading/Transparent"
 
 			#pragma shader_feature _ _ALPHATEST_ON _ALPHABLEND_ON _ALPHAPREMULTIPLY_ON
 			#pragma shader_feature ___ _DETAIL_MULX2
-			#pragma shader_feature ___ _METALLICGLOSSMAP
+			#pragma shader_feature ___ _METALLICGLOSSMAP _SPECGLOSSMAP
 			#pragma shader_feature _ _SMOOTHNESS_TEXTURE_ALBEDO_CHANNEL_A
 			#pragma shader_feature _ _SPECULARHIGHLIGHTS_OFF
 			#pragma shader_feature _ _GLOSSYREFLECTIONS_OFF
@@ -149,7 +169,7 @@ Shader "Silent's Cel Shading/Transparent"
 
 			#pragma shader_feature _ _ALPHATEST_ON _ALPHABLEND_ON _ALPHAPREMULTIPLY_ON
 			#pragma shader_feature ___ _DETAIL_MULX2
-			#pragma shader_feature ___ _METALLICGLOSSMAP
+			#pragma shader_feature ___ _METALLICGLOSSMAP _SPECGLOSSMAP
 			#pragma shader_feature _ _SMOOTHNESS_TEXTURE_ALBEDO_CHANNEL_A
 			#pragma shader_feature _ _SPECULARHIGHLIGHTS_OFF
 			#pragma shader_feature _ _GLOSSYREFLECTIONS_OFF
