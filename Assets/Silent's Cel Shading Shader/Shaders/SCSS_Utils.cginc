@@ -305,15 +305,19 @@ float3 applyBlendMode(int blendOp, half3 a, half3 b, half t)
     }
 }
 
-float3 applyMatcap(sampler2D src, float3 dst, float3 normal, float3 light, float3 viewDir, int blendMode, float blendStrength)
+half2 getMatcapUVs(float3 normal, float3 viewDir)
 {
     // Based on Masataka SUMI's implementation
     half3 worldUp = float3(0, 1, 0);
     half3 worldViewUp = normalize(worldUp - viewDir * dot(viewDir, worldUp));
     half3 worldViewRight = normalize(cross(viewDir, worldViewUp));
-    half2 matcapUV = half2(dot(worldViewRight, normal), dot(worldViewUp, normal)) * 0.5 + 0.5;
-    
-    return applyBlendMode(blendMode, dst, tex2D(src, matcapUV), blendStrength);
+    return half2(dot(worldViewRight, normal), dot(worldViewUp, normal)) * 0.5 + 0.5;
+}
+
+float3 applyMatcap(sampler2D src, float3 dst, float3 normal, float3 light, float3 viewDir, int blendMode, float blendStrength)
+{
+    half2 matcapUV = getMatcapUVs(normal, viewDir);
+    return applyBlendMode(blendMode, dst, tex2D(src, matcapUV) * light, blendStrength);
 }
 
 #endif // SCSS_UTILS_INCLUDED

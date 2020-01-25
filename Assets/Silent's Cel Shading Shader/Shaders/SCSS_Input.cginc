@@ -146,14 +146,29 @@ struct SCSS_Input
 	half3 tonemap;
 	half occlusion;
 	half softness;
+	half3 emission;
 };
 
 struct SCSS_LightParam
 {
-	half3 halfDir, reflDir;
+	half3 viewDir, halfDir, reflDir;
 	half2 rlPow4;
 	half NdotL, NdotV, LdotH, NdotH;
 };
+
+SCSS_LightParam initialiseLightParam (SCSS_Light l, float3 normal, float3 posWorld)
+{
+	SCSS_LightParam d = (SCSS_LightParam) 0;
+	d.viewDir = normalize(_WorldSpaceCameraPos.xyz - posWorld.xyz);
+	d.halfDir = Unity_SafeNormalize (l.dir + d.viewDir);
+	d.reflDir = reflect(-d.viewDir, normal); // Calculate reflection vector
+	d.NdotL = saturate(dot(l.dir, normal)); // Calculate NdotL
+	d.NdotV = saturate(dot(d.viewDir,  normal)); // Calculate NdotV
+	d.LdotH = saturate(dot(l.dir, d.halfDir));
+	d.NdotH = (dot(normal, d.halfDir)); // Saturate seems to cause artifacts
+	d.rlPow4 = Pow4(float2(dot(d.reflDir, l.dir), 1 - d.NdotV));  
+	return d;
+}
 
 float4 TexCoords(VertexOutput v)
 {
