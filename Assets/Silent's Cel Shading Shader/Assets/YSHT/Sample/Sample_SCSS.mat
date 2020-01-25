@@ -4,12 +4,12 @@
 Material:
   serializedVersion: 6
   m_ObjectHideFlags: 0
-  m_PrefabParentObject: {fileID: 0}
-  m_PrefabInternal: {fileID: 0}
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
   m_Name: Sample_SCSS
   m_Shader: {fileID: 4800000, guid: a883b384ca4bc054aa10b5f554ae85a3, type: 3}
-  m_ShaderKeywords: TINTED_OUTLINE _ _METALLICGLOSSMAP _NORMALMAP _SPECGLOSSMAP _SPECULAR_GGX
-    _USEENERGYCONSERVATION_ON _USEMETALLIC_ON
+  m_ShaderKeywords: _METALLICGLOSSMAP
   m_LightmapFlags: 4
   m_EnableInstancingVariants: 1
   m_DoubleSidedGI: 0
@@ -29,7 +29,7 @@ Material:
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _BumpMap:
-        m_Texture: {fileID: 2800000, guid: b83eef32ce58b6f4ba40dd8b6ba88ca1, type: 3}
+        m_Texture: {fileID: 2800000, guid: 06d8cbe587a3d2c4c967de17cac6c502, type: 3}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _ColorMask:
@@ -37,6 +37,10 @@ Material:
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _DetailAlbedoMap:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _DetailEmissionMap:
         m_Texture: {fileID: 0}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
@@ -57,7 +61,23 @@ Material:
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _MainTex:
-        m_Texture: {fileID: 2800000, guid: 5f1d5c66e68bf0b408d9e04138f7c3c0, type: 3}
+        m_Texture: {fileID: 2800000, guid: c61dab59da88c87499105c1b046bcf73, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _Matcap1:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _Matcap2:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _Matcap3:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _Matcap4:
+        m_Texture: {fileID: 0}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _MatcapMask:
@@ -66,6 +86,10 @@ Material:
         m_Offset: {x: 0, y: 0}
     - _MetallicGlossMap:
         m_Texture: {fileID: 2800000, guid: f49c1745408cdb2438830d4ed4244f63, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _MidBlendMatcap:
+        m_Texture: {fileID: 0}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _MultiplyMatcap:
@@ -81,7 +105,7 @@ Material:
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _Ramp:
-        m_Texture: {fileID: 2800000, guid: a2b389612cf565643b4b0bbd236f3335, type: 3}
+        m_Texture: {fileID: 2800000, guid: 8339ae69dbe9dcc439ff088723737cfb, type: 3}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _ShadowMask:
@@ -146,8 +170,17 @@ Material:
     - _IndirectLightingBoost: 0
     - _LightRampType: 0
     - _LightingCalculationType: 1
+    - _Matcap1Blend: 0
+    - _Matcap1Strength: 1
+    - _Matcap2Blend: 0
+    - _Matcap2Strength: 1
+    - _Matcap3Blend: 0
+    - _Matcap3Strength: 1
+    - _Matcap4Blend: 0
+    - _Matcap4Strength: 1
     - _Metallic: 0
     - _Metalness: 0
+    - _MidBlendMatcapStrength: 1
     - _Mode: 0
     - _MultiplyMatcapStrength: 1
     - _NormalLevel: 1
@@ -155,6 +188,7 @@ Material:
     - _OutlineMode: 1
     - _Parallax: 0.02
     - _PixelSampleMode: 0
+    - _ReadMask: 255
     - _RenderQueueOverride: -1
     - _Roughness: 0
     - _SSSAmbient: 0
@@ -162,7 +196,7 @@ Material:
     - _SSSIntensity: 1
     - _SSSPow: 1
     - _Shadow: 0.5
-    - _ShadowLift: 0
+    - _ShadowLift: -1
     - _ShadowMaskType: 0
     - _ShadowMatPower: 0.5
     - _Smoothness: 1
@@ -172,6 +206,11 @@ Material:
     - _SpecularPower: 0
     - _SpecularType: 1
     - _SrcBlend: 1
+    - _Stencil: 0
+    - _StencilComp: 0
+    - _StencilFail: 0
+    - _StencilOp: 0
+    - _StencilZFail: 0
     - _ThicknessMapInvert: 0
     - _ThicknessMapPower: 1
     - _UVSec: 0
@@ -185,6 +224,7 @@ Material:
     - _UseSubsurfaceScattering: 0
     - _UseVerticalLightramp: 0
     - _VertexColorType: 0
+    - _WriteMask: 255
     - _ZTest: 4
     - _ZWrite: 1
     - __dirty: 0
@@ -195,6 +235,7 @@ Material:
     - _Color: {r: 1, g: 1, b: 1, a: 1}
     - _CustomFresnelColor: {r: 0, g: 0, b: 0, a: 1}
     - _EmissionColor: {r: 0, g: 0, b: 0, a: 1}
+    - _EmissionDetailParams: {r: 0, g: 0, b: 0, a: 0}
     - _FresnelTint: {r: 1, g: 1, b: 1, a: 1}
     - _LightSkew: {r: 1, g: 0.1, b: 1, a: 0}
     - _SSSCol: {r: 1, g: 1, b: 1, a: 1}

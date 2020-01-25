@@ -253,29 +253,15 @@ float4 frag(VertexOutput i, uint facing : SV_IsFrontFace) : SV_Target
 		}
 	#endif
 
-	#if !(defined(_ALPHATEST_ON) || defined(_ALPHABLEND_ON) || defined(_ALPHAPREMULTIPLY_ON))
-		c.alpha = 1.0;
-	#endif
-
-	// Lighting parameters
-	SCSS_Light l = MainLight();
-	#if defined(UNITY_PASS_FORWARDADD)
-	l.dir = normalize(_WorldSpaceLightPos0.xyz - i.posWorld.xyz);
-	#endif
-	float3 viewDir = normalize(_WorldSpaceCameraPos.xyz - i.posWorld.xyz);
-
-	SCSS_LightParam d = (SCSS_LightParam) 0;
-	d.halfDir = Unity_SafeNormalize (l.dir + viewDir);
-	d.reflDir = reflect(-viewDir, c.normal); // Calculate reflection vector
-	d.NdotL = saturate(dot(l.dir, c.normal)); // Calculate NdotL
-	d.NdotV = saturate(dot(viewDir,  c.normal)); // Calculate NdotV
-	d.LdotH = saturate(dot(l.dir, d.halfDir));
-	d.NdotH = (dot(c.normal, d.halfDir)); // Saturate seems to cause artifacts
-	d.rlPow4 = Pow4(float2(dot(d.reflDir, l.dir), 1 - d.NdotV));  
-
 	c.tonemap = Tonemap(texcoords.xy, c.occlusion);
 
 	// Specular variable setup
+
+	// Disable PBR dielectric setup in cel specular mode.
+	#if defined(_SPECGLOSSMAP)
+	#define unity_ColorSpaceDielectricSpec half4(0, 0, 0, 1)
+	#endif 
+
 	//if (_SpecularType != 0 )
 	#if (defined(_METALLICGLOSSMAP) || defined(_SPECGLOSSMAP))
 	{
@@ -315,25 +301,26 @@ float4 frag(VertexOutput i, uint facing : SV_IsFrontFace) : SV_Target
 	}
 	#endif
 
-	// Lighting handling
-	float3 finalColor = SCSS_ApplyLighting(c, d, i, viewDir, l, texcoords);
-
-	#if defined(UNITY_PASS_FORWARDBASE)
-	float3 emissionMask = Emission(texcoords.xy);
-	float4 emissionDetail = EmissionDetail(texcoords.zw);
-	//finalColor *= saturate(emissionDetail.w + (1-emissionMask.rgb));
-	finalColor = max(0, finalColor - saturate((1-emissionDetail.w)- (1-emissionMask.rgb)));
-	finalColor += emissionDetail.rgb * emissionMask * _EmissionColor.rgb;
-	// Emissive rim. To restore masking behaviour, multiply by emissionMask.
-	finalColor += _CustomFresnelColor.xyz * (pow(d.rlPow4.y, rcp(_CustomFresnelColor.w+0.0001)));
+	#if !(defined(_ALPHATEST_ON) || defined(_ALPHABLEND_ON) || defined(_ALPHAPREMULTIPLY_ON))
+		c.alpha = 1.0;
 	#endif
+
+    // When premultiplied mode is set, this will multiply the diffuse by the alpha component,
+    // allowing to handle transparency in physically correct way - only diffuse component gets affected by alpha
+    half outputAlpha;
+    c.albedo = PreMultiplyAlpha (c.albedo, c.alpha, c.oneMinusReflectivity, /*out*/ outputAlpha);
+
+	c.emission = Emission(texcoords.xy);
+
+	// Lighting handling
+	float3 finalColor = SCSS_ApplyLighting(c, i, texcoords);
 
 	float3 lightmap = float4(1.0,1.0,1.0,1.0);
 	#if defined(LIGHTMAP_ON)
 		lightmap = DecodeLightmap(UNITY_SAMPLE_TEX2D(unity_Lightmap, i.uv1 * unity_LightmapST.xy + unity_LightmapST.zw));
 	#endif
 
-	fixed4 finalRGBA = fixed4(finalColor * lightmap, c.alpha);
+	fixed4 finalRGBA = fixed4(finalColor * lightmap, outputAlpha);
 	UNITY_APPLY_FOG(i.fogCoord, finalRGBA);
 	return finalRGBA;
 }
