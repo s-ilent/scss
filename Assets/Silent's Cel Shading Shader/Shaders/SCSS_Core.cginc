@@ -368,12 +368,14 @@ half3 calcSpecularCel(float3 specColor, float smoothness, float3 normal, float o
 	float attenuation, SCSS_LightParam d, SCSS_Light l, VertexOutput i)
 {
 	if (_SpecularType == 4) {
-		float spec = pow(d.NdotH, (1-smoothness)*100) * UNITY_PI;
 		//float spec = GGXTerm (d.NdotH, 1-smoothness) * UNITY_PI;
+		float spec = pow(d.NdotH, (smoothness)*40) * UNITY_PI;
 		spec = sharpenLighting(frac(spec), 1.0, 0.02)+floor(spec);
 		//spec = smoothstep(frac(spec), 1.0, 0.02)+floor(spec);
     	//spec *= any(specColor) ? 1.0 : 0.0;
-		return max(0, spec * specColor *  l.color) + 
+		//float spec = d.NdotH * UNITY_PI;
+		//spec = floor(spec+0.5);
+		return max(0, spec * specColor *  l.color * smoothness) + 
 			UNITY_SAMPLE_TEXCUBE_LOD(unity_SpecCube0, normal, UNITY_SPECCUBE_LOD_STEPS) * specColor;
 	}
 	if (_SpecularType == 5) {
@@ -394,7 +396,7 @@ float3 SCSS_ApplyLighting(SCSS_Input c, VertexOutput i, float4 texcoords)
 	UNITY_LIGHT_ATTENUATION(attenuation, i, i.posWorld.xyz);
 
 	// Lighting parameters
-	SCSS_Light l = MainLight();
+	SCSS_Light l = MainLight(i.posWorld.xyz);
 	#if defined(UNITY_PASS_FORWARDADD)
 	l.dir = normalize(_WorldSpaceLightPos0.xyz - i.posWorld.xyz);
 	#endif 
@@ -402,6 +404,8 @@ float3 SCSS_ApplyLighting(SCSS_Input c, VertexOutput i, float4 texcoords)
 	SCSS_LightParam d = initialiseLightParam(l, c.normal, i.posWorld.xyz);
 
 	#if defined(_METALLICGLOSSMAP)
+	// Geometric Specular AA from HDRP
+	c.smoothness = GeometricNormalFiltering(c.smoothness, i.normalDir.xyz, 0.25, 0.5);
 	// Perceptual roughness transformation. Without this, roughness handling is wrong.
 	float perceptualRoughness = SmoothnessToPerceptualRoughness(c.smoothness);
 	#else

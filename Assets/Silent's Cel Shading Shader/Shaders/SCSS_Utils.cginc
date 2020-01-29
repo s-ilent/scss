@@ -8,6 +8,16 @@ struct SCSS_Light
     half  intensity; 
 };
 
+SCSS_Light MainLight(float3 worldPos)
+{
+    SCSS_Light l;
+
+    l.color = _LightColor0.rgb;
+    l.intensity = _LightColor0.w;
+    l.dir = Unity_SafeNormalize(UnityWorldSpaceLightDir(worldPos)); 
+    return l;
+}
+
 SCSS_Light MainLight()
 {
     SCSS_Light l;
