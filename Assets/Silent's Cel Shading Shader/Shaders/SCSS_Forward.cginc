@@ -293,9 +293,6 @@ float4 frag(VertexOutput i, uint facing : SV_IsFrontFace) : SV_Target
 			c.tonemap = c.tonemap * (c.oneMinusReflectivity); 
 		}
 
-		// Geometric Specular AA from HDRP
-	    c.smoothness = GeometricNormalFiltering(c.smoothness, i.normalDir.xyz, 0.25, 0.5);
-
 	    i.tangentDir = ShiftTangent(normalize(i.tangentDir), c.normal, c.smoothness);
 	    i.bitangentDir = normalize(i.bitangentDir);
 	}
