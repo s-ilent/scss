@@ -44,7 +44,11 @@ float4 Shade4PointLightsAtten (
     ndotl = corr * (ndotl * 0.5 + 0.5); // Match with Forward for light ramp sampling
     ndotl = max (float4(0,0,0,0), ndotl);
     // attenuation
+    // Fixes popin. Thanks, d4rkplayer!
     float4 atten = 1.0 / (1.0 + lengthSq * lightAttenSq);
+	float4 atten2 = saturate(1 - (lengthSq * lightAttenSq / 25));
+	atten = min(atten, atten2 * atten2);
+
     float4 diff = ndotl * atten;
     #if defined(SCSS_UNIMPORTANT_LIGHTS_FRAGMENT)
     return atten;
@@ -386,7 +390,9 @@ half3 calcSpecularCel(float3 specColor, float smoothness, float3 normal, float o
 		spec += StrandSpecular(i.tangentDir, 
 			d.viewDir, l.dir, d.halfDir, 
 			_Anisotropy*10, 0.05 );
-		return sharpenLighting(spec, 1, 0.01) * specColor *  l.color;
+		spec = sharpenLighting(frac(spec), 1.0, 0.02)+floor(spec);
+		return max(0, spec * specColor *  l.color * smoothness) + 
+			UNITY_SAMPLE_TEXCUBE_LOD(unity_SpecCube0, normal, UNITY_SPECCUBE_LOD_STEPS) * specColor;
 	}
 	return 0;
 }
