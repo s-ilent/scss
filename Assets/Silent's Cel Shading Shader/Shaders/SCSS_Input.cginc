@@ -300,12 +300,29 @@ half3 NormalInTangentSpace(float4 texcoords, half mask)
     return normalTangent;
 }
 
+// This is based on a typical calculation for tonemapping
+// scenes to screens, but in this case we want to flatten
+// and shift the image colours.
+// Lavender's the most aesthetic colour for this.
+float3 AutoToneMapping(float3 color)
+{
+  	const float A = 0.7;
+  	const float3 B = float3(.74, 0.6, .74); 
+  	const float C = 0;
+  	const float D = 1.59;
+  	const float E = 0.951;
+	color = max((0.0), color - (0.004));
+	color = (color * (A * color + B)) / (color * (C * color + D) + E);
+	return color;
+}
+
 half3 Tonemap(float2 uv, inout float occlusion)
 {
 	float4 _ShadowMask_var = UNITY_SAMPLE_TEX2D_SAMPLER(_ShadowMask, _MainTex, uv.xy);
 
 	float3 tonemap;
 
+	// Occlusion
 	if (_ShadowMaskType == 0) 
 	{
 		// RGB will boost shadow range. Raising _Shadow reduces its influence.
@@ -313,10 +330,18 @@ half3 Tonemap(float2 uv, inout float occlusion)
 		tonemap = _ShadowMaskColor.rgb*saturate(_IndirectLightingBoost+1-_ShadowMask_var.a);
 		occlusion = _ShadowMaskColor.a*_ShadowMask_var.r;
 	}
+	// Tone
 	if (_ShadowMaskType == 1) 
 	{
 		tonemap = saturate(_ShadowMask_var+_IndirectLightingBoost) * _ShadowMaskColor.rgb;
 		occlusion = _ShadowMaskColor.a*_ShadowMask_var.a;
+	}
+	// Auto-Tone
+	if (_ShadowMaskType == 2) 
+	{
+		float3 albedo = Albedo(uv.xyxy);
+		tonemap = AutoToneMapping(albedo) * _ShadowMaskColor.rgb;
+		occlusion = saturate(_ShadowMaskColor.a*_ShadowMask_var.r*2.0);
 	}
 	return tonemap;
 }

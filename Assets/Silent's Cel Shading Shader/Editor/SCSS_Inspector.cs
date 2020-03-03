@@ -67,7 +67,8 @@ namespace SilentCelShading.Unity
         public enum ShadowMaskType
         {
             Occlusion,
-            Tone
+            Tone,
+            Auto
         }
 
         public enum LightRampType
@@ -1118,6 +1119,9 @@ namespace SilentCelShading.Unity
                     break;
                 case ShadowMaskType.Tone:
                     material.SetFloat("_ShadowMaskType", 1);
+                    break;
+                case ShadowMaskType.Auto:
+                    material.SetFloat("_ShadowMaskType", 2);
                     break;
                 default:
                     break;
