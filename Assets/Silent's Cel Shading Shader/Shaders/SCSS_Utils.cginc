@@ -1,6 +1,12 @@
 #ifndef SCSS_UTILS_INCLUDED
 #define SCSS_UTILS_INCLUDED
 
+#ifndef USING_DIRECTIONAL_LIGHT
+#if defined (DIRECTIONAL_COOKIE) || defined (DIRECTIONAL)
+#define USING_DIRECTIONAL_LIGHT
+#endif
+#endif
+
 struct SCSS_Light
 {
     half3 color;

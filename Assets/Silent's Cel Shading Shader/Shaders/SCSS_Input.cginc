@@ -310,7 +310,7 @@ float3 AutoToneMapping(float3 color)
   	const float3 B = float3(.74, 0.6, .74); 
   	const float C = 0;
   	const float D = 1.59;
-  	const float E = 0.951;
+  	const float E = 0.451;
 	color = max((0.0), color - (0.004));
 	color = (color * (A * color + B)) / (color * (C * color + D) + E);
 	return color;
@@ -327,7 +327,7 @@ half3 Tonemap(float2 uv, inout float occlusion)
 	{
 		// RGB will boost shadow range. Raising _Shadow reduces its influence.
 		// Alpha will boost light range. Raising _Shadow reduces its influence.
-		tonemap = _ShadowMaskColor.rgb*saturate(_IndirectLightingBoost+1-_ShadowMask_var.a);
+		tonemap = saturate(_IndirectLightingBoost+1-_ShadowMask_var.a) * _ShadowMaskColor.rgb;
 		occlusion = _ShadowMaskColor.a*_ShadowMask_var.r;
 	}
 	// Tone
@@ -340,8 +340,8 @@ half3 Tonemap(float2 uv, inout float occlusion)
 	if (_ShadowMaskType == 2) 
 	{
 		float3 albedo = Albedo(uv.xyxy);
-		tonemap = AutoToneMapping(albedo) * _ShadowMaskColor.rgb;
-		occlusion = saturate(_ShadowMaskColor.a*_ShadowMask_var.r*2.0);
+		tonemap = saturate(AutoToneMapping(albedo)+_IndirectLightingBoost) * _ShadowMaskColor.rgb;
+		occlusion = _ShadowMaskColor.a*_ShadowMask_var.r;
 	}
 	return tonemap;
 }
