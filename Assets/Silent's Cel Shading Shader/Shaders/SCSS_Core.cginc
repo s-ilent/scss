@@ -310,7 +310,6 @@ half3 calcSpecularBase(float3 specColor, float smoothness, float3 normal, float 
 	
 	half V = 0; half D = 0; 
 	float roughness = PerceptualRoughnessToRoughness(perceptualRoughness);
-	//float roughness = (perceptualRoughness);
 
 	// "GGX with roughness to 0 would mean no specular at all, using max(roughness, 0.002) here to match HDrenderloop roughness remapping."
 	// This also fixes issues with the other specular types.
@@ -372,13 +371,9 @@ half3 calcSpecularCel(float3 specColor, float smoothness, float3 normal, float o
 	float attenuation, SCSS_LightParam d, SCSS_Light l, VertexOutput i)
 {
 	if (_SpecularType == 4) {
-		//float spec = GGXTerm (d.NdotH, 1-smoothness) * UNITY_PI;
 		float spec = pow(d.NdotH, (smoothness)*40) * UNITY_PI;
-		spec = sharpenLighting(frac(spec), 1.0, 0.02)+floor(spec);
-		//spec = smoothstep(frac(spec), 1.0, 0.02)+floor(spec);
-    	//spec *= any(specColor) ? 1.0 : 0.0;
-		//float spec = d.NdotH * UNITY_PI;
-		//spec = floor(spec+0.5);
+
+		spec = smoothstep(0, 0.52, frac(spec))+floor(spec);
 		return max(0, spec * specColor *  l.color * smoothness) + 
 			UNITY_SAMPLE_TEXCUBE_LOD(unity_SpecCube0, normal, UNITY_SPECCUBE_LOD_STEPS) * specColor;
 	}
@@ -390,7 +385,7 @@ half3 calcSpecularCel(float3 specColor, float smoothness, float3 normal, float o
 		spec += StrandSpecular(i.tangentDir, 
 			d.viewDir, l.dir, d.halfDir, 
 			_Anisotropy*10, 0.05 );
-		spec = sharpenLighting(frac(spec), 1.0, 0.02)+floor(spec);
+		spec = smoothstep(0, 0.52, frac(spec))+floor(spec);
 		return max(0, spec * specColor *  l.color * smoothness) + 
 			UNITY_SAMPLE_TEXCUBE_LOD(unity_SpecCube0, normal, UNITY_SPECCUBE_LOD_STEPS) * specColor;
 	}
@@ -403,7 +398,7 @@ float3 SCSS_ApplyLighting(SCSS_Input c, VertexOutput i, float4 texcoords)
 
 	// Lighting parameters
 	SCSS_Light l = MainLight(i.posWorld.xyz);
-	#if defined(UNITY_PASS_FORWARDADD)
+	#if defined(UNITY_PASS_FORWARDADD) && !defined(USING_DIRECTIONAL_LIGHT)
 	l.dir = normalize(_WorldSpaceLightPos0.xyz - i.posWorld.xyz);
 	#endif 
 
@@ -422,6 +417,7 @@ float3 SCSS_ApplyLighting(SCSS_Input c, VertexOutput i, float4 texcoords)
 	// Generic lighting for matcaps/rimlighting
 	float3 effectLighting = l.color;
 	#if defined(UNITY_PASS_FORWARDBASE)
+	effectLighting *= attenuation;
 	effectLighting += BetterSH9(half4(0.0,  0.0, 0.0, 1.0));
 	#endif
 
