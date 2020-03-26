@@ -92,9 +92,8 @@ float3 sampleRampWithOptions(float rampPosition, half softness)
 	{
 		float shadeWidth = max(fwidth(rampPosition), 0.002 * (1+softness*10));
 
-		const float shadeOffset = (UNITY_PI/10.0); 
-		float lightContribution = smoothstep(shadeOffset-shadeWidth, shadeOffset+shadeWidth, frac(rampPosition)); 
-		lightContribution += floor(rampPosition);
+		const float shadeOffset = 0.5; 
+		float lightContribution = smoothstep(shadeOffset-shadeWidth, shadeOffset+shadeWidth, frac(rampPosition)) + floor(rampPosition); 
 		return saturate(lightContribution);
 	}
 	if (_LightRampType == 1) // Vertical
@@ -157,6 +156,22 @@ float getRemappedLight(half perceptualRoughness, half attenuation, SCSS_LightPar
 	return remappedLight;
 }
 
+half3 calcVertexLight(float4 vertexAttenuation, float occlusion, float3 tonemap, half softness)
+{
+	float3 vertexContribution = 0;
+	#if defined(UNITY_PASS_FORWARDBASE)
+		// Vertex lighting based on Shade4PointLights
+		float4 vertexAttenuationFalloff = saturate(vertexAttenuation * 10);
+		vertexAttenuation = applyShadowLift(vertexAttenuation, occlusion);
+
+	    vertexContribution += unity_LightColor[0] * (sampleRampWithOptions(vertexAttenuation.x, softness)+tonemap) * vertexAttenuationFalloff.x;
+	    vertexContribution += unity_LightColor[1] * (sampleRampWithOptions(vertexAttenuation.y, softness)+tonemap) * vertexAttenuationFalloff.y;
+	    vertexContribution += unity_LightColor[2] * (sampleRampWithOptions(vertexAttenuation.z, softness)+tonemap) * vertexAttenuationFalloff.z;
+	    vertexContribution += unity_LightColor[3] * (sampleRampWithOptions(vertexAttenuation.w, softness)+tonemap) * vertexAttenuationFalloff.w;
+	#endif
+	return vertexContribution;
+}
+
 void getDirectIndirectLighting(float3 normal, inout float3 directLighting, inout float3 indirectLighting)
 {
 	switch (_LightingCalculationType)
@@ -184,7 +199,7 @@ void getDirectIndirectLighting(float3 normal, inout float3 directLighting, inout
 }
 
 half3 calcDiffuseBase(float3 tonemap, float occlusion, half3 normal, half perceptualRoughness, half attenuation, 
-	half smoothness, half softness, SCSS_LightParam d, SCSS_Light l)
+	half softness, SCSS_LightParam d, SCSS_Light l)
 {
 	float remappedLight = getRemappedLight(perceptualRoughness, attenuation, d);
 	remappedLight = remappedLight * 0.5 + 0.5;
@@ -217,13 +232,18 @@ half3 calcDiffuseBase(float3 tonemap, float occlusion, half3 normal, half percep
 
 	float3 indirectContribution = sampleRampWithOptions(ambientLight, softness);
 
-	lightContribution += lerp(indirectLighting, directLighting, indirectContribution);
+	const float3 indirectAverage = 0.5 * (indirectLighting + directLighting);
+
+	lightContribution += 
+	lerp(indirectAverage,
+	lerp(indirectLighting, directLighting, indirectContribution),
+	saturate(dot(abs((directLighting-indirectLighting)/indirectAverage), 1.0)));
 
 	return lightContribution;	
 }
 
 half3 calcDiffuseAdd(float3 tonemap, float occlusion, half perceptualRoughness, 
-	half smoothness, half softness, SCSS_LightParam d, SCSS_Light l)
+	half softness, SCSS_LightParam d, SCSS_Light l)
 {
 	float remappedLight = getRemappedLight(perceptualRoughness, 1.0, d);
 	remappedLight = remappedLight * 0.5 + 0.5;
@@ -242,22 +262,6 @@ half3 calcDiffuseAdd(float3 tonemap, float occlusion, half perceptualRoughness,
 
 	lightContribution = lerp(indirectLighting, directLighting, lightContribution);
 	return lightContribution;
-}
-
-half3 calcVertexLight(float4 vertexAttenuation, float occlusion, float3 tonemap, half softness)
-{
-	float3 vertexContribution = 0;
-	#if defined(UNITY_PASS_FORWARDBASE)
-		// Vertex lighting based on Shade4PointLights
-		vertexAttenuation *= (1 - _Shadow) * occlusion + _Shadow;
-		float4 vertexAttenuationFalloff = saturate(vertexAttenuation * 10);
-
-	    vertexContribution += unity_LightColor[0] * (sampleRampWithOptions(vertexAttenuation.x, softness)+tonemap) * vertexAttenuationFalloff.x;
-	    vertexContribution += unity_LightColor[1] * (sampleRampWithOptions(vertexAttenuation.y, softness)+tonemap) * vertexAttenuationFalloff.y;
-	    vertexContribution += unity_LightColor[2] * (sampleRampWithOptions(vertexAttenuation.z, softness)+tonemap) * vertexAttenuationFalloff.z;
-	    vertexContribution += unity_LightColor[3] * (sampleRampWithOptions(vertexAttenuation.w, softness)+tonemap) * vertexAttenuationFalloff.w;
-	#endif
-	return vertexContribution;
 }
 
 void getSpecularVD(float roughness, float3 normal, SCSS_LightParam d, SCSS_Light l, VertexOutput i,
@@ -340,6 +344,12 @@ half3 calcSpecularBase(float3 specColor, float smoothness, float3 normal, float 
 	
 }
 
+half3 calcSpecularBase(SCSS_Input c, float perceptualRoughness, float attenuation,
+	SCSS_LightParam d, SCSS_Light l, VertexOutput i)
+{
+	return calcSpecularBase(c.specColor, c.smoothness, c.normal, c.oneMinusReflectivity, perceptualRoughness, attenuation, d, l, i);
+}
+
 half3 calcSpecularAdd(float3 specColor, float smoothness, float3 normal, float oneMinusReflectivity, float perceptualRoughness,
 	SCSS_LightParam d, SCSS_Light l, VertexOutput i)
 {
@@ -367,15 +377,23 @@ half3 calcSpecularAdd(float3 specColor, float smoothness, float3 normal, float o
 	
 }
 
+half3 calcSpecularAdd(SCSS_Input c, float perceptualRoughness,
+	SCSS_LightParam d, SCSS_Light l, VertexOutput i)
+{
+	return calcSpecularAdd(c.specColor, c.smoothness, c.normal, c.oneMinusReflectivity, perceptualRoughness, d, l, i);
+}
+
 half3 calcSpecularCel(float3 specColor, float smoothness, float3 normal, float oneMinusReflectivity, float perceptualRoughness,
 	float attenuation, SCSS_LightParam d, SCSS_Light l, VertexOutput i)
 {
 	if (_SpecularType == 4) {
-		float spec = pow(d.NdotH, (smoothness)*40) * UNITY_PI;
+		float spec = max(d.NdotH, 0);
+		spec = pow(spec, (smoothness)*40) * UNITY_PI;
+		spec = sharpenLighting(frac(spec), 1.0, 0.02)+floor(spec);
+    	spec = max(0.02,spec);
 
-		spec = smoothstep(0, 0.52, frac(spec))+floor(spec);
-		return max(0, spec * specColor *  l.color * smoothness) + 
-			UNITY_SAMPLE_TEXCUBE_LOD(unity_SpecCube0, normal, UNITY_SPECCUBE_LOD_STEPS) * specColor;
+    	float3 envLight = UNITY_SAMPLE_TEXCUBE_LOD(unity_SpecCube0, normal, UNITY_SPECCUBE_LOD_STEPS);
+		return (spec * specColor *  l.color) + (spec * specColor * envLight);
 	}
 	if (_SpecularType == 5) {
 		_Anisotropy = abs(_Anisotropy);
@@ -385,11 +403,16 @@ half3 calcSpecularCel(float3 specColor, float smoothness, float3 normal, float o
 		spec += StrandSpecular(i.tangentDir, 
 			d.viewDir, l.dir, d.halfDir, 
 			_Anisotropy*10, 0.05 );
-		spec = smoothstep(0, 0.52, frac(spec))+floor(spec);
+		spec = sharpenLighting(frac(spec), 1.0, 0.02)+floor(spec);
 		return max(0, spec * specColor *  l.color * smoothness) + 
 			UNITY_SAMPLE_TEXCUBE_LOD(unity_SpecCube0, normal, UNITY_SPECCUBE_LOD_STEPS) * specColor;
 	}
 	return 0;
+}
+
+half3 calcSpecularCel(SCSS_Input c, float perceptualRoughness, float attenuation, SCSS_LightParam d, SCSS_Light l, VertexOutput i)
+{
+	return calcSpecularCel(c.specColor, c.smoothness, c.normal, c.oneMinusReflectivity, perceptualRoughness, attenuation, d, l, i);
 }
 
 float3 SCSS_ApplyLighting(SCSS_Input c, VertexOutput i, float4 texcoords)
@@ -422,13 +445,17 @@ float3 SCSS_ApplyLighting(SCSS_Input c, VertexOutput i, float4 texcoords)
 	#endif
 
 	// Apply matcap before specular effect.
-	if (_UseMatcap == 1 && i.is_outline == 0) 
+	if (_UseMatcap >= 1 && i.is_outline == 0) 
 	{
+		half2 matcapUV;
+		if (_UseMatcap == 1) matcapUV = getMatcapUVsOriented(c.normal, d.viewDir, float3(0, 1, 0));
+		if (_UseMatcap == 2) matcapUV = getMatcapUVsOriented(c.normal, d.viewDir, i.bitangentDir.xyz);
+
 		float4 _MatcapMask_var = MatcapMask(texcoords.xy);
-		c.albedo = applyMatcap(_Matcap1, c.albedo, c.normal, effectLighting, d.viewDir, _Matcap1Blend, _Matcap1Strength * _MatcapMask_var.r);
-		c.albedo = applyMatcap(_Matcap2, c.albedo, c.normal, effectLighting, d.viewDir, _Matcap2Blend, _Matcap2Strength * _MatcapMask_var.g);
-		c.albedo = applyMatcap(_Matcap3, c.albedo, c.normal, effectLighting, d.viewDir, _Matcap3Blend, _Matcap3Strength * _MatcapMask_var.b);
-		c.albedo = applyMatcap(_Matcap4, c.albedo, c.normal, effectLighting, d.viewDir, _Matcap4Blend, _Matcap4Strength * _MatcapMask_var.a);
+		c.albedo = applyMatcap(_Matcap1, matcapUV, c.albedo, effectLighting, _Matcap1Blend, _Matcap1Strength * _MatcapMask_var.r);
+		c.albedo = applyMatcap(_Matcap2, matcapUV, c.albedo, effectLighting, _Matcap2Blend, _Matcap2Strength * _MatcapMask_var.g);
+		c.albedo = applyMatcap(_Matcap3, matcapUV, c.albedo, effectLighting, _Matcap3Blend, _Matcap3Strength * _MatcapMask_var.b);
+		c.albedo = applyMatcap(_Matcap4, matcapUV, c.albedo, effectLighting, _Matcap4Blend, _Matcap4Strength * _MatcapMask_var.a);
 	}
 
 	float3 finalColor = 0; 
@@ -440,12 +467,12 @@ float3 SCSS_ApplyLighting(SCSS_Input c, VertexOutput i, float4 texcoords)
 
 	#if defined(UNITY_PASS_FORWARDBASE)
 	finalColor = calcDiffuseBase(c.tonemap, c.occlusion, c.normal, 
-		perceptualRoughness, attenuation, c.smoothness, c.softness, d, l);
+		perceptualRoughness, attenuation, c.softness, d, l);
 	#endif
 
 	#if defined(UNITY_PASS_FORWARDADD)
 	finalColor = calcDiffuseAdd(c.tonemap, c.occlusion, 
-		perceptualRoughness, c.smoothness, c.softness, d, l);
+		perceptualRoughness, c.softness, d, l);
 	#endif
 
 	// Proper cheap vertex lights. 
@@ -463,20 +490,19 @@ float3 SCSS_ApplyLighting(SCSS_Input c, VertexOutput i, float4 texcoords)
 	#if defined(_METALLICGLOSSMAP)
 	if (i.is_outline == 0)
 	{
-    	finalColor += calcSpecularBase(c.specColor, c.smoothness, c.normal, c.oneMinusReflectivity, perceptualRoughness, 
-    		attenuation, d, l, i);
+    	finalColor += calcSpecularBase(c, perceptualRoughness, attenuation, d, l, i);
     };
     #endif
     #if defined(_SPECGLOSSMAP)
-    // In this mode, reflection probes aren't used, so a fake light should be determined if one doesn't exist.
+    // In this mode, reflection probes aren't used normally, 
+    // so a fake light is determined for if one doesn't exist.
     l.color = l.color + GetSHLength();
 	l.dir = Unity_SafeNormalize(l.dir + (unity_SHAr.xyz + unity_SHAg.xyz + unity_SHAb.xyz) * _LightSkew.xyz);
 	d = initialiseLightParam(l, c.normal, i.posWorld.xyz);
 
 	if (i.is_outline == 0)
 	{
-    	finalColor += calcSpecularCel(c.specColor, c.smoothness, c.normal, c.oneMinusReflectivity, perceptualRoughness, 
-    		attenuation, d, l, i);
+    	finalColor += calcSpecularCel(c, perceptualRoughness, attenuation, d, l, i);
     };
     #endif
 
@@ -494,15 +520,13 @@ float3 SCSS_ApplyLighting(SCSS_Input c, VertexOutput i, float4 texcoords)
 		#if defined(_METALLICGLOSSMAP)
 		if (i.is_outline == 0)
 		{
-    	finalColor += calcSpecularAdd(c.specColor, c.smoothness, c.normal, c.oneMinusReflectivity, perceptualRoughness, 
-    	d, l, i) * i.vertexLight[num];
+    	finalColor += calcSpecularAdd(c, perceptualRoughness, d, l, i) * i.vertexLight[num];
     	}
     	#endif
 	    #if defined(_SPECGLOSSMAP)
 		if (i.is_outline == 0)
 		{
-	    	finalColor += calcSpecularCel(c.specColor, c.smoothness, c.normal, c.oneMinusReflectivity, perceptualRoughness, 
-	    		attenuation, d, l, i) * i.vertexLight[num];
+	    	finalColor += calcSpecularCel(c, perceptualRoughness, attenuation, d, l, i) * i.vertexLight[num];
 	    };
 	    #endif
     };

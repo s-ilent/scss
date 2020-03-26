@@ -32,7 +32,7 @@ Shader "Silent's Cel Shading/☓ No Outline/Opaque"
 		_outline_width("Outline Width", Float) = 0.1
 		_outline_color("Outline Colour", Color) = (0.5,0.5,0.5,1)
 		[Space]
-		[Header(Rim lighting)]
+		[Header(Rim Lighting)]
 		[Enum(AmbientFresnelType)]_UseFresnel ("Use Fresnel", Float) = 0.0
 		_FresnelWidth ("Fresnel Strength", Range(0, 20)) = .5
 		_FresnelStrength ("Fresnel Softness", Range(0.1, 0.9999)) = 0.5
@@ -47,7 +47,7 @@ Shader "Silent's Cel Shading/☓ No Outline/Opaque"
 		_Anisotropy("Anisotropy", Range(-1,1)) = 0.8
 		[Space]
 		[Header(Matcap)]
-		[Toggle(_)]_UseMatcap ("Use Matcap", Float) = 0.0
+		[Enum(MatcapType)]_UseMatcap ("Matcap Type", Float) = 0.0
 		_MatcapMask("Matcap Mask", 2D) = "white" {}
 		[Space]_Matcap1("Matcap 1", 2D) = "black" {}
 		_Matcap1Strength("Matcap 1 Strength", Range(0, 2)) = 1.0

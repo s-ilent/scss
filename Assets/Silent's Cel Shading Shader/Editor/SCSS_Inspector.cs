@@ -93,6 +93,13 @@ namespace SilentCelShading.Unity
             Median,
         }
 
+        public enum MatcapType
+        {
+            Disable,
+            Standard,
+            Anisotropic
+        }
+
         public enum VertexColorType
         {
             Color,
@@ -163,7 +170,9 @@ namespace SilentCelShading.Unity
 
             public static GUIContent useEnergyConservation = new GUIContent("Use Energy Conservation", "Reduces the intensity of the diffuse on specular areas, to realistically conserve energy.");
             public static GUIContent useMetallic = new GUIContent("Use as Metalness", "Metalness maps are greyscale maps that contain the metalness of a surface. This is different to specular maps, which are RGB (colour) maps that contain the specular parts of a surface.");
+
             public static GUIContent useMatcap = new GUIContent("Use Matcap", "Enables the use of material capture textures.");
+            public static GUIContent matcapTitle = new GUIContent("Matcap", "Enables the use of material capture textures.");
             public static GUIContent matcap1Tex = new GUIContent("Matcap 1", "Matcap (RGB). Controlled by the matcap mask's R channel.");
             public static GUIContent matcap2Tex = new GUIContent("Matcap 2", "Matcap (RGB). Controlled by the matcap mask's G channel.");
             public static GUIContent matcap3Tex = new GUIContent("Matcap 3", "Matcap (RGB). Controlled by the matcap mask's B channel.");
@@ -662,20 +671,30 @@ namespace SilentCelShading.Unity
         protected void MatcapOptions(MaterialEditor materialEditor, Material material)
         { 
             EditorGUILayout.Space();
+            EditorGUILayout.LabelField(Styles.matcapTitle, EditorStyles.boldLabel);
             
-            EditorGUI.BeginChangeCheck();
-            {
-                materialEditor.ShaderProperty(useMatcap, Styles.useMatcap);
+            var mMode = (MatcapType)useMatcap.floatValue;
 
-                if (PropertyEnabled(useMatcap))
+            EditorGUI.BeginChangeCheck();
+            
+            mMode = (MatcapType)EditorGUILayout.Popup("Matcap Style", 
+                (int)mMode, Enum.GetNames(typeof(MatcapType)));
+                if (EditorGUI.EndChangeCheck())
                 {
-                    materialEditor.TexturePropertySingleLine(Styles.matcapMask, matcapMask);
-                    materialEditor.TexturePropertySingleLine(Styles.matcap1Tex, matcap1, matcap1Strength, matcap1Blend);
-                    materialEditor.TexturePropertySingleLine(Styles.matcap2Tex, matcap2, matcap2Strength, matcap2Blend);
-                    materialEditor.TexturePropertySingleLine(Styles.matcap3Tex, matcap3, matcap3Strength, matcap3Blend);
-                    materialEditor.TexturePropertySingleLine(Styles.matcap4Tex, matcap4, matcap4Strength, matcap4Blend);
+                    materialEditor.RegisterPropertyChangeUndo("Matcap Style");
+                    useMatcap.floatValue = (float)mMode;
                 }
-            } 
+
+            EditorGUI.BeginChangeCheck();
+            if (PropertyEnabled(useMatcap))
+            {
+                materialEditor.TexturePropertySingleLine(Styles.matcapMask, matcapMask);
+                materialEditor.TexturePropertySingleLine(Styles.matcap1Tex, matcap1, matcap1Strength, matcap1Blend);
+                materialEditor.TexturePropertySingleLine(Styles.matcap2Tex, matcap2, matcap2Strength, matcap2Blend);
+                materialEditor.TexturePropertySingleLine(Styles.matcap3Tex, matcap3, matcap3Strength, matcap3Blend);
+                materialEditor.TexturePropertySingleLine(Styles.matcap4Tex, matcap4, matcap4Strength, matcap4Blend);
+            }
+            
             EditorGUI.EndChangeCheck();
         }
 
