@@ -224,6 +224,8 @@ float4 frag(VertexOutput i, uint facing : SV_IsFrontFace) : SV_Target
 
 	c.albedo = Albedo(texcoords);
 
+	c.emission = Emission(texcoords.xy);
+
 	// Vertex colour application. 
 	c.albedo = _VertexColorType? c.albedo : c.albedo * i.color.rgb;
 	c.softness = i.extraData.g;
@@ -239,6 +241,13 @@ float4 frag(VertexOutput i, uint facing : SV_IsFrontFace) : SV_Target
 
 	c.alpha = Alpha(texcoords.xy);
 
+    #if defined(DISSOLVING)
+    fixed3 baseWorldPos = unity_ObjectToWorld._m03_m13_m23;
+    const float scale = length(float3(unity_ObjectToWorld[0].x, unity_ObjectToWorld[1].x, unity_ObjectToWorld[2].x));
+    float closeDist = distance(_WorldSpaceCameraPos, baseWorldPos);
+    c.alpha *= saturate((3*scale)-closeDist);
+	#endif
+	
 	#if defined(_ALPHATEST_ON)
 	// Switch between dithered alpha and sharp-edge alpha.
 		if (_AlphaSharp  == 0) {
@@ -306,8 +315,6 @@ float4 frag(VertexOutput i, uint facing : SV_IsFrontFace) : SV_Target
     // allowing to handle transparency in physically correct way - only diffuse component gets affected by alpha
     half outputAlpha;
     c.albedo = PreMultiplyAlpha (c.albedo, c.alpha, c.oneMinusReflectivity, /*out*/ outputAlpha);
-
-	c.emission = Emission(texcoords.xy);
 
 	// Lighting handling
 	float3 finalColor = SCSS_ApplyLighting(c, i, texcoords);

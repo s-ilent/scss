@@ -14,16 +14,6 @@ struct SCSS_Light
     half  intensity; 
 };
 
-SCSS_Light MainLight(float3 worldPos)
-{
-    SCSS_Light l;
-
-    l.color = _LightColor0.rgb;
-    l.intensity = _LightColor0.w;
-    l.dir = Unity_SafeNormalize(UnityWorldSpaceLightDir(worldPos)); 
-    return l;
-}
-
 SCSS_Light MainLight()
 {
     SCSS_Light l;
@@ -31,6 +21,13 @@ SCSS_Light MainLight()
     l.color = _LightColor0.rgb;
     l.intensity = _LightColor0.w;
     l.dir = Unity_SafeNormalize(_WorldSpaceLightPos0.xyz); 
+    return l;
+}
+
+SCSS_Light MainLight(float3 worldPos)
+{
+    SCSS_Light l = MainLight();
+    l.dir = Unity_SafeNormalize(UnityWorldSpaceLightDir(worldPos)); 
     return l;
 }
 
@@ -330,9 +327,16 @@ half2 getMatcapUVs(float3 normal, float3 viewDir)
     return half2(dot(worldViewRight, normal), dot(worldViewUp, normal)) * 0.5 + 0.5;
 }
 
-float3 applyMatcap(sampler2D src, float3 dst, float3 normal, float3 light, float3 viewDir, int blendMode, float blendStrength)
+half2 getMatcapUVsOriented(float3 normal, float3 viewDir, float3 upDir)
 {
-    half2 matcapUV = getMatcapUVs(normal, viewDir);
+    // Based on Masataka SUMI's implementation
+    half3 worldViewUp = normalize(upDir - viewDir * dot(viewDir, upDir));
+    half3 worldViewRight = normalize(cross(viewDir, worldViewUp));
+    return half2(dot(worldViewRight, normal), dot(worldViewUp, normal)) * 0.5 + 0.5;
+}
+
+float3 applyMatcap(sampler2D src, half2 matcapUV, float3 dst, float3 light, int blendMode, float blendStrength)
+{
     return applyBlendMode(blendMode, dst, tex2D(src, matcapUV) * light, blendStrength);
 }
 
