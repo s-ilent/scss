@@ -316,6 +316,10 @@ float4 frag(VertexOutput i, uint facing : SV_IsFrontFace) : SV_Target
     half outputAlpha;
     c.albedo = PreMultiplyAlpha (c.albedo, c.alpha, c.oneMinusReflectivity, /*out*/ outputAlpha);
 
+    // Rim lighting parameters. 
+	c.rim = initialiseRimParam();
+	c.rim.power *= RimMask(texcoords.xy);
+
 	// Lighting handling
 	float3 finalColor = SCSS_ApplyLighting(c, i, texcoords);
 

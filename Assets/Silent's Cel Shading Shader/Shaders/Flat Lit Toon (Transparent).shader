@@ -10,6 +10,7 @@ Shader "Silent's Cel Shading/Transparent"
 		[Space]
 		_ColorMask("Color Mask Map", 2D) = "white" {}
 		_BumpMap("Normal Map", 2D) = "bump" {}
+		_BumpScale("Normal Map Scale", Float) = 1.0
 		[Enum(VertexColorType)]_VertexColorType ("Vertex Colour Type", Float) = 2.0
 		[Space]
 		[Header(Emission)]
@@ -35,7 +36,7 @@ Shader "Silent's Cel Shading/Transparent"
 		[Header(Rim Lighting)]
 		[Enum(AmbientFresnelType)]_UseFresnel ("Use Fresnel", Float) = 0.0
 		_FresnelWidth ("Fresnel Strength", Range(0, 20)) = .5
-		_FresnelStrength ("Fresnel Softness", Range(0.1, 0.9999)) = 0.5
+		_FresnelStrength ("Fresnel Softness", Range(0.01, 0.9999)) = 0.5
 		[HDR]_FresnelTint("Fresnel Tint", Color) = (1,1,1,1)
 		[Space]
 		[Header(Specular)]
