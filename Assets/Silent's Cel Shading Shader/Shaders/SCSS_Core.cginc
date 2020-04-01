@@ -121,6 +121,10 @@ float3 sharpFresnelLight(float fresnelEffect) {
 	return sharpenLighting(fresnelEffect, _FresnelWidth, _FresnelStrength) * _FresnelTint.rgb * _FresnelTint.a;
 }
 
+float3 sharpFresnelLight(float fresnelEffect, SCSS_RimLightInput rim) {
+	return sharpenLighting(fresnelEffect, rim.width, rim.power) * rim.tint * rim.alpha;
+}
+
 //SSS method from GDC 2011 conference by Colin Barre-Bresebois & Marc Bouchard and modified by Xiexe
 float3 getSubsurfaceScatteringLight (SCSS_Light l, float3 normalDirection, float3 viewDirection, 
     float attenuation, float3 thickness, float3 indirectLight)
@@ -212,13 +216,6 @@ half3 calcDiffuseBase(float3 tonemap, float occlusion, half3 normal, half percep
 
 	getDirectIndirectLighting(normal, /*out*/ directLighting, /*out*/ indirectLighting);
 	
-	if (_UseFresnel == 1) 
-	{
-		float sharpFresnel = sharpFresnelLight(d.rlPow4.y);
-		lightContribution += lightContribution*sharpFresnel;
-		directLighting += directLighting*sharpFresnel;
-	}
-	
 	indirectLighting = lerp(indirectLighting, directLighting, tonemap);
 
 	lightContribution = lerp(tonemap, 1.0, lightContribution);
@@ -253,12 +250,6 @@ half3 calcDiffuseAdd(float3 tonemap, float occlusion, half perceptualRoughness,
 
 	float3 directLighting = l.color;
 	float3 indirectLighting = l.color * tonemap;
-
-	if (_UseFresnel == 1) 
-	{
-		float sharpFresnel = sharpFresnelLight(d.rlPow4.y);
-		directLighting += directLighting*sharpFresnel;
-	}
 
 	lightContribution = lerp(indirectLighting, directLighting, lightContribution);
 	return lightContribution;
@@ -430,6 +421,9 @@ float3 SCSS_ApplyLighting(SCSS_Input c, VertexOutput i, float4 texcoords)
 	#if defined(_METALLICGLOSSMAP)
 	// Geometric Specular AA from HDRP
 	c.smoothness = GeometricNormalFiltering(c.smoothness, i.normalDir.xyz, 0.25, 0.5);
+	#endif
+
+	#if defined(_METALLICGLOSSMAP)
 	// Perceptual roughness transformation. Without this, roughness handling is wrong.
 	float perceptualRoughness = SmoothnessToPerceptualRoughness(c.smoothness);
 	#else
@@ -459,10 +453,24 @@ float3 SCSS_ApplyLighting(SCSS_Input c, VertexOutput i, float4 texcoords)
 	}
 
 	float3 finalColor = 0; 
+	
+	if (_UseFresnel == 1 && i.is_outline == 0) 
+	{
+		float sharpFresnel = sharpFresnelLight(d.rlPow4.y, c.rim);
+		c.albedo += c.albedo * sharpFresnel;
+	}
 
 	if (_UseFresnel == 3 && i.is_outline == 0)
 	{
-		d.NdotL = saturate(max(d.NdotL, sharpFresnelLight(d.rlPow4.y)));
+		float sharpFresnel = sharpFresnelLight(d.rlPow4.y, c.rim);
+		c.occlusion += saturate(sharpFresnel);
+	}
+
+	if (_UseFresnel == 4 && i.is_outline == 0)
+	{
+		float sharpFresnel = sharpFresnelLight(d.rlPow4.y, c.rim);
+		c.albedo += c.albedo * sharpFresnel;
+		c.occlusion += saturate(sharpFresnel);
 	}
 
 	#if defined(UNITY_PASS_FORWARDBASE)
@@ -482,7 +490,7 @@ float3 SCSS_ApplyLighting(SCSS_Input c, VertexOutput i, float4 texcoords)
 
 	if (_UseFresnel == 2 && i.is_outline == 0)
 	{
-		finalColor *= 1+sharpFresnelLight(d.rlPow4.y)*effectLighting;
+		finalColor *= 1+sharpFresnelLight(d.rlPow4.y, c.rim)*effectLighting;
 	}
 
 	finalColor *= c.albedo; 
@@ -496,7 +504,7 @@ float3 SCSS_ApplyLighting(SCSS_Input c, VertexOutput i, float4 texcoords)
     #if defined(_SPECGLOSSMAP)
     // In this mode, reflection probes aren't used normally, 
     // so a fake light is determined for if one doesn't exist.
-    l.color = l.color + GetSHLength();
+    l.color = attenuation * l.color + GetSHLength();
 	l.dir = Unity_SafeNormalize(l.dir + (unity_SHAr.xyz + unity_SHAg.xyz + unity_SHAb.xyz) * _LightSkew.xyz);
 	d = initialiseLightParam(l, c.normal, i.posWorld.xyz);
 
@@ -514,7 +522,7 @@ float3 SCSS_ApplyLighting(SCSS_Input c, VertexOutput i, float4 texcoords)
 
 		SCSS_LightParam d = initialiseLightParam(l, c.normal, i.posWorld.xyz);
 
-    	finalColor += calcDiffuseAdd(c.tonemap, c.occlusion, perceptualRoughness, c.smoothness, c.softness, d, l) * c.albedo * i.vertexLight[num];
+    	finalColor += calcDiffuseAdd(c.tonemap, c.occlusion, perceptualRoughness, c.softness, d, l) * c.albedo * i.vertexLight[num];
 
 		//if (_SpecularType != 0 && i.is_outline == 0)
 		#if defined(_METALLICGLOSSMAP)

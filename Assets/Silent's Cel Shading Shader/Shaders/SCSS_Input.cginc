@@ -31,6 +31,7 @@ uniform sampler2D _Matcap3; uniform half4 _Matcap3_ST;
 uniform sampler2D _Matcap4; uniform half4 _Matcap4_ST; 
 
 uniform float4 _Color;
+uniform float _BumpScale;
 uniform float _Cutoff;
 uniform float _AlphaSharp;
 uniform float _UVSec;
@@ -97,6 +98,9 @@ uniform float _VertexColorType;
 
 struct v2g
 {
+    UNITY_VERTEX_INPUT_INSTANCE_ID
+    UNITY_VERTEX_OUTPUT_STEREO
+
 	UNITY_POSITION(vertex);
 	float3 normal : NORMAL;
 	float4 tangent : TANGENT;
@@ -112,13 +116,13 @@ struct v2g
 	half2 extraData : TEXCOORD7;
 	UNITY_SHADOW_COORDS(8)
 	UNITY_FOG_COORDS(9)
-
-    UNITY_VERTEX_INPUT_INSTANCE_ID
-    UNITY_VERTEX_OUTPUT_STEREO
 };
 
 struct VertexOutput
 {
+    UNITY_VERTEX_INPUT_INSTANCE_ID
+    UNITY_VERTEX_OUTPUT_STEREO
+
 	UNITY_POSITION(pos);
 	float4 color : COLOR;
 	float2 uv0 : TEXCOORD0;
@@ -132,21 +136,27 @@ struct VertexOutput
 	bool is_outline : IS_OUTLINE;
 	UNITY_SHADOW_COORDS(8)
 	UNITY_FOG_COORDS(9)
+};
 
-    UNITY_VERTEX_INPUT_INSTANCE_ID
-    UNITY_VERTEX_OUTPUT_STEREO
+struct SCSS_RimLightInput
+{
+	half width;
+	half power;
+	half3 tint;
+	half alpha;
 };
 
 struct SCSS_Input 
 {
-	half3 albedo, specColor;
+	half3 albedo, tonemap, specColor;
 	float3 normal;
-	float oneMinusReflectivity, smoothness;
 	half alpha;
-	half3 tonemap;
+	float oneMinusReflectivity, smoothness;
 	half occlusion;
 	half softness;
 	half3 emission;
+
+	SCSS_RimLightInput rim;
 };
 
 struct SCSS_LightParam
@@ -170,6 +180,16 @@ SCSS_LightParam initialiseLightParam (SCSS_Light l, float3 normal, float3 posWor
 	return d;
 }
 
+SCSS_RimLightInput initialiseRimParam()
+{
+	SCSS_RimLightInput rim = (SCSS_RimLightInput) 0;
+	rim.width = _FresnelWidth;
+	rim.power = _FresnelStrength;
+	rim.tint = _FresnelTint.rgb;
+	rim.alpha = _FresnelTint.a;
+	return rim;
+}
+
 float4 TexCoords(VertexOutput v)
 {
     float4 texcoord;
@@ -186,6 +206,11 @@ float4 TexCoords(VertexOutput v)
 half ColorMask(float2 uv)
 {
     return UNITY_SAMPLE_TEX2D_SAMPLER (_ColorMask, _MainTex, uv).g;
+}
+
+half RimMask(float2 uv)
+{
+    return UNITY_SAMPLE_TEX2D_SAMPLER (_ColorMask, _MainTex, uv).b;
 }
 
 half DetailMask(float2 uv)
@@ -281,7 +306,7 @@ half4 EmissionDetail(float2 uv)
 
 half3 NormalInTangentSpace(float4 texcoords, half mask)
 {
-	float3 normalTangent = UnpackScaleNormal(UNITY_SAMPLE_TEX2D_SAMPLER(_BumpMap, _MainTex, TRANSFORM_TEX(texcoords.xy, _MainTex)), 1.0);
+	float3 normalTangent = UnpackScaleNormal(UNITY_SAMPLE_TEX2D_SAMPLER(_BumpMap, _MainTex, TRANSFORM_TEX(texcoords.xy, _MainTex)), _BumpScale);
 #if _DETAIL 
     half3 detailNormalTangent = UnpackScaleNormal(UNITY_SAMPLE_TEX2D_SAMPLER (_DetailNormalMap, _MainTex, texcoords.zw), _DetailNormalMapScale);
     #if _DETAIL_LERP
