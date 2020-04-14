@@ -127,7 +127,7 @@ Shader "Silent's Cel Shading/☓ No Outline/Cutout"
 	{
 		Tags
 		{
-			"Queue"="AlphaTest+0" "RenderType" = "TransparentCutout" "IgnoreProjector"="True"
+			"Queue"="AlphaTest" "RenderType" = "TransparentCutout" "IgnoreProjector"="True"
 		}
 
         Blend[_SrcBlend][_DstBlend]
@@ -160,6 +160,7 @@ Shader "Silent's Cel Shading/☓ No Outline/Cutout"
 
 			#define UNITY_PASS_FORWARDBASE
 			#pragma multi_compile _ VERTEXLIGHT_ON
+			#pragma multi_compile ___ UNITY_HDR_ON
 
 			#pragma multi_compile_fwdbase
 			#pragma multi_compile_fog

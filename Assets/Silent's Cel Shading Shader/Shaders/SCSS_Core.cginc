@@ -5,11 +5,12 @@
 #include "AutoLight.cginc"
 #include "Lighting.cginc"
 
+#define SCSS_UNIMPORTANT_LIGHTS_FRAGMENT 1
+#define SCSS_CLAMP_IN_NON_HDR 1
+
 #include "SCSS_Utils.cginc"
 #include "SCSS_Input.cginc"
 #include "SCSS_UnityGI.cginc"
-
-#define SCSS_UNIMPORTANT_LIGHTS_FRAGMENT 1
 
 // Shade4PointLights from UnityCG.cginc but only returns their attenuation.
 float4 Shade4PointLightsAtten (
@@ -299,7 +300,7 @@ void getSpecularVD(float roughness, float3 normal, SCSS_LightParam d, SCSS_Light
 }
 
 half3 calcSpecularBase(float3 specColor, float smoothness, float3 normal, float oneMinusReflectivity, float perceptualRoughness,
-	float attenuation, SCSS_LightParam d, SCSS_Light l, VertexOutput i)
+	float attenuation, float occlusion, SCSS_LightParam d, SCSS_Light l, VertexOutput i)
 {
 	UnityGI gi = (UnityGI)0;
 	
@@ -324,8 +325,8 @@ half3 calcSpecularBase(float3 specColor, float smoothness, float3 normal, float 
     // To provide true Lambert lighting, we need to be able to kill specular completely.
     specularTerm *= any(specColor) ? 1.0 : 0.0;
 
-	gi =  GetUnityGI(l.color.rgb, l.dir, 
-	normal, d.viewDir, d.reflDir, attenuation, perceptualRoughness, i.posWorld.xyz);
+	gi =  GetUnityGI(l.color.rgb, l.dir, normal, 
+		d.viewDir, d.reflDir, attenuation, occlusion, perceptualRoughness, i.posWorld.xyz);
 
 	float grazingTerm = saturate(smoothness + (1-oneMinusReflectivity));
 
@@ -338,7 +339,8 @@ half3 calcSpecularBase(float3 specColor, float smoothness, float3 normal, float 
 half3 calcSpecularBase(SCSS_Input c, float perceptualRoughness, float attenuation,
 	SCSS_LightParam d, SCSS_Light l, VertexOutput i)
 {
-	return calcSpecularBase(c.specColor, c.smoothness, c.normal, c.oneMinusReflectivity, perceptualRoughness, attenuation, d, l, i);
+	return calcSpecularBase(c.specColor, c.smoothness, c.normal, c.oneMinusReflectivity, 
+		perceptualRoughness, attenuation, c.occlusion, d, l, i);
 }
 
 half3 calcSpecularAdd(float3 specColor, float smoothness, float3 normal, float oneMinusReflectivity, float perceptualRoughness,
@@ -431,7 +433,8 @@ float3 SCSS_ApplyLighting(SCSS_Input c, VertexOutput i, float4 texcoords)
 	float perceptualRoughness = 0;
 	#endif
 
-	// Generic lighting for matcaps/rimlighting
+	// Generic lighting for matcaps/rimlighting. 
+	// Currently matcaps are applied to albedo, so they don't need lighting. 
 	float3 effectLighting = l.color;
 	#if defined(UNITY_PASS_FORWARDBASE)
 	effectLighting *= attenuation;
@@ -446,10 +449,10 @@ float3 SCSS_ApplyLighting(SCSS_Input c, VertexOutput i, float4 texcoords)
 		if (_UseMatcap == 2) matcapUV = getMatcapUVsOriented(c.normal, d.viewDir, i.bitangentDir.xyz);
 
 		float4 _MatcapMask_var = MatcapMask(texcoords.xy);
-		c.albedo = applyMatcap(_Matcap1, matcapUV, c.albedo, effectLighting, _Matcap1Blend, _Matcap1Strength * _MatcapMask_var.r);
-		c.albedo = applyMatcap(_Matcap2, matcapUV, c.albedo, effectLighting, _Matcap2Blend, _Matcap2Strength * _MatcapMask_var.g);
-		c.albedo = applyMatcap(_Matcap3, matcapUV, c.albedo, effectLighting, _Matcap3Blend, _Matcap3Strength * _MatcapMask_var.b);
-		c.albedo = applyMatcap(_Matcap4, matcapUV, c.albedo, effectLighting, _Matcap4Blend, _Matcap4Strength * _MatcapMask_var.a);
+		c.albedo = applyMatcap(_Matcap1, matcapUV, c.albedo, 1.0, _Matcap1Blend, _Matcap1Strength * _MatcapMask_var.r);
+		c.albedo = applyMatcap(_Matcap2, matcapUV, c.albedo, 1.0, _Matcap2Blend, _Matcap2Strength * _MatcapMask_var.g);
+		c.albedo = applyMatcap(_Matcap3, matcapUV, c.albedo, 1.0, _Matcap3Blend, _Matcap3Strength * _MatcapMask_var.b);
+		c.albedo = applyMatcap(_Matcap4, matcapUV, c.albedo, 1.0, _Matcap4Blend, _Matcap4Strength * _MatcapMask_var.a);
 	}
 
 	float3 finalColor = 0; 
@@ -490,8 +493,13 @@ float3 SCSS_ApplyLighting(SCSS_Input c, VertexOutput i, float4 texcoords)
 
 	if (_UseFresnel == 2 && i.is_outline == 0)
 	{
-		finalColor *= 1+sharpFresnelLight(d.rlPow4.y, c.rim)*effectLighting;
+		finalColor *= 1+sharpFresnelLight(d.rlPow4.y, c.rim);
 	}
+
+    // Workaround for scenes with HDR off blowing out in VRchat.
+    #if !UNITY_HDR_ON && SCSS_CLAMP_IN_NON_HDR
+        l.color = saturate(l.color);
+    #endif
 
 	finalColor *= c.albedo; 
 

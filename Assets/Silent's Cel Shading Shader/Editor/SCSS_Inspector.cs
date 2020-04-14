@@ -248,6 +248,7 @@ namespace SilentCelShading.Unity
         protected MaterialProperty customFresnelColor;
 
         protected MaterialProperty normalMap;
+        protected MaterialProperty normalMapScale;
 
         protected MaterialProperty useDetailMaps;
         protected MaterialProperty detailAlbedoMap;
@@ -362,6 +363,7 @@ namespace SilentCelShading.Unity
                 fresnelStrength = FindProperty("_FresnelStrength", props);
                 fresnelTint = FindProperty("_FresnelTint", props);
                 normalMap = FindProperty("_BumpMap", props);
+                normalMapScale = FindProperty("_BumpScale", props);
                 alphaCutoff = FindProperty("_Cutoff", props);
                 alphaSharp = FindProperty("_AlphaSharp", props);
 
@@ -522,7 +524,7 @@ namespace SilentCelShading.Unity
                 }
                 materialEditor.TexturePropertySingleLine(Styles.colorMask, colorMask);
                 EditorGUI.indentLevel -= 2;
-                materialEditor.TexturePropertySingleLine(Styles.normalMap, normalMap);
+                materialEditor.TexturePropertySingleLine(Styles.normalMap, normalMap, normalMapScale);
                 EditorGUILayout.Space();
             }
                 EditorGUI.EndChangeCheck();
