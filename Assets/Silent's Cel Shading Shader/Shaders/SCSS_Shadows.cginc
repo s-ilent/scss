@@ -1,4 +1,5 @@
-#ifndef FLAT_LIT_TOON_SHADOWS_INCLUDED
+#ifndef SHADOWS_INCLUDED
+#define SHADOWS_INCLUDED
 
 #include "UnityCG.cginc"
 #include "UnityShaderVariables.cginc"

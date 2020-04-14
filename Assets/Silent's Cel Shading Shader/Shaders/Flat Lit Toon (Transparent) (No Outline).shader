@@ -127,7 +127,7 @@ Shader "Silent's Cel Shading/☓ No Outline/Transparent"
 	{
 		Tags
 		{
-			"Queue"="Transparent+100" "RenderType" = "Transparent" "IgnoreProjector"="True"
+			"Queue"="Transparent" "RenderType" = "Transparent" "IgnoreProjector"="True"
 		}
 
         Blend[_SrcBlend][_DstBlend]
@@ -158,6 +158,7 @@ Shader "Silent's Cel Shading/☓ No Outline/Transparent"
 
 			#define UNITY_PASS_FORWARDBASE
 			#pragma multi_compile _ VERTEXLIGHT_ON
+			#pragma multi_compile ___ UNITY_HDR_ON
 
 			#pragma multi_compile_fwdbase nolightmap 
 			#pragma multi_compile_fog

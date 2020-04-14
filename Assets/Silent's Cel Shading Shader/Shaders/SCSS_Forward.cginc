@@ -10,7 +10,6 @@ v2g vert(appdata_full v) {
 	o.uv0 = v.texcoord;
 	o.uv1 = v.texcoord1;
 	o.normal = v.normal;
-	o.tangent = v.tangent;
 	o.normalDir = UnityObjectToWorldNormal(v.normal);
 	o.tangentDir = UnityObjectToWorldDir(v.tangent.xyz);
     half sign = v.tangent.w * unity_WorldTransformParams.w;
@@ -24,11 +23,11 @@ v2g vert(appdata_full v) {
 	if (_VertexColorType == 2) 
 	{
 		o.color = 1.0; // Reset
-		o.extraData.xy = v.color.rg;
+		o.extraData = v.color;
 	} else {
 		o.color = v.color;
+		o.extraData = 0.0; 
 		o.extraData.x = v.color.a;
-		o.extraData.y = 0.0; 
 	}
 
 	o.extraData.x *= _outline_width * .01; // Apply outline width and convert to cm
@@ -68,7 +67,7 @@ void geom(triangle v2g IN[3], inout TriangleStream<VertexOutput> tristream)
 		o.uv0 = IN[i].uv0;
 		o.uv1 = IN[i].uv1;
 		o.posWorld = mul(unity_ObjectToWorld, IN[i].vertex);
-		o.normalDir = UnityObjectToWorldNormal(IN[i].normal);
+		o.normalDir = IN[i].normalDir;
 		o.tangentDir = IN[i].tangentDir;
 		o.bitangentDir = IN[i].bitangentDir;
 		o.is_outline = true;
@@ -104,7 +103,7 @@ void geom(triangle v2g IN[3], inout TriangleStream<VertexOutput> tristream)
 		o.uv0 = IN[ii].uv0;
 		o.uv1 = IN[ii].uv1;
 		o.posWorld = mul(unity_ObjectToWorld, IN[ii].vertex);
-		o.normalDir = UnityObjectToWorldNormal(IN[ii].normal);
+		o.normalDir = IN[ii].normalDir;
 		o.tangentDir = IN[ii].tangentDir;
 		o.bitangentDir = IN[ii].bitangentDir;
 		o.posWorld = mul(unity_ObjectToWorld, IN[ii].vertex); 
@@ -157,11 +156,11 @@ VertexOutput vert_nogeom(appdata_full v) {
 	if (_VertexColorType == 2) 
 	{
 		o.color = 1.0; // Reset
-		o.extraData.xy = v.color.rg;
+		o.extraData = v.color;
 	} else {
 		o.color = v.color;
+		o.extraData = 0.0; 
 		o.extraData.x = v.color.a;
-		o.extraData.y = 0.0; 
 	}
 
 	#if (UNITY_VERSION<600)

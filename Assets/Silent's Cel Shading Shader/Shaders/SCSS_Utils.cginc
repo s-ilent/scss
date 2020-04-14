@@ -21,6 +21,12 @@ SCSS_Light MainLight()
     l.color = _LightColor0.rgb;
     l.intensity = _LightColor0.w;
     l.dir = Unity_SafeNormalize(_WorldSpaceLightPos0.xyz); 
+
+    // Workaround for scenes with HDR off blowing out in VRchat.
+    #if !UNITY_HDR_ON && SCSS_CLAMP_IN_NON_HDR
+        l.color = saturate(l.color);
+    #endif
+
     return l;
 }
 

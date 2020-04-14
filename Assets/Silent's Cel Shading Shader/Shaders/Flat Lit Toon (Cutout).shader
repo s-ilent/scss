@@ -10,6 +10,7 @@ Shader "Silent's Cel Shading/Cutout"
 		[Space]
 		_ColorMask("Color Mask Map", 2D) = "white" {}
 		_BumpMap("Normal Map", 2D) = "bump" {}
+		_BumpScale("Normal Map Scale", Float) = 1.0
 		[Enum(VertexColorType)]_VertexColorType ("Vertex Colour Type", Float) = 2.0
 		[Space]
 		[Header(Emission)]
@@ -126,7 +127,7 @@ Shader "Silent's Cel Shading/Cutout"
 	{
 		Tags
 		{
-			"Queue"="AlphaTest+1" "RenderType" = "TransparentCutout" "IgnoreProjector"="True"
+			"Queue"="AlphaTest" "RenderType" = "TransparentCutout" "IgnoreProjector"="True"
 		}
 
         Blend[_SrcBlend][_DstBlend]
@@ -159,6 +160,7 @@ Shader "Silent's Cel Shading/Cutout"
 
 			#define UNITY_PASS_FORWARDBASE
 			#pragma multi_compile _ VERTEXLIGHT_ON
+			#pragma multi_compile ___ UNITY_HDR_ON
 
 			#pragma multi_compile_fwdbase
 			#pragma multi_compile_fog

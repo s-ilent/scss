@@ -158,6 +158,7 @@ Shader "Silent's Cel Shading/Opaque"
 
 			#define UNITY_PASS_FORWARDBASE
 			#pragma multi_compile _ VERTEXLIGHT_ON
+			#pragma multi_compile ___ UNITY_HDR_ON
 
 			#pragma multi_compile_fwdbase
 			#pragma multi_compile_fog

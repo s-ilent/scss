@@ -48,7 +48,7 @@ inline UnityGI UnityGlobalIllumination_SCSS (UnityGIInput data, half occlusion, 
 }
 
 UnityGI GetUnityGI(float3 lightColor, float3 lightDirection, float3 normalDirection,float3 viewDirection, 
-float3 viewReflectDirection, float attenuation, float roughness, float3 worldPos){
+float3 viewReflectDirection, float attenuation, float occlusion, float roughness, float3 worldPos){
     UnityLight light;
     light.color = lightColor;
     light.dir = lightDirection;
@@ -70,7 +70,7 @@ float3 viewReflectDirection, float attenuation, float roughness, float3 worldPos
     Unity_GlossyEnvironmentData ugls_en_data;
     ugls_en_data.roughness = roughness;
     ugls_en_data.reflUVW = viewReflectDirection;
-    UnityGI gi = UnityGlobalIllumination_SCSS(d, 1.0h, normalDirection, ugls_en_data );
+    UnityGI gi = UnityGlobalIllumination_SCSS(d, occlusion, normalDirection, ugls_en_data );
     return gi;
 }
 
