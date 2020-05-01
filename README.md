@@ -1,7 +1,8 @@
 # Silent's Cel Shading Shaders
-Shaders for Unity for cel shading, originally based off CubedParadox's Flat Lit Toon, now featuring tons of improvements and handy features.
+Shaders for Unity for cel shading, originally based off CubedParadox's Flat Lit Toon, now remade and featuring tons of improvements and handy features.
 # [Want to know how to use this shader? Here's the manual!](https://gitlab.com/s-ilent/SCSS/wikis/Manual/Setting-Overview)
 # [Can't find the Download link? Click here!](https://gitlab.com/s-ilent/SCSS/-/archive/master/SCSS-master.zip)
+* After downloading the shader, install it by dragging the contents of the Assets folder into your project's Assets folder.
 ## Features include:
 * **Customisable lighting**
 
