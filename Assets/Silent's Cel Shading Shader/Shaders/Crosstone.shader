@@ -1,4 +1,4 @@
-Shader "Hidden/Silent's Cel Shading/Old/Transparent"
+Shader "Silent's Cel Shading/Crosstone (Outline)"
 {
 	Properties
 	{
@@ -18,34 +18,47 @@ Shader "Hidden/Silent's Cel Shading/Old/Transparent"
 		[HDR]_EmissionColor("Emission Color", Color) = (0,0,0,1)
 		[Space]
 		[Header(Lighting)]
-		[Enum(LightRampType)]_LightRampType ("Light Ramp Type", Float) = 0.0
-		_Ramp ("Lighting Ramp", 2D) = "white" {}
+        _1st_ShadeMap ("1st_ShadeMap", 2D) = "white" {}
+        _1st_ShadeColor ("1st_ShadeColor", Color) = (1,1,1,1)
+        _2nd_ShadeMap ("2nd_ShadeMap", 2D) = "white" {}
+        _2nd_ShadeColor ("2nd_ShadeColor", Color) = (1,1,1,1)
+        _ShadingGradeMap ("ShadingGradeMap", 2D) = "white" {}
 		[Space]
-		[Enum(ShadowMaskType)] _ShadowMaskType ("Shadow Mask Type", Float) = 0.0
-		_ShadowMask("Shadow Mask", 2D) = "white" {} 
-		_ShadowMaskColor("Shadow Mask Color", Color) = (1,1,1,1)
-		_Shadow("Shadow Mask Power", Range(0, 1)) = 0.5
-		_ShadowLift("Shadow Offset", Range(-1, 1)) = 0.0
-		_IndirectLightingBoost("Indirect Lighting Boost", Range(0, 1)) = 0.0
+        _1st_ShadeColor_Step ("1st_ShadeColor_Step", Range(0, 1)) = 0.5
+        _1st_ShadeColor_Feather ("1st_ShadeColor_Feather", Range(0.0001, 1)) = 0.0001
+        _2nd_ShadeColor_Step ("2nd_ShadeColor_Step", Range(0, 1)) = 0
+        _2nd_ShadeColor_Feather ("2nd_ShadeColor_Feather", Range(0.0001, 1)) = 0.0001
 		[Space]
 		[Header(Outline)]
-		[Enum(OutlineMode)] _OutlineMode("Outline Mode", Float) = 1.0
+		[Enum(OutlineMode)] _OutlineMode("Outline Mode", Float) = 0.0
+		_OutlineMask("Outline Map", 2D) = "white" {}
 		_outline_width("Outline Width", Float) = 0.1
 		_outline_color("Outline Colour", Color) = (0.5,0.5,0.5,1)
+		[Toggle(_)]_UseInteriorOutline("Use Interior Outline", Float) = 0
+		[Gamma]_InteriorOutlineWidth("Interior Outline Width", Range(0, 1)) = 0.01
 		[Space]
 		[Header(Rim Lighting)]
-		[Enum(AmbientFresnelType)]_UseFresnel ("Use Fresnel", Float) = 0.0
-		_FresnelWidth ("Fresnel Strength", Range(0, 20)) = .5
-		_FresnelStrength ("Fresnel Softness", Range(0.01, 0.9999)) = 0.5
-		[HDR]_FresnelTint("Fresnel Tint", Color) = (1,1,1,1)
+		[Enum(AmbientFresnelType)]_UseFresnel ("Use Rim Light", Float) = 0.0
+		[HDR]_FresnelTint("Rim Light Tint", Color) = (1,1,1,1)
+		_FresnelWidth ("Rim Light Strength", Range(0, 20)) = .5
+		_FresnelStrength ("Rim Light Softness", Range(0.01, 0.9999)) = 0.5
+		[Toggle(_)]_UseFresnelLightMask("Mask Rim Light by Light Direction", Float) = 0.0
+		_FresnelLightMask("Light Direction Mask Power", Range(1, 10)) = 1.0
+		[HDR]_FresnelTintInv("Inverse Rim Light Tint", Color) = (1,1,1,1)
+		_FresnelWidthInv ("Inverse Rim Light Strength", Range(0, 20)) = .5
+		_FresnelStrengthInv ("Inverse Rim Light Softness", Range(0.01, 0.9999)) = 0.5
 		[Space]
 		[Header(Specular)]
 		[Enum(SpecularType)] _SpecularType ("Specular Type", Float) = 0.0
-		_SpecGlossMap ("Specular Map", 2D) = "black" {}
+        _SpecColor("Specular", Color) = (1,1,1)
+		_SpecGlossMap ("Specular Map", 2D) = "white" {}
 		[Toggle(_)]_UseMetallic ("Use as Metallic", Float) = 0.0
-		[Toggle(_)]_UseEnergyConservation ("Energy Conservation", Float) = 1.0
+		[Toggle(_)]_UseEnergyConservation ("Energy Conservation", Float) = 0.0
 		_Smoothness ("Smoothness", Range(0, 1)) = 1
+		_CelSpecularSoftness ("Softness", Range(1, 0)) = 0.02
 		_Anisotropy("Anisotropy", Range(-1,1)) = 0.8
+		[ToggleOff(_SPECULARHIGHLIGHTS_OFF)]_SpecularHighlights ("Specular Highlights", Float) = 1.0
+		[ToggleOff(_GLOSSYREFLECTIONS_OFF)]_GlossyReflections ("Glossy Reflections", Float) = 1.0
 		[Space]
 		[Header(Matcap)]
 		[Enum(MatcapType)]_UseMatcap ("Matcap Type", Float) = 0.0
@@ -98,13 +111,12 @@ Shader "Hidden/Silent's Cel Shading/Old/Transparent"
         _LightWrappingCompensationFactor("Light Wrapping Compensation Factor", Range(0.5, 1)) = 0.8
 		[Space]
 		[Header(System Internal)]
-		[ToggleOff(_SPECULARHIGHLIGHTS_OFF)]_SpecularHighlights ("Specular Highlights", Float) = 1.0
-		[ToggleOff(_GLOSSYREFLECTIONS_OFF)]_GlossyReflections ("Glossy Reflections", Float) = 1.0
 		[Space]
         // Advanced options.
 		[Header(System Render Flags)]
         [Enum(RenderingMode)] _Mode("Rendering Mode", Float) = 0                                     // "Opaque"
         [Enum(CustomRenderingMode)] _CustomMode("Mode", Float) = 0                                   // "Opaque"
+        [Enum(DepthWrite)] _AtoCMode("Alpha to Mask", Float) = 0                                     // "Off"
         [Enum(UnityEngine.Rendering.BlendMode)] _SrcBlend("Source Blend", Float) = 1                 // "One"
         [Enum(UnityEngine.Rendering.BlendMode)] _DstBlend("Destination Blend", Float) = 0            // "Zero"
         [Enum(UnityEngine.Rendering.BlendOp)] _BlendOp("Blend Operation", Float) = 0                 // "Add"
@@ -129,7 +141,7 @@ Shader "Hidden/Silent's Cel Shading/Old/Transparent"
 	{
 		Tags
 		{
-			"Queue"="Transparent" "RenderType" = "Transparent" "IgnoreProjector"="True"
+			"RenderType" = "Opaque"
 		}
 
         Blend[_SrcBlend][_DstBlend]
@@ -138,6 +150,7 @@ Shader "Hidden/Silent's Cel Shading/Old/Transparent"
         ZWrite[_ZWrite]
         Cull[_CullMode]
         ColorMask[_ColorWriteMask]
+		AlphaToMask [_AtoCMode]
 
         Stencil
         {
@@ -150,10 +163,112 @@ Shader "Hidden/Silent's Cel Shading/Old/Transparent"
             ZFail [_StencilZFail]
         }
 
-		UsePass "Silent's Cel Shading/Lightramp (Outline)/FORWARD"
-		UsePass "Silent's Cel Shading/Lightramp (Outline)/FORWARD_DELTA"
-		UsePass "Silent's Cel Shading/Lightramp (Outline)/SHADOW_CASTER"
+        CGINCLUDE
+		#pragma shader_feature _ _ALPHATEST_ON _ALPHABLEND_ON _ALPHAPREMULTIPLY_ON
+
+		#define SCSS_CROSSTONE
+		#define SCSS_USE_OUTLINE_TEXTURE
+        ENDCG
+
+		Pass
+		{
+
+			Name "FORWARD"
+			Tags { "LightMode" = "ForwardBase" }
+
+			CGPROGRAM
+
+			#ifndef UNITY_PASS_FORWARDBASE
+			#define UNITY_PASS_FORWARDBASE
+			#endif
+
+			#pragma multi_compile _ VERTEXLIGHT_ON
+			#pragma multi_compile ___ UNITY_HDR_ON
+
+			#pragma multi_compile_fwdbase
+			#pragma multi_compile_fog
+
+			#pragma shader_feature ___ _DETAIL_MULX2
+			#pragma shader_feature ___ _METALLICGLOSSMAP _SPECGLOSSMAP
+			#pragma shader_feature _ _SMOOTHNESS_TEXTURE_ALBEDO_CHANNEL_A
+			#pragma shader_feature _ _SPECULARHIGHLIGHTS_OFF
+			#pragma shader_feature _ _GLOSSYREFLECTIONS_OFF			
+			#pragma shader_feature _ _SUNDISK_NONE			
+			
+			#include "SCSS_Core.cginc"
+
+			#pragma vertex vert
+			#pragma geometry geom
+			#pragma fragment frag
+
+			#include "SCSS_Forward.cginc"
+
+			ENDCG
+		}
+
+
+		Pass
+		{
+			Name "FORWARD_DELTA"
+			Tags { "LightMode" = "ForwardAdd" }
+			Blend [_SrcBlend] One
+
+			CGPROGRAM
+
+			#ifndef UNITY_PASS_FORWARDADD
+			#define UNITY_PASS_FORWARDADD
+			#endif
+
+			#pragma multi_compile_fwdadd_fullshadows
+			#pragma multi_compile_fog
+
+			#pragma shader_feature ___ _DETAIL_MULX2
+			#pragma shader_feature ___ _METALLICGLOSSMAP _SPECGLOSSMAP
+			#pragma shader_feature _ _SMOOTHNESS_TEXTURE_ALBEDO_CHANNEL_A
+			#pragma shader_feature _ _SPECULARHIGHLIGHTS_OFF
+			#pragma shader_feature _ _GLOSSYREFLECTIONS_OFF
+			#pragma shader_feature _ _SUNDISK_NONE			
+
+			#include "SCSS_Core.cginc"
+
+			#pragma vertex vert
+			#pragma geometry geom
+			#pragma fragment frag
+
+			#include "SCSS_Forward.cginc"
+
+			ENDCG
+		}
+
+		Pass
+		{
+			Name "SHADOW_CASTER"
+			Tags{ "LightMode" = "ShadowCaster" }
+
+            Blend[_SrcBlend][_DstBlend]
+            BlendOp[_BlendOp]
+            ZTest[_ZTest]
+            ZWrite[_ZWrite]
+            Cull[_CullMode]
+            ColorMask[_ColorWriteMask]
+		
+			AlphaToMask Off
+
+			CGPROGRAM
+
+			#ifndef UNITY_PASS_SHADOWCASTER
+			#define UNITY_PASS_SHADOWCASTER
+			#endif
+			
+			#pragma multi_compile_shadowcaster
+			
+			#include "SCSS_Shadows.cginc"
+
+			#pragma vertex vertShadowCaster
+			#pragma fragment fragShadowCaster
+			ENDCG
+		}
 	}
-	FallBack "Silent's Cel Shading/Lightramp"
+	FallBack "Silent's Cel Shading/Crosstone/☓ No Outline/Opaque"
 	CustomEditor "SilentCelShading.Unity.Inspector"
 }

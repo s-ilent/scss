@@ -1,12 +1,27 @@
 #ifndef SCSS_CORE_INCLUDED
+
 #define SCSS_CORE_INCLUDED
 
 #include "UnityCG.cginc"
 #include "AutoLight.cginc"
 #include "Lighting.cginc"
 
+// Perform full-quality light calculations on unimportant lights.
+// Considering our target GPUs, this is a big visual improvement
+// for a small performance penalty.
 #define SCSS_UNIMPORTANT_LIGHTS_FRAGMENT 1
+
+// When rendered by a non-HDR camera, clamp incoming lighting.
+// This works around issues where scenes are set up incorrectly
+// for non-HDR.
 #define SCSS_CLAMP_IN_NON_HDR 1
+
+// When screen-space shadows are used in the scene, performs a
+// search to find the best sampling point for the shadow
+// using the camera's depth buffer. This filters away many aliasing
+// artifacts caused by limitations in the screen shadow technique
+// used by directional lights.
+#define SCSS_SCREEN_SHADOW_FILTER 1
 
 #include "SCSS_Utils.cginc"
 #include "SCSS_Input.cginc"
@@ -79,6 +94,21 @@ inline half4 VertexLightContribution(float3 posWorld, half3 normalWorld)
 	return vertexLight;
 }
 
+#if defined(_SUBSURFACE)
+//SSS method from GDC 2011 conference by Colin Barre-Bresebois & Marc Bouchard and modified by Xiexe
+float3 getSubsurfaceScatteringLight (SCSS_Light l, float3 normalDirection, float3 viewDirection, 
+    float attenuation, float3 thickness, float3 indirectLight)
+{
+    float3 vSSLight = l.dir + normalDirection * _SSSDist; // Distortion
+    float3 vdotSS = pow(saturate(dot(viewDirection, -vSSLight)), _SSSPow) 
+        * _SSSIntensity; 
+    
+    return lerp(1, attenuation, float(any(_WorldSpaceLightPos0.xyz))) 
+                * (vdotSS + _SSSAmbient) * abs(_ThicknessMapInvert-thickness)
+                * (l.color + indirectLight) * _SSSCol;
+                
+}
+#endif
 
 // Sample ramp with the specified options.
 // rampPosition: 0-1 position on the light ramp from light to dark
@@ -109,35 +139,24 @@ float3 sampleRampWithOptions(float rampPosition, half softness)
 	}
 }
 
-float sharpenLighting (float inLight, float width, float softness)
+float3 sampleCrossToneLighting(float x, SCSS_TonemapInput tone0, SCSS_TonemapInput tone1)
 {
-    inLight *= width;
-    float2 lightStep = .5 + float2(-1, 1) * fwidth(inLight);
-    lightStep = lerp(float2(0.0, 1.0), lightStep, 1-softness);
-    inLight = smoothstep(lightStep.x, lightStep.y, inLight);
-    return inLight;
-}
+	// A three-tiered tone system.
+	// Input x is potentially affected by occlusion map.
+	half offset0 = _1st_ShadeColor_Step * tone0.bias; 
+	half width0  = _1st_ShadeColor_Feather;
+	half factor0 = saturate(simpleSharpen(x, width0, offset0));
 
-float3 sharpFresnelLight(float fresnelEffect) {
-	return sharpenLighting(fresnelEffect, _FresnelWidth, _FresnelStrength) * _FresnelTint.rgb * _FresnelTint.a;
-}
+	half offset1 = _2nd_ShadeColor_Step * tone1.bias; 
+	half width1  = _2nd_ShadeColor_Feather;
+	half factor1 = saturate(simpleSharpen(x, width1, offset1));
 
-float3 sharpFresnelLight(float fresnelEffect, SCSS_RimLightInput rim) {
-	return sharpenLighting(fresnelEffect, rim.width, rim.power) * rim.tint * rim.alpha;
-}
+	float3 final;
+	final = lerp(tone1.col, tone0.col, factor1);
+	final = lerp(final, 1.0, factor0);
+	return final;
 
-//SSS method from GDC 2011 conference by Colin Barre-Bresebois & Marc Bouchard and modified by Xiexe
-float3 getSubsurfaceScatteringLight (SCSS_Light l, float3 normalDirection, float3 viewDirection, 
-    float attenuation, float3 thickness, float3 indirectLight)
-{
-    float3 vSSLight = l.dir + normalDirection * _SSSDist; // Distortion
-    float3 vdotSS = pow(saturate(dot(viewDirection, -vSSLight)), _SSSPow) 
-        * _SSSIntensity; 
-    
-    return lerp(1, attenuation, float(any(_WorldSpaceLightPos0.xyz))) 
-                * (vdotSS + _SSSAmbient) * abs(_ThicknessMapInvert-thickness)
-                * (l.color + indirectLight) * _SSSCol;
-                
+	// v0 + t * (v1 - v0);
 }
 
 float applyShadowLift(float baseLight, float occlusion)
@@ -154,11 +173,26 @@ float applyShadowLift(float4 baseLight, float occlusion)
 	return baseLight;
 }
 
-float getRemappedLight(half perceptualRoughness, half attenuation, SCSS_LightParam d)
+float getRemappedLight(half perceptualRoughness, SCSS_LightParam d)
 {
-	float remappedLight = d.NdotL * attenuation
-		* DisneyDiffuse(d.NdotV, d.NdotL, d.LdotH, perceptualRoughness);
+	float diffuseShadowing = DisneyDiffuse(abs(d.NdotV), abs(d.NdotL), d.LdotH, perceptualRoughness);
+	float remappedLight = d.NdotL * LerpOneTo(diffuseShadowing, _DiffuseGeomShadowFactor);
 	return remappedLight;
+}
+
+float applyAttenuation(half NdotL, half attenuation)
+{
+	#if defined(SCSS_CROSSTONE)
+	//attenuation = round(attenuation);
+	half shadeVal = _1st_ShadeColor_Step - _1st_ShadeColor_Feather * 0.5;
+	shadeVal = shadeVal-0.01;
+	//NdotL = min(lerp(shadeVal, NdotL, attenuation), NdotL);
+	NdotL = lerp(shadeVal*NdotL, NdotL, attenuation);
+	#else
+	NdotL = min(NdotL * attenuation, NdotL);
+	//NdotL = lerp(0.5, NdotL, attenuation);
+	#endif
+	return NdotL;
 }
 
 half3 calcVertexLight(float4 vertexAttenuation, float occlusion, float3 tonemap, half softness)
@@ -203,59 +237,97 @@ void getDirectIndirectLighting(float3 normal, inout float3 directLighting, inout
 
 }
 
-half3 calcDiffuseBase(float3 tonemap, float occlusion, half3 normal, half perceptualRoughness, half attenuation, 
-	half softness, SCSS_LightParam d, SCSS_Light l)
+// For baked lighting.
+half3 calcDiffuseGI(SCSS_TonemapInput tone[2], float occlusion, half3 normal, half perceptualRoughness, half softness)
 {
-	float remappedLight = getRemappedLight(perceptualRoughness, attenuation, d);
-	remappedLight = remappedLight * 0.5 + 0.5;
-	remappedLight = applyShadowLift(remappedLight, occlusion);
+	float3 ambientLightDirection = Unity_SafeNormalize((unity_SHAr.xyz + unity_SHAg.xyz + unity_SHAb.xyz) * _LightSkew.xyz);
 
-	float3 lightContribution = sampleRampWithOptions(remappedLight, softness);
+	float ambientLight = dot(normal, ambientLightDirection);
+	ambientLight = ambientLight * 0.5 + 0.5;
 
 	float3 directLighting = 0.0;
 	float3 indirectLighting = 0.0;
 
 	getDirectIndirectLighting(normal, /*out*/ directLighting, /*out*/ indirectLighting);
 	
-	indirectLighting = lerp(indirectLighting, directLighting, tonemap);
+	float3 indirectAverage = 0.5 * (indirectLighting + directLighting);
 
-	lightContribution = lerp(tonemap, 1.0, lightContribution);
-	lightContribution *= l.color;
-	
-	float3 ambientLightDirection = Unity_SafeNormalize((unity_SHAr.xyz + unity_SHAg.xyz + unity_SHAb.xyz) * _LightSkew.xyz);
-
-	float ambientLight = dot(normal, ambientLightDirection);
-	ambientLight = ambientLight * 0.5 + 0.5;
+	#if !defined(SCSS_CROSSTONE)
 	ambientLight = applyShadowLift(ambientLight, occlusion);
-
 	float3 indirectContribution = sampleRampWithOptions(ambientLight, softness);
+	indirectLighting = lerp(indirectLighting, directLighting, tone[0].col);
+	indirectAverage = lerp(indirectAverage, directLighting, tone[0].col);
+	#endif
 
-	const float3 indirectAverage = 0.5 * (indirectLighting + directLighting);
+	#if defined(SCSS_CROSSTONE)
+	ambientLight *= occlusion;
+	float3 indirectContribution = sampleCrossToneLighting(ambientLight, tone[0], tone[1]);
+	indirectLighting = lerp(indirectLighting, directLighting, tone[0].col);
+	indirectAverage = lerp(indirectAverage, directLighting, tone[0].col);
+	#endif
 
-	lightContribution += 
+	// Make this a UI value later.
+	half ambientLightSplitThreshold = 1.0/3.0;
+
+	float3 lightContribution = 
 	lerp(indirectAverage,
 	lerp(indirectLighting, directLighting, indirectContribution),
-	saturate(dot(abs((directLighting-indirectLighting)/indirectAverage), 1.0)));
+	saturate(dot(abs((directLighting-indirectLighting)/indirectAverage), 
+		ambientLightSplitThreshold)));
+
+	return lightContribution;
+}
+
+// For directional lights where attenuation is shadow.
+half3 calcDiffuseBase(SCSS_TonemapInput tone[2], float occlusion, half3 normal, half perceptualRoughness, 
+	half attenuation, half softness, SCSS_LightParam d, SCSS_Light l)
+{
+	float remappedLight = getRemappedLight(perceptualRoughness, d);
+	remappedLight = remappedLight * 0.5 + 0.5;
+
+	remappedLight = applyAttenuation(remappedLight, attenuation);
+
+	#if !defined(SCSS_CROSSTONE)
+	remappedLight = applyShadowLift(remappedLight, occlusion);
+	float3 lightContribution = lerp(tone[0].col, 1.0, sampleRampWithOptions(remappedLight, softness));;
+	#endif
+
+	#if defined(SCSS_CROSSTONE)
+	remappedLight *= occlusion;
+	float3 lightContribution = sampleCrossToneLighting(remappedLight, tone[0], tone[1]);
+	#endif
+
+	lightContribution *= l.color;
 
 	return lightContribution;	
 }
 
-half3 calcDiffuseAdd(float3 tonemap, float occlusion, half perceptualRoughness, 
+// For point/spot lights where attenuation is shadow+attenuation.
+half3 calcDiffuseAdd(SCSS_TonemapInput tone[2], float occlusion, half perceptualRoughness, 
 	half softness, SCSS_LightParam d, SCSS_Light l)
 {
-	float remappedLight = getRemappedLight(perceptualRoughness, 1.0, d);
+	float remappedLight = getRemappedLight(perceptualRoughness, d);
 	remappedLight = remappedLight * 0.5 + 0.5;
-	remappedLight = applyShadowLift(remappedLight, occlusion);
 
+	#if !defined(SCSS_CROSSTONE)
+	remappedLight = applyShadowLift(remappedLight, occlusion);
 	float3 lightContribution = sampleRampWithOptions(remappedLight, softness);
 
 	float3 directLighting = l.color;
-	float3 indirectLighting = l.color * tonemap;
+	float3 indirectLighting = l.color * tone[0].col;
 
 	lightContribution = lerp(indirectLighting, directLighting, lightContribution);
+	#endif
+
+	#if defined(SCSS_CROSSTONE)
+	float3 lightContribution = sampleCrossToneLighting(remappedLight, tone[0], tone[1]);
+	lightContribution *= l.color;
+	#endif
+
 	return lightContribution;
 }
 
+#if defined(_SPECULAR)
 void getSpecularVD(float roughness, float3 normal, SCSS_LightParam d, SCSS_Light l, VertexOutput i,
 	out half V, out half D)
 {
@@ -311,6 +383,8 @@ half3 calcSpecularBase(float3 specColor, float smoothness, float3 normal, float 
 	// This also fixes issues with the other specular types.
 	roughness = max(roughness, 0.002);
 
+	d = saturate(d);
+
 	getSpecularVD(roughness, normal, d, l, i, /*out*/ V, /*out*/ D);
 
 	half specularTerm = V*D * UNITY_PI; // Torrance-Sparrow model, Fresnel is applied later
@@ -357,6 +431,8 @@ half3 calcSpecularAdd(float3 specColor, float smoothness, float3 normal, float o
 	// This also fixes issues with the other specular types.
 	roughness = max(roughness, 0.002);
 
+	d = saturate(d);
+
 	getSpecularVD(roughness, normal, d, l, i, /*out*/ V, /*out*/ D);
 
 	half specularTerm = V*D * UNITY_PI; // Torrance-Sparrow model, Fresnel is applied later
@@ -382,7 +458,7 @@ half3 calcSpecularCel(float3 specColor, float smoothness, float3 normal, float o
 	if (_SpecularType == 4) {
 		float spec = max(d.NdotH, 0);
 		spec = pow(spec, (smoothness)*40) * UNITY_PI;
-		spec = sharpenLighting(frac(spec), 1.0, 0.02)+floor(spec);
+		spec = sharpenLighting(frac(spec), _CelSpecularSoftness)+floor(spec);
     	spec = max(0.02,spec);
 
     	float3 envLight = UNITY_SAMPLE_TEXCUBE_LOD(unity_SpecCube0, normal, UNITY_SPECCUBE_LOD_STEPS);
@@ -396,7 +472,7 @@ half3 calcSpecularCel(float3 specColor, float smoothness, float3 normal, float o
 		spec += StrandSpecular(i.tangentDir, 
 			d.viewDir, l.dir, d.halfDir, 
 			_Anisotropy*10, 0.05 );
-		spec = sharpenLighting(frac(spec), 1.0, 0.02)+floor(spec);
+		spec = sharpenLighting(frac(spec), 0.02)+floor(spec);
 		return max(0, spec * specColor *  l.color * smoothness) + 
 			UNITY_SAMPLE_TEXCUBE_LOD(unity_SpecCube0, normal, UNITY_SPECCUBE_LOD_STEPS) * specColor;
 	}
@@ -407,10 +483,81 @@ half3 calcSpecularCel(SCSS_Input c, float perceptualRoughness, float attenuation
 {
 	return calcSpecularCel(c.specColor, c.smoothness, c.normal, c.oneMinusReflectivity, perceptualRoughness, attenuation, d, l, i);
 }
+#endif
+
+float3 SCSS_ShadeBase(SCSS_Input c, VertexOutput i, SCSS_Light l, float attenuation)
+{	
+	float3 finalColor;
+
+	SCSS_LightParam d = initialiseLightParam(l, c.normal, i.posWorld.xyz);
+
+	finalColor  = calcDiffuseGI(c.tone, c.occlusion, c.normal, c.perceptualRoughness, c.softness);
+	finalColor += calcDiffuseBase(c.tone, c.occlusion, c.normal, c.perceptualRoughness, attenuation, c.softness, d, l);
+
+	finalColor *= c.albedo; 
+
+	// Prepare fake light params for spec/fresnel which simulate specular.
+	SCSS_Light fL = l;
+	SCSS_LightParam fD = d;
+	fL.color = attenuation * fL.color + GetSHLength();
+	fL.dir = Unity_SafeNormalize(fL.dir + (unity_SHAr.xyz + unity_SHAg.xyz + unity_SHAb.xyz) * _LightSkew.xyz);
+	fD = initialiseLightParam(fL, c.normal, i.posWorld.xyz);
+	
+	if (i.is_outline == 0)
+	{
+		#if defined(_SUBSURFACE)
+		float3 thicknessMap_var = pow(Thickness(i.uv0.xy), _ThicknessMapPower);
+		finalColor += c.albedo * getSubsurfaceScatteringLight(l, c.normal, fD.viewDir,
+			attenuation, thicknessMap_var, c.tone[0].col);
+		#endif
+
+		#if defined(_METALLICGLOSSMAP)
+	    finalColor += calcSpecularBase(c, c.perceptualRoughness, attenuation, d, l, i);
+	    #endif
+
+	    #if defined(_SPECGLOSSMAP)
+    	finalColor += calcSpecularCel(c, c.perceptualRoughness, attenuation, fD, fL, i);
+   		#endif
+    };
+
+    return finalColor;
+}
+
+float3 SCSS_ShadeLight(SCSS_Input c, VertexOutput i, SCSS_Light l, half attenuation)
+{
+	float3 finalColor;
+
+	SCSS_LightParam d = initialiseLightParam(l, c.normal, i.posWorld.xyz);
+
+    finalColor = calcDiffuseAdd(c.tone, c.occlusion, c.perceptualRoughness, c.softness, d, l) * c.albedo;
+
+	if (i.is_outline == 0)
+	{
+		#if defined(_SUBSURFACE) 
+		float3 thicknessMap_var = pow(Thickness(i.uv0.xy), _ThicknessMapPower);
+		finalColor += c.albedo * getSubsurfaceScatteringLight(l, c.normal, d.viewDir,
+			attenuation, thicknessMap_var, c.tone[0].col);
+		#endif
+
+		#if defined(_METALLICGLOSSMAP)
+    	finalColor += calcSpecularAdd(c, c.perceptualRoughness, d, l, i);
+    	#endif
+
+		#if defined(_SPECGLOSSMAP)
+		finalColor += calcSpecularCel(c, c.perceptualRoughness, attenuation, d, l, i);
+		#endif
+	};
+	return finalColor;
+}
+
 
 float3 SCSS_ApplyLighting(SCSS_Input c, VertexOutput i, float4 texcoords)
 {
 	UNITY_LIGHT_ATTENUATION(attenuation, i, i.posWorld.xyz);
+
+	#if defined(SCSS_SCREEN_SHADOW_FILTER)
+	correctedScreenShadowsForMSAA(i._ShadowCoord, attenuation);
+	#endif
 
 	// Lighting parameters
 	SCSS_Light l = MainLight(i.posWorld.xyz);
@@ -427,17 +574,16 @@ float3 SCSS_ApplyLighting(SCSS_Input c, VertexOutput i, float4 texcoords)
 
 	#if defined(_METALLICGLOSSMAP)
 	// Perceptual roughness transformation. Without this, roughness handling is wrong.
-	float perceptualRoughness = SmoothnessToPerceptualRoughness(c.smoothness);
+	c.perceptualRoughness = SmoothnessToPerceptualRoughness(c.smoothness);
 	#else
 	// Disable DisneyDiffuse for cel specular.
-	float perceptualRoughness = 0;
 	#endif
 
 	// Generic lighting for matcaps/rimlighting. 
 	// Currently matcaps are applied to albedo, so they don't need lighting. 
 	float3 effectLighting = l.color;
 	#if defined(UNITY_PASS_FORWARDBASE)
-	effectLighting *= attenuation;
+	//effectLighting *= attenuation;
 	effectLighting += BetterSH9(half4(0.0,  0.0, 0.0, 1.0));
 	#endif
 
@@ -448,7 +594,7 @@ float3 SCSS_ApplyLighting(SCSS_Input c, VertexOutput i, float4 texcoords)
 		if (_UseMatcap == 1) matcapUV = getMatcapUVsOriented(c.normal, d.viewDir, float3(0, 1, 0));
 		if (_UseMatcap == 2) matcapUV = getMatcapUVsOriented(c.normal, d.viewDir, i.bitangentDir.xyz);
 
-		float4 _MatcapMask_var = MatcapMask(texcoords.xy);
+		float4 _MatcapMask_var = MatcapMask(i.uv0.xy);
 		c.albedo = applyMatcap(_Matcap1, matcapUV, c.albedo, 1.0, _Matcap1Blend, _Matcap1Strength * _MatcapMask_var.r);
 		c.albedo = applyMatcap(_Matcap2, matcapUV, c.albedo, 1.0, _Matcap2Blend, _Matcap2Strength * _MatcapMask_var.g);
 		c.albedo = applyMatcap(_Matcap3, matcapUV, c.albedo, 1.0, _Matcap3Blend, _Matcap3Strength * _MatcapMask_var.b);
@@ -456,71 +602,69 @@ float3 SCSS_ApplyLighting(SCSS_Input c, VertexOutput i, float4 texcoords)
 	}
 
 	float3 finalColor = 0; 
+
+	float fresnelLightMaskBase = LerpOneTo((d.NdotH), _UseFresnelLightMask);
+	float fresnelLightMask = 
+		saturate(pow(saturate( fresnelLightMaskBase), _FresnelLightMask));
+	float fresnelLightMaskInv = 
+		saturate(pow(saturate(-fresnelLightMaskBase), _FresnelLightMask));
 	
 	if (_UseFresnel == 1 && i.is_outline == 0) 
 	{
-		float sharpFresnel = sharpFresnelLight(d.rlPow4.y, c.rim);
+		float3 sharpFresnel = sharpenLighting(d.rlPow4.y * c.rim.width * fresnelLightMask, 
+			c.rim.power) * c.rim.tint * c.rim.alpha;
+		sharpFresnel += sharpenLighting(d.rlPow4.y * c.rim.invWidth * fresnelLightMaskInv,
+			c.rim.invPower) * c.rim.invTint * c.rim.invAlpha * _FresnelLightMask;
 		c.albedo += c.albedo * sharpFresnel;
 	}
 
 	if (_UseFresnel == 3 && i.is_outline == 0)
 	{
-		float sharpFresnel = sharpFresnelLight(d.rlPow4.y, c.rim);
+		float sharpFresnel = sharpenLighting(d.rlPow4.y*c.rim.width, c.rim.power)
+		 * c.rim.alpha;
 		c.occlusion += saturate(sharpFresnel);
 	}
 
 	if (_UseFresnel == 4 && i.is_outline == 0)
 	{
-		float sharpFresnel = sharpFresnelLight(d.rlPow4.y, c.rim);
-		c.albedo += c.albedo * sharpFresnel;
+		float3 sharpFresnel = sharpenLighting(d.rlPow4.y * c.rim.width * fresnelLightMask, 
+			c.rim.power);
 		c.occlusion += saturate(sharpFresnel);
+		sharpFresnel *= c.rim.tint * c.rim.alpha;
+		sharpFresnel += sharpenLighting(d.rlPow4.y * c.rim.invWidth * fresnelLightMaskInv,
+			c.rim.invPower) * c.rim.invTint * c.rim.invAlpha * _FresnelLightMask;
+		c.albedo += c.albedo * sharpFresnel;
 	}
 
 	#if defined(UNITY_PASS_FORWARDBASE)
-	finalColor = calcDiffuseBase(c.tonemap, c.occlusion, c.normal, 
-		perceptualRoughness, attenuation, c.softness, d, l);
+	finalColor = SCSS_ShadeBase(c, i, l, attenuation);
 	#endif
 
 	#if defined(UNITY_PASS_FORWARDADD)
-	finalColor = calcDiffuseAdd(c.tonemap, c.occlusion, 
-		perceptualRoughness, c.softness, d, l);
+	finalColor = SCSS_ShadeLight(c, i, l, attenuation);
 	#endif
 
 	// Proper cheap vertex lights. 
 	#if defined(VERTEXLIGHT_ON) && !defined(SCSS_UNIMPORTANT_LIGHTS_FRAGMENT)
-	finalColor += calcVertexLight(i.vertexLight, c.occlusion, c.tonemap, c.softness);
+	finalColor += c.albedo * calcVertexLight(i.vertexLight, c.occlusion, c.tone[0].col, c.softness);
 	#endif
 
 	if (_UseFresnel == 2 && i.is_outline == 0)
 	{
-		finalColor *= 1+sharpFresnelLight(d.rlPow4.y, c.rim);
+		float3 sharpFresnel = sharpenLighting(d.rlPow4.y * c.rim.width * fresnelLightMask, 
+			c.rim.power) * c.rim.tint * c.rim.alpha;
+		sharpFresnel += sharpenLighting(d.rlPow4.y * c.rim.invWidth * fresnelLightMaskInv,
+			c.rim.invPower) * c.rim.invTint * c.rim.invAlpha * _FresnelLightMask;
+		finalColor += effectLighting*sharpFresnel;
 	}
+
+	//float3 wrappedDiffuse = LightColour * saturate((dot(N, L) + w) / ((1 + w) * (1 + w)));
 
     // Workaround for scenes with HDR off blowing out in VRchat.
     #if !UNITY_HDR_ON && SCSS_CLAMP_IN_NON_HDR
         l.color = saturate(l.color);
     #endif
 
-	finalColor *= c.albedo; 
-
-	#if defined(_METALLICGLOSSMAP)
-	if (i.is_outline == 0)
-	{
-    	finalColor += calcSpecularBase(c, perceptualRoughness, attenuation, d, l, i);
-    };
-    #endif
-    #if defined(_SPECGLOSSMAP)
-    // In this mode, reflection probes aren't used normally, 
-    // so a fake light is determined for if one doesn't exist.
-    l.color = attenuation * l.color + GetSHLength();
-	l.dir = Unity_SafeNormalize(l.dir + (unity_SHAr.xyz + unity_SHAg.xyz + unity_SHAb.xyz) * _LightSkew.xyz);
-	d = initialiseLightParam(l, c.normal, i.posWorld.xyz);
-
-	if (i.is_outline == 0)
-	{
-    	finalColor += calcSpecularCel(c, perceptualRoughness, attenuation, d, l, i);
-    };
-    #endif
 
     // Apply full lighting to unimportant lights. This is cheaper than you might expect.
 	#if defined(UNITY_PASS_FORWARDBASE) && defined(VERTEXLIGHT_ON) && defined(SCSS_UNIMPORTANT_LIGHTS_FRAGMENT)
@@ -528,23 +672,7 @@ float3 SCSS_ApplyLighting(SCSS_Input c, VertexOutput i, float4 texcoords)
     	l.color = unity_LightColor[num].rgb;
     	l.dir = normalize(float3(unity_4LightPosX0[num], unity_4LightPosY0[num], unity_4LightPosZ0[num]) - i.posWorld.xyz);
 
-		SCSS_LightParam d = initialiseLightParam(l, c.normal, i.posWorld.xyz);
-
-    	finalColor += calcDiffuseAdd(c.tonemap, c.occlusion, perceptualRoughness, c.softness, d, l) * c.albedo * i.vertexLight[num];
-
-		//if (_SpecularType != 0 && i.is_outline == 0)
-		#if defined(_METALLICGLOSSMAP)
-		if (i.is_outline == 0)
-		{
-    	finalColor += calcSpecularAdd(c, perceptualRoughness, d, l, i) * i.vertexLight[num];
-    	}
-    	#endif
-	    #if defined(_SPECGLOSSMAP)
-		if (i.is_outline == 0)
-		{
-	    	finalColor += calcSpecularCel(c, perceptualRoughness, attenuation, d, l, i) * i.vertexLight[num];
-	    };
-	    #endif
+		finalColor += SCSS_ShadeLight(c, i, l, 1) *  i.vertexLight[num];
     };
 	#endif
 
@@ -552,12 +680,7 @@ float3 SCSS_ApplyLighting(SCSS_Input c, VertexOutput i, float4 texcoords)
 		finalColor *= attenuation;
 	#endif
 
-	if (_UseSubsurfaceScattering == 1 && i.is_outline == 0)
-	{
-	float3 thicknessMap_var = pow(Thickness(texcoords.xy), _ThicknessMapPower);
-	finalColor += c.albedo * getSubsurfaceScatteringLight(l, c.normal, d.viewDir,
-		attenuation, thicknessMap_var, c.tonemap);
-	};
+	finalColor *= _LightWrappingCompensationFactor;
 
 	#if defined(UNITY_PASS_FORWARDBASE)
 	float4 emissionDetail = EmissionDetail(texcoords.zw);
@@ -565,7 +688,7 @@ float3 SCSS_ApplyLighting(SCSS_Input c, VertexOutput i, float4 texcoords)
 	finalColor = max(0, finalColor - saturate((1-emissionDetail.w)- (1-c.emission)));
 	finalColor += emissionDetail.rgb * c.emission * _EmissionColor.rgb;
 
-	// Emissive rim. To restore masking behaviour, multiply by emissionMask.
+	// Emissive c.rim. To restore masking behaviour, multiply by emissionMask.
 	finalColor += _CustomFresnelColor.xyz * (pow(d.rlPow4.y, rcp(_CustomFresnelColor.w+0.0001)));
 	#endif
 

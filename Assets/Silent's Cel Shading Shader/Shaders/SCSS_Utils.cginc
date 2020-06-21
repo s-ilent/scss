@@ -7,6 +7,9 @@
 #endif
 #endif
 
+sampler2D_float _CameraDepthTexture;
+float4 _CameraDepthTexture_TexelSize;
+
 struct SCSS_Light
 {
     half3 color;
@@ -69,7 +72,7 @@ float intensity(float2 pixel) {
 }
 
 float rDither(float gray, float2 pos) {
-	#define steps 8
+	#define steps 4
 	// pos is screen pixel position in 0-res range
     // Calculated noised gray value
     float noised = (2./steps) * T(intensity(float2(pos.xy))) + gray - (1./steps);
@@ -79,6 +82,24 @@ float rDither(float gray, float2 pos) {
 }
 
 // "R2" dithering -- end
+
+inline void applyAlphaClip(inout float alpha, float cutoff, float2 pos, bool sharpen)
+{
+    pos += _SinTime.x%4;
+    #if defined(_ALPHATEST_ON)
+    // Switch between dithered alpha and sharp-edge alpha.
+        if (!sharpen) {
+            float mask = (T(intensity(pos)));
+            alpha = alpha*alpha*alpha*alpha;
+            alpha = saturate(alpha + alpha * mask); 
+        }
+        else {
+            alpha = ((alpha - cutoff) / max(fwidth(alpha), 0.0001) + 0.5);
+        }
+    // If 0, remove now.
+    clip (alpha);
+    #endif
+}
 
 inline float3 BlendNormalsPD(float3 n1, float3 n2) {
 	return normalize(float3(n1.xy*n2.z + n2.xy*n1.z, n1.z*n2.z));
@@ -172,6 +193,62 @@ float GeometricNormalFiltering(float perceptualSmoothness, float3 geometricNorma
 {
     float variance = GeometricNormalVariance(geometricNormalWS, screenSpaceVariance);
     return NormalFiltering(perceptualSmoothness, variance, threshold);
+}
+
+// bgolus's method for "fixing" screen space directional shadows and anti-aliasing
+// https://forum.unity.com/threads/fixing-screen-space-directional-shadows-and-anti-aliasing.379902/
+// Searches the depth buffer for the depth closest to the current fragment to sample the shadow from.
+// This reduces the visible aliasing. 
+
+void correctedScreenShadowsForMSAA(float4 _ShadowCoord, inout float shadow)
+{
+    #ifdef SHADOWS_SCREEN
+
+    float2 screenUV = _ShadowCoord.xy / _ShadowCoord.w;
+    shadow = tex2D(_ShadowMapTexture, screenUV).r;
+
+    float fragDepth = _ShadowCoord.z / _ShadowCoord.w;
+    float depth_raw = tex2D(_CameraDepthTexture, screenUV).r;
+
+    float depthDiff = abs(fragDepth - depth_raw);
+    float diffTest = 1.0 / 100000.0;
+
+    if (depthDiff > diffTest)
+    {
+        float2 texelSize = _CameraDepthTexture_TexelSize.xy;
+        float4 offsetDepths = 0;
+
+        float2 uvOffsets[5] = {
+            float2(1.0, 0.0) * texelSize,
+            float2(-1.0, 0.0) * texelSize,
+            float2(0.0, 1.0) * texelSize,
+            float2(0.0, -1.0) * texelSize,
+            float2(0.0, 0.0)
+        };
+
+        offsetDepths.x = tex2D(_CameraDepthTexture, screenUV + uvOffsets[0]).r;
+        offsetDepths.y = tex2D(_CameraDepthTexture, screenUV + uvOffsets[1]).r;
+        offsetDepths.z = tex2D(_CameraDepthTexture, screenUV + uvOffsets[2]).r;
+        offsetDepths.w = tex2D(_CameraDepthTexture, screenUV + uvOffsets[3]).r;
+
+        float4 offsetDiffs = abs(fragDepth - offsetDepths);
+
+        float diffs[4] = {offsetDiffs.x, offsetDiffs.y, offsetDiffs.z, offsetDiffs.w};
+
+        int lowest = 4;
+        float tempDiff = depthDiff;
+        for (int i=0; i<4; i++)
+        {
+            if(diffs[i] < tempDiff)
+            {
+                tempDiff = diffs[i];
+                lowest = i;
+            }
+        }
+
+        shadow = tex2D(_ShadowMapTexture, screenUV + uvOffsets[lowest]).r;
+    }
+    #endif //SHADOWS_SCREEN
 }
 
 // RCP SQRT
@@ -344,6 +421,29 @@ half2 getMatcapUVsOriented(float3 normal, float3 viewDir, float3 upDir)
 float3 applyMatcap(sampler2D src, half2 matcapUV, float3 dst, float3 light, int blendMode, float blendStrength)
 {
     return applyBlendMode(blendMode, dst, tex2D(src, matcapUV) * light, blendStrength);
+}
+
+// Fresnel/stylish lighting helpers
+
+float lerpstep( float a, float b, float t)
+{
+    return saturate( ( t - a ) / ( b - a ) );
+}
+
+float sharpenLighting (float inLight, float softness)
+{
+    float2 lightStep = 0.5 + float2(-1, 1) * fwidth(inLight);
+    lightStep = lerp(float2(0.0, 1.0), lightStep, 1-softness);
+    inLight = lerpstep(lightStep.x, lightStep.y, inLight);
+    return inLight;
+}
+
+float simpleSharpen (float x, float width, float mid)
+{
+    width = max(width, fwidth(x));
+    x = lerpstep(mid-width, mid, x);
+
+    return x;
 }
 
 #endif // SCSS_UTILS_INCLUDED

@@ -1,4 +1,4 @@
-Shader "Silent's Cel Shading/☓ No Outline/Transparent"
+Shader "Hidden/Silent's Cel Shading/Old/☓ No Outline/Transparent"
 {
 	Properties
 	{
@@ -76,7 +76,7 @@ Shader "Silent's Cel Shading/☓ No Outline/Transparent"
 		[Enum(UV0,0,UV1,1)]_UVSec ("UV Set Secondary", Float) = 0
 		[Space]
 		[Header(Subsurface Scattering)]
-		[Toggle(_)]_UseSubsurfaceScattering ("Use Subsurface Scattering", Float) = 0.0
+		[Toggle(_SUNDISK_NONE)]_UseSubsurfaceScattering ("Use Subsurface Scattering", Float) = 0.0
 		_ThicknessMap("Thickness Map", 2D) = "black" {}
 		[Toggle(_)]_ThicknessMapInvert("Invert Thickness", Float) = 0.0
 		_ThicknessMapPower ("Thickness Map Power", Range(0.01, 10)) = 1
@@ -94,6 +94,8 @@ Shader "Silent's Cel Shading/☓ No Outline/Transparent"
 		[Header(System Lighting)]
 		[Enum(LightingCalculationType)] _LightingCalculationType ("Lighting Calculation Type", Float) = 0.0
 		_LightSkew ("Light Skew", Vector) = (1, 0.1, 1, 0)
+        _DiffuseGeomShadowFactor ("Diffuse Geometric Shadowing Factor", Range(0, 1)) = 1
+        _LightWrappingCompensationFactor("Light Wrapping Compensation Factor", Range(0.5, 1)) = 0.8
 		[Space]
 		[Header(System Internal)]
 		[ToggleOff(_SPECULARHIGHLIGHTS_OFF)]_SpecularHighlights ("Specular Highlights", Float) = 1.0
@@ -148,94 +150,10 @@ Shader "Silent's Cel Shading/☓ No Outline/Transparent"
             ZFail [_StencilZFail]
         }
 
-		Pass
-		{
-
-			Name "FORWARD"
-			Tags { "LightMode" = "ForwardBase" }
-
-			CGPROGRAM
-
-			#define UNITY_PASS_FORWARDBASE
-			#pragma multi_compile _ VERTEXLIGHT_ON
-			#pragma multi_compile ___ UNITY_HDR_ON
-
-			#pragma multi_compile_fwdbase nolightmap 
-			#pragma multi_compile_fog
-
-			#pragma shader_feature _ _ALPHATEST_ON _ALPHABLEND_ON _ALPHAPREMULTIPLY_ON
-			#pragma shader_feature ___ _DETAIL_MULX2
-			#pragma shader_feature ___ _METALLICGLOSSMAP _SPECGLOSSMAP
-			#pragma shader_feature _ _SMOOTHNESS_TEXTURE_ALBEDO_CHANNEL_A
-			#pragma shader_feature _ _SPECULARHIGHLIGHTS_OFF
-			#pragma shader_feature _ _GLOSSYREFLECTIONS_OFF
-
-			#include "SCSS_Core.cginc"
-
-			#pragma vertex vert_nogeom
-			#pragma fragment frag
-
-			#include "SCSS_Forward.cginc"
-
-			ENDCG
-		}
-
-
-		Pass
-		{
-			Name "FORWARD_DELTA"
-			Tags { "LightMode" = "ForwardAdd" }
-			Blend [_SrcBlend] One
-
-			CGPROGRAM
-
-			#define UNITY_PASS_FORWARDADD
-
-			#pragma multi_compile_fwdadd nolightmap 
-			#pragma multi_compile_fog
-
-			#pragma shader_feature _ _ALPHATEST_ON _ALPHABLEND_ON _ALPHAPREMULTIPLY_ON
-			#pragma shader_feature ___ _DETAIL_MULX2
-			#pragma shader_feature ___ _METALLICGLOSSMAP _SPECGLOSSMAP
-			#pragma shader_feature _ _SMOOTHNESS_TEXTURE_ALBEDO_CHANNEL_A
-			#pragma shader_feature _ _SPECULARHIGHLIGHTS_OFF
-			#pragma shader_feature _ _GLOSSYREFLECTIONS_OFF
-
-			#include "SCSS_Core.cginc"
-
-			#pragma vertex vert_nogeom
-			#pragma fragment frag
-
-			#include "SCSS_Forward.cginc"
-
-			ENDCG
-		}
-
-		Pass
-		{
-			Name "SHADOW_CASTER" 
-			Tags{ "LightMode" = "ShadowCaster" }
-
-            Blend[_SrcBlend][_DstBlend]
-            BlendOp[_BlendOp]
-            ZTest[_ZTest]
-            ZWrite[_ZWrite]
-            Cull[_CullMode]
-            ColorMask[_ColorWriteMask]
-
-			CGPROGRAM
-			#define UNITY_PASS_SHADOWCASTER
-			
-			#pragma multi_compile_shadowcaster
-
-			#pragma shader_feature _ _ALPHATEST_ON _ALPHABLEND_ON _ALPHAPREMULTIPLY_ON
-
-			#include "SCSS_Shadows.cginc"
-
-			#pragma vertex vertShadowCaster
-			#pragma fragment fragShadowCaster
-			ENDCG
-		}
+		UsePass "Silent's Cel Shading/Lightramp/FORWARD"
+		UsePass "Silent's Cel Shading/Lightramp/FORWARD_DELTA"
+		UsePass "Silent's Cel Shading/Lightramp/SHADOW_CASTER"
+		
 	}
 	FallBack "Diffuse"
 	CustomEditor "SilentCelShading.Unity.Inspector"
