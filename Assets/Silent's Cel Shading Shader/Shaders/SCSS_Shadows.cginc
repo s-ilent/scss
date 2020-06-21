@@ -86,11 +86,8 @@ half4 fragShadowCaster(
     #if defined(UNITY_STANDARD_USE_SHADOW_UVS)
         half alpha = tex2D(_MainTex, i.tex).a * _Color.a;
 
-        #if defined(DISSOLVING)
-        fixed3 baseWorldPos = unity_ObjectToWorld._m03_m13_m23;
-        const float scale = length(float3(unity_ObjectToWorld[0].x, unity_ObjectToWorld[1].x, unity_ObjectToWorld[2].x));
-        float closeDist = distance(_WorldSpaceCameraPos, baseWorldPos);
-        alpha *= saturate((3*scale)-closeDist);
+        #if defined(ALPHAFUNCTION)
+        alphaFunction(alpha);
         #endif
 
         #if defined(_ALPHATEST_ON)
@@ -99,6 +96,7 @@ half4 fragShadowCaster(
             mask = saturate(_Cutoff + _Cutoff*mask);
             clip (alpha - mask);
         #endif
+        
         #if defined(_ALPHABLEND_ON) || defined(_ALPHAPREMULTIPLY_ON)
             #if defined(UNITY_STANDARD_USE_DITHER_MASK)
             // Use dither mask for alpha blended shadows, based on pixel position xy

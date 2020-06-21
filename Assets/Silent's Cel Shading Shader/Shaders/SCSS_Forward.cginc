@@ -30,6 +30,10 @@ v2g vert(appdata_full v) {
 		o.extraData.x = v.color.a;
 	}
 
+	#if defined(SCSS_USE_OUTLINE_TEXTURE)
+	o.extraData.x *= OutlineMask(v.texcoord.xy);
+	#endif
+
 	o.extraData.x *= _outline_width * .01; // Apply outline width and convert to cm
 	
 	// Scale outlines relative to the distance from the camera. Outlines close up look ugly in VR because
@@ -87,7 +91,7 @@ void geom(triangle v2g IN[3], inout TriangleStream<VertexOutput> tristream)
 
 		// Pass-through the vertex light information.
 		o.vertexLight = IN[i].vertexLight;
-		o.color = fixed4( _outline_color.r, _outline_color.g, _outline_color.b, 1)*IN[i].color;
+		o.color = IN[i].color;
 		o.extraData = IN[i].extraData;
 
 		UNITY_TRANSFER_INSTANCE_ID(IN[i], o);
@@ -194,7 +198,19 @@ float4 frag(VertexOutput i, uint facing : SV_IsFrontFace) : SV_Target
 	}
 	if (i.is_outline && !facing) discard;
 
+	if (_UseInteriorOutline)
+	{
+	    i.is_outline = max(i.is_outline, 1-innerOutline(i));
+	}
+	
+    float outlineDarken = 1-i.is_outline;
+
 	float4 texcoords = TexCoords(i);
+
+	// Ideally, we should pass all input to lighting functions through the 
+	// material parameter struct. But there are some things that are
+	// optional. Review this at a later date...
+	i.uv0 = texcoords; 
 
 	SCSS_Input c = (SCSS_Input) 0;
 
@@ -226,42 +242,40 @@ float4 frag(VertexOutput i, uint facing : SV_IsFrontFace) : SV_Target
 	c.emission = Emission(texcoords.xy);
 
 	// Vertex colour application. 
-	c.albedo = _VertexColorType? c.albedo : c.albedo * i.color.rgb;
+	switch (_VertexColorType)
+	{
+		case 2: 
+		case 0: c.albedo = c.albedo * i.color.rgb; break;
+		case 1: c.albedo = lerp(c.albedo, i.color.rgb, i.is_outline); break;
+	}
+	
 	c.softness = i.extraData.g;
 
-	if(i.is_outline && _OutlineMode == 2) 
+	c.albedo = lerp(c.albedo, c.albedo * _outline_color.rgb, i.is_outline);
+	if (_OutlineMode == 2) 
 	{
-		c.albedo = i.color.rgb; 
-	}
-	if (i.is_outline) 
-	{
-		c.albedo *= i.color.rgb;
+		c.albedo = lerp(c.albedo, _outline_color.rgb, i.is_outline);
 	}
 
 	c.alpha = Alpha(texcoords.xy);
 
-    #if defined(DISSOLVING)
-    fixed3 baseWorldPos = unity_ObjectToWorld._m03_m13_m23;
-    const float scale = length(float3(unity_ObjectToWorld[0].x, unity_ObjectToWorld[1].x, unity_ObjectToWorld[2].x));
-    float closeDist = distance(_WorldSpaceCameraPos, baseWorldPos);
-    c.alpha *= saturate((3*scale)-closeDist);
+	c.alpha *= UNITY_SAMPLE_TEX2D_SAMPLER (_ColorMask, _MainTex, texcoords.xy).r;
+
+    #if defined(ALPHAFUNCTION)
+    alphaFunction(c.alpha);
 	#endif
 	
-	#if defined(_ALPHATEST_ON)
-	// Switch between dithered alpha and sharp-edge alpha.
-		if (_AlphaSharp  == 0) {
-			float mask = (T(intensity(i.pos.xy + _SinTime.x%4)));
-			c.alpha *= c.alpha;
-			c.alpha = saturate(c.alpha + c.alpha * mask); 
-			clip (c.alpha);
-		}
-		if (_AlphaSharp  == 1) {
-			c.alpha = ((c.alpha - _Cutoff) / max(fwidth(c.alpha), 0.0001) + 0.5);
-			clip (c.alpha);
-		}
+	applyAlphaClip(c.alpha, _Cutoff, i.pos.xy, _AlphaSharp);
+
+	#if !defined(SCSS_CROSSTONE)
+	c.tone[0] = Tonemap(texcoords.xy, c.occlusion);
 	#endif
 
-	c.tonemap = Tonemap(texcoords.xy, c.occlusion);
+	#if defined(SCSS_CROSSTONE)
+	c.tone[0] = Tonemap1st(texcoords.xy);
+	c.tone[1] = Tonemap2nd(texcoords.xy);
+	c.occlusion = ShadingGradeMap(texcoords.xy);
+	#endif
 
 	// Specular variable setup
 
@@ -271,7 +285,7 @@ float4 frag(VertexOutput i, uint facing : SV_IsFrontFace) : SV_Target
 	#endif 
 
 	//if (_SpecularType != 0 )
-	#if (defined(_METALLICGLOSSMAP) || defined(_SPECGLOSSMAP))
+	#if defined(_SPECULAR)
 	{
 		half4 specGloss = SpecularGloss(texcoords, detailMask);
 
@@ -279,11 +293,8 @@ float4 frag(VertexOutput i, uint facing : SV_IsFrontFace) : SV_Target
 		c.smoothness = specGloss.a;
 
 		// Because specular behaves poorly on backfaces, disable specular on outlines. 
-		if(i.is_outline) 
-		{
-			c.specColor = 0;
-			c.smoothness = 0;
-		}
+		c.specColor  *= outlineDarken;
+		c.smoothness *= outlineDarken;
 
 		// Specular energy converservation. From EnergyConservationBetweenDiffuseAndSpecular in UnityStandardUtils.cginc
 		c.oneMinusReflectivity = 1 - SpecularStrength(c.specColor); 
@@ -298,7 +309,8 @@ float4 frag(VertexOutput i, uint facing : SV_IsFrontFace) : SV_Target
 		if (_UseEnergyConservation == 1)
 		{
 			c.albedo.xyz = c.albedo.xyz * (c.oneMinusReflectivity); 
-			c.tonemap = c.tonemap * (c.oneMinusReflectivity); 
+			//c.tone[0].col = c.tone[0].col * (c.oneMinusReflectivity); 
+//Astonemapismultipliedagainstalbedo,isthisnecessary?
 		}
 
 	    i.tangentDir = ShiftTangent(normalize(i.tangentDir), c.normal, c.smoothness);
@@ -318,6 +330,7 @@ float4 frag(VertexOutput i, uint facing : SV_IsFrontFace) : SV_Target
     // Rim lighting parameters. 
 	c.rim = initialiseRimParam();
 	c.rim.power *= RimMask(texcoords.xy);
+	c.rim.tint *= outlineDarken;
 
 	// Lighting handling
 	float3 finalColor = SCSS_ApplyLighting(c, i, texcoords);

@@ -8,23 +8,62 @@
     #define _DETAIL 1
 #endif
 
+#if (_METALLICGLOSSMAP || _SPECGLOSSMAP)
+	#define _SPECULAR 1
+#endif
+
+#if (_SUNDISK_NONE)
+	#define _SUBSURFACE 1
+#endif
+
 //---------------------------------------
 
 UNITY_DECLARE_TEX2D(_MainTex); uniform half4 _MainTex_ST; uniform half4 _MainTex_TexelSize;
-UNITY_DECLARE_TEX2D(_DetailAlbedoMap); uniform half4 _DetailAlbedoMap_ST; uniform half4 _DetailAlbedoMap_TexelSize;
 UNITY_DECLARE_TEX2D_NOSAMPLER(_ColorMask); uniform half4 _ColorMask_ST;
 UNITY_DECLARE_TEX2D_NOSAMPLER(_BumpMap); uniform half4 _BumpMap_ST;
-UNITY_DECLARE_TEX2D_NOSAMPLER(_DetailNormalMap); uniform half4 _DetailNormalMap_ST;
 UNITY_DECLARE_TEX2D_NOSAMPLER(_EmissionMap); uniform half4 _EmissionMap_ST;
+
+#if defined(_DETAIL)
+UNITY_DECLARE_TEX2D(_DetailAlbedoMap); uniform half4 _DetailAlbedoMap_ST; uniform half4 _DetailAlbedoMap_TexelSize;
+UNITY_DECLARE_TEX2D_NOSAMPLER(_DetailNormalMap); uniform half4 _DetailNormalMap_ST;
 UNITY_DECLARE_TEX2D_NOSAMPLER(_DetailEmissionMap); uniform half4 _DetailEmissionMap_ST;
-UNITY_DECLARE_TEX2D_NOSAMPLER(_SpecGlossMap); uniform half4 _SpecGlossMap_ST;
-UNITY_DECLARE_TEX2D_NOSAMPLER(_ShadowMask); uniform half4 _ShadowMask_ST;
-UNITY_DECLARE_TEX2D_NOSAMPLER(_MatcapMask); uniform half4 _MatcapMask_ST; 
 UNITY_DECLARE_TEX2D_NOSAMPLER(_SpecularDetailMask); uniform half4 _SpecularDetailMask_ST;
+uniform float _DetailAlbedoMapScale;
+uniform float _DetailNormalMapScale;
+uniform float _SpecularDetailStrength;
+#endif
+
+#if defined(_SPECULAR)
+//uniform float4 _SpecColor; // Defined elsewhere
+UNITY_DECLARE_TEX2D_NOSAMPLER(_SpecGlossMap); uniform half4 _SpecGlossMap_ST;
+uniform float _UseMetallic;
+uniform float _SpecularType;
+uniform float _Smoothness;
+uniform float _UseEnergyConservation;
+uniform float _Anisotropy;
+uniform float _CelSpecularSoftness;
+#else
+#define _SpecularType 0
+#define _UseEnergyConservation 0
+uniform float _Anisotropy; // Can not be removed yet.
+#endif
+
+UNITY_DECLARE_TEX2D_NOSAMPLER(_ShadowMask); uniform half4 _ShadowMask_ST;
 UNITY_DECLARE_TEX2D_NOSAMPLER(_ThicknessMap); uniform half4 _ThicknessMap_ST;
 
-uniform sampler2D _Ramp; uniform half4 _Ramp_ST;
+UNITY_DECLARE_TEX2D_NOSAMPLER(_1st_ShadeMap);
+UNITY_DECLARE_TEX2D_NOSAMPLER(_2nd_ShadeMap);
+UNITY_DECLARE_TEX2D_NOSAMPLER(_ShadingGradeMap);
 
+uniform sampler2D _Ramp; uniform half4 _Ramp_ST;
+uniform float _LightRampType;
+uniform float _Shadow;
+uniform float4 _ShadowMaskColor;
+uniform float _ShadowMaskType;
+uniform float _ShadowLift;
+uniform float _IndirectLightingBoost;
+
+UNITY_DECLARE_TEX2D_NOSAMPLER(_MatcapMask); uniform half4 _MatcapMask_ST; 
 uniform sampler2D _Matcap1; uniform half4 _Matcap1_ST; 
 uniform sampler2D _Matcap2; uniform half4 _Matcap2_ST; 
 uniform sampler2D _Matcap3; uniform half4 _Matcap3_ST; 
@@ -36,31 +75,23 @@ uniform float _Cutoff;
 uniform float _AlphaSharp;
 uniform float _UVSec;
 
-uniform float _DetailAlbedoMapScale;
-uniform float _DetailNormalMapScale;
-uniform float _SpecularDetailStrength;
-
-uniform float _LightRampType;
-
 uniform float4 _EmissionColor;
 uniform float4 _EmissionDetailParams;
-
-uniform float _UseMetallic;
-uniform float _SpecularType;
-uniform float _Smoothness;
-uniform float _Anisotropy;
-uniform float _UseEnergyConservation;
-
-uniform float _Shadow;
-uniform float4 _ShadowMaskColor;
-uniform float _ShadowMaskType;
-uniform float _ShadowLift;
-uniform float _IndirectLightingBoost;
+// For later use
+uniform float _EmissionScrollX;
+uniform float _EmissionScrollY;
+uniform float _EmissionPhaseSpeed;
+uniform float _EmissionPhaseWidth;
 
 uniform float _UseFresnel;
+uniform float _UseFresnelLightMask;
+uniform float4 _FresnelTint;
 uniform float _FresnelWidth;
 uniform float _FresnelStrength;
-uniform float4 _FresnelTint;
+uniform float _FresnelLightMask;
+uniform float4 _FresnelTintInv;
+uniform float _FresnelWidthInv;
+uniform float _FresnelStrengthInv;
 
 uniform float4 _CustomFresnelColor;
 
@@ -80,6 +111,7 @@ uniform float _Matcap2Blend;
 uniform float _Matcap3Blend;
 uniform float _Matcap4Blend;
 
+#if defined(_SUBSURFACE)
 uniform float _UseSubsurfaceScattering;
 uniform float _ThicknessMapPower;
 uniform float _ThicknessMapInvert;
@@ -88,10 +120,27 @@ uniform float _SSSIntensity;
 uniform float _SSSPow;
 uniform float _SSSDist;
 uniform float _SSSAmbient;
+#endif
 
 uniform float4 _LightSkew;
 uniform float _PixelSampleMode;
 uniform float _VertexColorType;
+
+// CrossTone
+uniform float4 _1st_ShadeColor;
+uniform float4 _2nd_ShadeColor;
+uniform float _1st_ShadeColor_Step;
+uniform float _1st_ShadeColor_Feather;
+uniform float _2nd_ShadeColor_Step;
+uniform float _2nd_ShadeColor_Feather;
+
+uniform float _DiffuseGeomShadowFactor;
+uniform float _LightWrappingCompensationFactor;
+
+uniform float _UseInteriorOutline;
+uniform float _InteriorOutlineWidth;
+
+uniform sampler2D _OutlineMask; uniform half4 _OutlineMask_ST; 
 
 //-------------------------------------------------------------------------------------
 // Input functions
@@ -132,7 +181,7 @@ struct VertexOutput
 	float3 bitangentDir : TEXCOORD5;
 	half4 vertexLight : TEXCOORD6;
 	half4 extraData : TEXCOORD7;
-	bool is_outline : IS_OUTLINE;
+	float is_outline : IS_OUTLINE;
 	UNITY_SHADOW_COORDS(8)
 	UNITY_FOG_COORDS(9)
 };
@@ -143,19 +192,35 @@ struct SCSS_RimLightInput
 	half power;
 	half3 tint;
 	half alpha;
+
+	half invWidth;
+	half invPower;
+	half3 invTint;
+	half invAlpha;
+};
+
+// Contains tonemap colour and shade offset.
+struct SCSS_TonemapInput
+{
+	half3 col; 
+	half bias;
 };
 
 struct SCSS_Input 
 {
-	half3 albedo, tonemap, specColor;
-	float3 normal;
+	half3 albedo;
 	half alpha;
-	float oneMinusReflectivity, smoothness;
+	float3 normal;
+
 	half occlusion;
+
+	half3 specColor;
+	float oneMinusReflectivity, smoothness, perceptualRoughness;
 	half softness;
 	half3 emission;
 
 	SCSS_RimLightInput rim;
+	SCSS_TonemapInput tone[2];
 };
 
 struct SCSS_LightParam
@@ -171,11 +236,23 @@ SCSS_LightParam initialiseLightParam (SCSS_Light l, float3 normal, float3 posWor
 	d.viewDir = normalize(_WorldSpaceCameraPos.xyz - posWorld.xyz);
 	d.halfDir = Unity_SafeNormalize (l.dir + d.viewDir);
 	d.reflDir = reflect(-d.viewDir, normal); // Calculate reflection vector
-	d.NdotL = saturate(dot(l.dir, normal)); // Calculate NdotL
-	d.NdotV = saturate(dot(d.viewDir,  normal)); // Calculate NdotV
-	d.LdotH = saturate(dot(l.dir, d.halfDir));
+	d.NdotL = (dot(l.dir, normal)); // Calculate NdotL
+	d.NdotV = (dot(d.viewDir,  normal)); // Calculate NdotV
+	d.LdotH = (dot(l.dir, d.halfDir));
 	d.NdotH = (dot(normal, d.halfDir)); // Saturate seems to cause artifacts
 	d.rlPow4 = Pow4(float2(dot(d.reflDir, l.dir), 1 - d.NdotV));  
+	return d;
+}
+
+// Allows saturate to be called on light params. 
+// Does not affect directions. Those are already normalized.
+// Only the required saturations will be left in code.
+SCSS_LightParam saturate (SCSS_LightParam d)
+{
+	d.NdotL = saturate(d.NdotL);
+	d.NdotV = saturate(d.NdotV);
+	d.LdotH = saturate(d.LdotH);
+	d.NdotH = saturate(d.NdotH);
 	return d;
 }
 
@@ -186,6 +263,11 @@ SCSS_RimLightInput initialiseRimParam()
 	rim.power = _FresnelStrength;
 	rim.tint = _FresnelTint.rgb;
 	rim.alpha = _FresnelTint.a;
+
+	rim.invWidth = _FresnelWidthInv;
+	rim.invPower = _FresnelStrengthInv;
+	rim.invTint = _FresnelTintInv.rgb;
+	rim.invAlpha = _FresnelTintInv.a;
 	return rim;
 }
 
@@ -196,10 +278,23 @@ float4 TexCoords(VertexOutput v)
 	texcoord.xy = _PixelSampleMode? 
 		sharpSample(_MainTex_TexelSize * _MainTex_ST.xyxy, texcoord.xy) : texcoord.xy;
 
+#if _DETAIL 
 	texcoord.zw = TRANSFORM_TEX(((_UVSec == 0) ? v.uv0 : v.uv1), _DetailAlbedoMap);
 	texcoord.zw = _PixelSampleMode? 
 		sharpSample(_DetailAlbedoMap_TexelSize * _DetailAlbedoMap_ST.xyxy, texcoord.zw) : texcoord.zw;
+#else
+	texcoord.zw = texcoord.xy;
+#endif
     return texcoord;
+}
+
+#define UNITY_SAMPLE_TEX2D_SAMPLER_LOD(tex,samplertex,coord,lod) tex.Sample (sampler##samplertex,coord,lod)
+#define UNITY_SAMPLE_TEX2D_LOD(tex,coord,lod) tex.Sample (sampler##tex,coord,lod)
+
+half OutlineMask(float2 uv)
+{
+    //return UNITY_SAMPLE_TEX2D_SAMPLER (_ColorMask, _MainTex, uv).r;
+    return tex2Dlod(_OutlineMask, float4(uv, 0, 0)).r;
 }
 
 half ColorMask(float2 uv)
@@ -261,20 +356,21 @@ half Alpha(float2 uv)
 half4 SpecularGloss(float4 texcoords, half mask)
 {
     half4 sg;
-#if 1 //def _SPECGLOSSMAP
+#if _SPECULAR
     #ifdef _SMOOTHNESS_TEXTURE_ALBEDO_CHANNEL_A
         sg.rgb = UNITY_SAMPLE_TEX2D_SAMPLER(_SpecGlossMap, _MainTex, texcoords.xy).rgb;
         sg.a = UNITY_SAMPLE_TEX2D(_MainTex, texcoords.xy).a;
     #else
         sg = UNITY_SAMPLE_TEX2D_SAMPLER(_SpecGlossMap, _MainTex, texcoords.xy);
     #endif
+    sg.rgb *= _SpecColor;
     sg.a *= _Smoothness; // _GlossMapScale is what Standard uses for this
 #else
-    sg.rgb = _SpecColor.rgb;
+    sg = _SpecColor;
     #ifdef _SMOOTHNESS_TEXTURE_ALBEDO_CHANNEL_A
         sg.a = UNITY_SAMPLE_TEX2D(_MainTex, texcoords.xy).a * _Smoothness; // _GlossMapScale is what Standard uses for this
     #else
-        sg.a = _Smoothness; // _Glossiness is what Standard uses for this
+    //    sg.a = _Smoothness; // _Glossiness is what Standard uses for this
     #endif
 #endif
 
@@ -296,7 +392,10 @@ half4 EmissionDetail(float2 uv)
 #if _DETAIL 
 	uv += _EmissionDetailParams.xy * _Time.y;
 	half4 ed = UNITY_SAMPLE_TEX2D_SAMPLER(_DetailEmissionMap, _DetailAlbedoMap, uv);
-	ed.rgb = _EmissionDetailParams.z? (sin(ed.rgb * _EmissionDetailParams.w + _Time.y * _EmissionDetailParams.z))+1 : ed.rgb;
+	ed.rgb = 
+	_EmissionDetailParams.z
+	? (sin(ed.rgb * _EmissionDetailParams.w + _Time.y * _EmissionDetailParams.z))+1 
+	: ed.rgb;
 	return ed;
 #else
 	return 1;
@@ -340,34 +439,71 @@ float3 AutoToneMapping(float3 color)
 	return color;
 }
 
-half3 Tonemap(float2 uv, inout float occlusion)
+SCSS_TonemapInput Tonemap(float2 uv, inout float occlusion)
 {
+	SCSS_TonemapInput t = (SCSS_TonemapInput)0;
 	float4 _ShadowMask_var = UNITY_SAMPLE_TEX2D_SAMPLER(_ShadowMask, _MainTex, uv.xy);
-
-	float3 tonemap;
 
 	// Occlusion
 	if (_ShadowMaskType == 0) 
 	{
 		// RGB will boost shadow range. Raising _Shadow reduces its influence.
 		// Alpha will boost light range. Raising _Shadow reduces its influence.
-		tonemap = saturate(_IndirectLightingBoost+1-_ShadowMask_var.a) * _ShadowMaskColor.rgb;
-		occlusion = _ShadowMaskColor.a*_ShadowMask_var.r;
+		t.col = saturate(_IndirectLightingBoost+1-_ShadowMask_var.a) * _ShadowMaskColor.rgb;
+		t.bias = _ShadowMaskColor.a*_ShadowMask_var.r;
 	}
 	// Tone
 	if (_ShadowMaskType == 1) 
 	{
-		tonemap = saturate(_ShadowMask_var+_IndirectLightingBoost) * _ShadowMaskColor.rgb;
-		occlusion = _ShadowMaskColor.a*_ShadowMask_var.a;
+		t.col = saturate(_ShadowMask_var+_IndirectLightingBoost) * _ShadowMaskColor.rgb;
+		t.bias = _ShadowMaskColor.a*_ShadowMask_var.a;
 	}
 	// Auto-Tone
 	if (_ShadowMaskType == 2) 
 	{
 		float3 albedo = Albedo(uv.xyxy);
-		tonemap = saturate(AutoToneMapping(albedo)+_IndirectLightingBoost) * _ShadowMaskColor.rgb;
-		occlusion = _ShadowMaskColor.a*_ShadowMask_var.r;
+		t.col = saturate(AutoToneMapping(albedo)+_IndirectLightingBoost) * _ShadowMaskColor.rgb;
+		t.bias = _ShadowMaskColor.a*_ShadowMask_var.r;
 	}
-	return tonemap;
+	occlusion = t.bias;
+	return t;
+}
+
+// Tonemaps contain tone in RGB, occlusion in A.
+// Midpoint/width is handled in the application function.
+SCSS_TonemapInput Tonemap1st (float2 uv)
+{
+	float4 tonemap = UNITY_SAMPLE_TEX2D_SAMPLER(_1st_ShadeMap, _MainTex, uv.xy);
+	tonemap.rgb = tonemap * _1st_ShadeColor;
+	SCSS_TonemapInput t = (SCSS_TonemapInput)1;
+	t.col = tonemap.rgb;
+	t.bias = tonemap.a;
+	return t;
+}
+SCSS_TonemapInput Tonemap2nd (float2 uv)
+{
+	float4 tonemap = UNITY_SAMPLE_TEX2D_SAMPLER(_2nd_ShadeMap, _MainTex, uv.xy);
+	tonemap.rgb *= _2nd_ShadeColor;
+	SCSS_TonemapInput t = (SCSS_TonemapInput)1;
+	t.col = tonemap.rgb;
+	t.bias = tonemap.a;
+	return t;
+}
+
+float ShadingGradeMap (float2 uv)
+{
+	float4 tonemap = UNITY_SAMPLE_TEX2D_SAMPLER(_ShadingGradeMap, _MainTex, uv.xy);
+	return tonemap.r;
+}
+
+float innerOutline (VertexOutput i)
+{
+	// The compiler should merge this with the later calls.
+	// Use the vertex normals for this to avoid artifacts.
+	SCSS_LightParam d = initialiseLightParam((SCSS_Light)0, i.normalDir, i.posWorld.xyz);
+	float baseRim = d.NdotV;
+	baseRim = simpleSharpen(baseRim, 0, _InteriorOutlineWidth * OutlineMask(i.uv0.xy));
+	return baseRim;
 }
 
 #endif // SCSS_INPUT_INCLUDED
