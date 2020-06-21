@@ -1,12 +1,13 @@
 # Silent's Cel Shading Shaders
-Shaders for Unity for cel shading, originally based off CubedParadox's Flat Lit Toon, now featuring tons of improvements and handy features.
+Shaders for Unity for cel shading, originally based off CubedParadox's Flat Lit Toon, now remade and featuring tons of improvements and handy features.
 # [Want to know how to use this shader? Here's the manual!](https://gitlab.com/s-ilent/SCSS/wikis/Manual/Setting-Overview)
 # [Can't find the Download link? Click here!](https://gitlab.com/s-ilent/SCSS/-/archive/master/SCSS-master.zip)
+* After downloading, install the shader by moving the contents of the Assets folder into your project's Assets folder.
 ## Features include:
 * **Customisable lighting**
 
-  Allows the use of light ramp textures that are integrated seamlessly into lighting. Even in realtime shadows, the ramp system applies correctly. 
-  In addition, a shadow tone map system is integrated, which allows for true anime-style material shade colouring and light bias. 
+  A shadow tone map system is integrated, which allows for true anime-style material shade colouring and light bias. 
+  Provides a light ramp system that are integrated seamlessly into lighting. 
 
 * **NPR**
 
@@ -27,9 +28,13 @@ Shaders for Unity for cel shading, originally based off CubedParadox's Flat Lit 
 
   Many advanced options for blend mode and more. Provides support for using premutiplied transparency,   which allows for glossy transparent objects that naturally fit into their surroundings.
 
-<div style="width: 5em">![Too Much Preview](https://cdn.discordapp.com/attachments/414634326995763201/694118872110071880/screen_10328x5640_2020-03-30_19-58-06.png.jpg)</div>
+<div style="width: 5em">
+![Too Much Preview](https://cdn.discordapp.com/attachments/414634326995763201/694118872110071880/screen_10328x5640_2020-03-30_19-58-06.png.jpg)
+</div>
 
-<div style="width: 5em">![Too Much Preview](https://cdn.discordapp.com/attachments/429349528156504064/580024394995204096/Unity_2019-05-20_21-39-24.png)</div>
+<div style="width: 5em">
+![Too Much Preview](https://cdn.discordapp.com/attachments/429349528156504064/580024394995204096/Unity_2019-05-20_21-39-24.png)
+</div>
 
 # [For more details, please check the setting overview!](https://gitlab.com/s-ilent/SCSS/wikis/Manual/Setting-Overview)
 
