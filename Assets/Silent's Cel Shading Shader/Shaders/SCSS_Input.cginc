@@ -219,6 +219,8 @@ struct SCSS_Input
 	half softness;
 	half3 emission;
 
+	half3 thickness;
+
 	SCSS_RimLightInput rim;
 	SCSS_TonemapInput tone[2];
 };
@@ -319,7 +321,13 @@ half4 MatcapMask(float2 uv)
 
 half3 Thickness(float2 uv)
 {
-    return UNITY_SAMPLE_TEX2D_SAMPLER (_ThicknessMap, _MainTex, uv);
+#if defined(_SUBSURFACE)
+	return pow(
+		UNITY_SAMPLE_TEX2D_SAMPLER (_ThicknessMap, _MainTex, uv), 
+		_ThicknessMapPower);
+#else
+	return 1;
+#endif
 }
 
 half3 Albedo(float4 texcoords)
@@ -465,6 +473,7 @@ SCSS_TonemapInput Tonemap(float2 uv, inout float occlusion)
 		t.col = saturate(AutoToneMapping(albedo)+_IndirectLightingBoost) * _ShadowMaskColor.rgb;
 		t.bias = _ShadowMaskColor.a*_ShadowMask_var.r;
 	}
+	t.bias = (1 - _Shadow) * t.bias + _Shadow;
 	occlusion = t.bias;
 	return t;
 }

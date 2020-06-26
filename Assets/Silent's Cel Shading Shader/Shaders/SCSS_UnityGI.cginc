@@ -82,6 +82,11 @@ half3 BetterSH9 (half4 normal) {
 	indirect.b = shEvaluateDiffuseL1Geomerics_local(L0.b, unity_SHAb.xyz, normal);
 	indirect = max(0, indirect);
 	return indirect;
-
 }
+
+float3 BetterSH9(float3 normal)
+{
+    return BetterSH9(float4(normal, 1));
+}
+
 #endif // SCSS_UNITYGI_INCLUDED

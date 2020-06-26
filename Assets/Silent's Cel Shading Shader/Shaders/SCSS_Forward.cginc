@@ -332,6 +332,9 @@ float4 frag(VertexOutput i, uint facing : SV_IsFrontFace) : SV_Target
 	c.rim.power *= RimMask(texcoords.xy);
 	c.rim.tint *= outlineDarken;
 
+	// Scattering parameters
+	c.thickness = Thickness(texcoords.xy);
+
 	// Lighting handling
 	float3 finalColor = SCSS_ApplyLighting(c, i, texcoords);
 

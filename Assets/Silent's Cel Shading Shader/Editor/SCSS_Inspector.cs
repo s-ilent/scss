@@ -176,6 +176,10 @@ namespace SilentCelShading.Unity
 
 			const string lightrampName = "Lightramp";
 			usingLightramp = material.shader.name.Contains(lightrampName);
+
+			// Short circuit for old materials.
+			const string hiddenName = "Old";
+			if (material.shader.name.Contains(hiddenName)) UpgradeVariantCheck(material);
 		}
 
 		public override void OnGUI(MaterialEditor materialEditor, MaterialProperty[] props)
@@ -434,6 +438,8 @@ namespace SilentCelShading.Unity
 			materialEditor.TexturePropertySingleLine(CrosstoneStyles.shadeMap2, shadeMap2, shadeMap2Color);
 			materialEditor.ShaderProperty(shadeMap2Step, CrosstoneStyles.shadeMap2Step);
 			materialEditor.ShaderProperty(shadeMap2Feather, CrosstoneStyles.shadeMap2Feather);
+			
+			EditorGUILayout.Space();
 			materialEditor.TexturePropertySingleLine(CrosstoneStyles.shadingGradeMap, shadingGradeMap);
 		}
 
