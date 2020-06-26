@@ -23,9 +23,9 @@
 // used by directional lights.
 #define SCSS_SCREEN_SHADOW_FILTER 1
 
+#include "SCSS_UnityGI.cginc"
 #include "SCSS_Utils.cginc"
 #include "SCSS_Input.cginc"
-#include "SCSS_UnityGI.cginc"
 
 // Shade4PointLights from UnityCG.cginc but only returns their attenuation.
 float4 Shade4PointLightsAtten (
@@ -97,7 +97,7 @@ inline half4 VertexLightContribution(float3 posWorld, half3 normalWorld)
 #if defined(_SUBSURFACE)
 //SSS method from GDC 2011 conference by Colin Barre-Bresebois & Marc Bouchard and modified by Xiexe
 float3 getSubsurfaceScatteringLight (SCSS_Light l, float3 normalDirection, float3 viewDirection, 
-    float attenuation, float3 thickness, float3 indirectLight)
+    float attenuation, float3 thickness, float3 indirectLight = 0)
 {
     float3 vSSLight = l.dir + normalDirection * _SSSDist; // Distortion
     float3 vdotSS = pow(saturate(dot(viewDirection, -vSSLight)), _SSSPow) 
@@ -161,14 +161,14 @@ float3 sampleCrossToneLighting(float x, SCSS_TonemapInput tone0, SCSS_TonemapInp
 
 float applyShadowLift(float baseLight, float occlusion)
 {
-	baseLight *= (1 - _Shadow) * occlusion + _Shadow;
+	baseLight *= occlusion;
 	baseLight = _ShadowLift + baseLight * (1-_ShadowLift);
 	return baseLight;
 }
 
 float applyShadowLift(float4 baseLight, float occlusion)
 {
-	baseLight *= (1 - _Shadow) * occlusion + _Shadow;
+	baseLight *= occlusion;
 	baseLight = _ShadowLift + baseLight * (1-_ShadowLift);
 	return baseLight;
 }
@@ -244,6 +244,8 @@ half3 calcDiffuseGI(SCSS_TonemapInput tone[2], float occlusion, half3 normal, ha
 
 	float ambientLight = dot(normal, ambientLightDirection);
 	ambientLight = ambientLight * 0.5 + 0.5;
+
+	if (1)	ambientLight = getGreyscaleSH(normal);
 
 	float3 directLighting = 0.0;
 	float3 indirectLighting = 0.0;
@@ -494,6 +496,23 @@ float3 SCSS_ShadeBase(SCSS_Input c, VertexOutput i, SCSS_Light l, float attenuat
 	finalColor  = calcDiffuseGI(c.tone, c.occlusion, c.normal, c.perceptualRoughness, c.softness);
 	finalColor += calcDiffuseBase(c.tone, c.occlusion, c.normal, c.perceptualRoughness, attenuation, c.softness, d, l);
 
+	// Prepare fake light params for subsurface scattering.
+	SCSS_Light iL = l;
+	SCSS_LightParam iD = d;
+	iL.color = GetSHLength();
+	iL.dir = Unity_SafeNormalize((unity_SHAr.xyz + unity_SHAg.xyz + unity_SHAb.xyz) * _LightSkew.xyz);
+	iD = initialiseLightParam(iL, c.normal, i.posWorld.xyz);
+
+	#if defined(_SUBSURFACE)
+	if (i.is_outline == 0)
+	{
+		finalColor += getSubsurfaceScatteringLight(l, c.normal, d.viewDir,
+			attenuation, c.thickness);
+		finalColor += getSubsurfaceScatteringLight(iL, c.normal, iD.viewDir,
+			1, c.thickness);
+	}
+	#endif
+
 	finalColor *= c.albedo; 
 
 	// Prepare fake light params for spec/fresnel which simulate specular.
@@ -505,11 +524,6 @@ float3 SCSS_ShadeBase(SCSS_Input c, VertexOutput i, SCSS_Light l, float attenuat
 	
 	if (i.is_outline == 0)
 	{
-		#if defined(_SUBSURFACE)
-		float3 thicknessMap_var = pow(Thickness(i.uv0.xy), _ThicknessMapPower);
-		finalColor += c.albedo * getSubsurfaceScatteringLight(l, c.normal, fD.viewDir,
-			attenuation, thicknessMap_var, c.tone[0].col);
-		#endif
 
 		#if defined(_METALLICGLOSSMAP)
 	    finalColor += calcSpecularBase(c, c.perceptualRoughness, attenuation, d, l, i);
@@ -534,9 +548,8 @@ float3 SCSS_ShadeLight(SCSS_Input c, VertexOutput i, SCSS_Light l, half attenuat
 	if (i.is_outline == 0)
 	{
 		#if defined(_SUBSURFACE) 
-		float3 thicknessMap_var = pow(Thickness(i.uv0.xy), _ThicknessMapPower);
 		finalColor += c.albedo * getSubsurfaceScatteringLight(l, c.normal, d.viewDir,
-			attenuation, thicknessMap_var, c.tone[0].col);
+			attenuation, c.thickness, c.tone[0].col);
 		#endif
 
 		#if defined(_METALLICGLOSSMAP)

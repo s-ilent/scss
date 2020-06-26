@@ -10,6 +10,8 @@
 sampler2D_float _CameraDepthTexture;
 float4 _CameraDepthTexture_TexelSize;
 
+#define sRGB_Luminance float3(0.2126, 0.7152, 0.0722)
+
 struct SCSS_Light
 {
     half3 color;
@@ -375,6 +377,11 @@ float StrandSpecular(float3 T, float3 V, float3 L, float3 H, float exponent, flo
 	return dirAtten * pow(sinTH, exponent) * strength;
 }
 
+float3 SimpleSH9(float3 normal)
+{
+    return ShadeSH9(float4(normal, 1));
+}
+
 // Get the maximum SH contribution
 // synqark's Arktoon shader's shading method
 half3 GetSHLength ()
@@ -387,6 +394,25 @@ half3 GetSHLength ()
     x1.g = length(unity_SHBg);
     x1.b = length(unity_SHBb);
     return x + x1;
+}
+
+float getGreyscaleSH(float3 normal)
+{
+    // Samples the SH in the weakest and strongest direction and uses the difference
+    // to compress the SH result into 0-1 range.
+
+    // However, for efficiency, we only get the weakest direction from L1.
+    float3 ambientLightDirection = 
+        Unity_SafeNormalize((unity_SHAr.xyz + unity_SHAg.xyz + unity_SHAb.xyz));
+
+    // If this causes issues, it might be worth getting the min() of those two.
+    //float3 dd = float3(unity_SHAr.w, unity_SHAg.w, unity_SHAb.w);
+    float3 dd = BetterSH9(-ambientLightDirection);
+    float3 ee = BetterSH9(normal);
+    float3 aa = GetSHLength();
+
+    ee = saturate( (ee - dd) / (aa - dd));
+    return dot(ee, sRGB_Luminance);
 }
 
 // Used for matcaps
