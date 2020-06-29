@@ -154,6 +154,8 @@ namespace SilentCelShading.Unity
 
 			public static GUIContent lightWrappingCompensationFactor = new GUIContent("Light Reduction","Compensation factor for the light wrapping inherent in cel shading. For cel shaded models, this should be around 0.75. Realistic lighting should set this to 1 to disable it. ");
 
+			public static GUIContent indirectShadingType = new GUIContent("Indirect Shading Type","Sets the method used to shade indirect lighting. Directional will pick a single direction as a fake light source, so light will always be sharp. Dynamic will use the overall shading as a base, allowing for blobbier and more accurate lighting. ");
+
 			public static GUIContent manualButton = new GUIContent("This shader has a manual. Check it out!","For information on new features, old features, and just how to use the shader in general, check out the manual on the shader wiki!");
 		}
 

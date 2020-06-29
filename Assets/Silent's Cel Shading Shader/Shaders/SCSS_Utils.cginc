@@ -396,23 +396,30 @@ half3 GetSHLength ()
     return x + x1;
 }
 
+float3 SHEvalLinearL2(float3 n)
+{
+    return SHEvalLinearL2(float4(n, 1.0));
+}
+
 float getGreyscaleSH(float3 normal)
 {
     // Samples the SH in the weakest and strongest direction and uses the difference
     // to compress the SH result into 0-1 range.
 
-    // However, for efficiency, we only get the weakest direction from L1.
+    // However, for efficiency, we only get the direction from L1.
     float3 ambientLightDirection = 
         Unity_SafeNormalize((unity_SHAr.xyz + unity_SHAg.xyz + unity_SHAb.xyz));
 
     // If this causes issues, it might be worth getting the min() of those two.
     //float3 dd = float3(unity_SHAr.w, unity_SHAg.w, unity_SHAb.w);
-    float3 dd = BetterSH9(-ambientLightDirection);
-    float3 ee = BetterSH9(normal);
-    float3 aa = GetSHLength();
+    float3 dd = SimpleSH9(-ambientLightDirection);
+    float3 ee = SimpleSH9(normal);
+    float3 aa = GetSHLength(); // SHa and SHb
 
     ee = saturate( (ee - dd) / (aa - dd));
-    return dot(ee, sRGB_Luminance);
+    return abs(dot(ee, sRGB_Luminance));
+
+    return dot(normal, ambientLightDirection);
 }
 
 // Used for matcaps
