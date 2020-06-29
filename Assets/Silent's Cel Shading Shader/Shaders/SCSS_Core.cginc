@@ -79,7 +79,7 @@ inline half4 VertexLightContribution(float3 posWorld, half3 normalWorld)
 {
 	half4 vertexLight = 0;
 
-	// Static lightmaps
+	// Static lightmapped materials are not allowed to have vertex lights.
 	#ifdef LIGHTMAP_ON
 		return 0;
 	#elif UNITY_SHOULD_SAMPLE_SH
@@ -121,10 +121,10 @@ float3 sampleRampWithOptions(float rampPosition, half softness)
 	}
 	if (_LightRampType == 2) // None
 	{
-		float shadeWidth = max(fwidth(rampPosition), 0.002 * (1+softness*10));
+		float shadeWidth = 0.0002 * (1+softness*100);
 
 		const float shadeOffset = 0.5; 
-		float lightContribution = smoothstep(shadeOffset-shadeWidth, shadeOffset+shadeWidth, frac(rampPosition)) + floor(rampPosition); 
+		float lightContribution = simpleSharpen(rampPosition, shadeWidth, shadeOffset);
 		return saturate(lightContribution);
 	}
 	if (_LightRampType == 1) // Vertical
@@ -139,10 +139,12 @@ float3 sampleRampWithOptions(float rampPosition, half softness)
 	}
 }
 
-float3 sampleCrossToneLighting(float x, SCSS_TonemapInput tone0, SCSS_TonemapInput tone1)
+float3 sampleCrossToneLighting(float x, SCSS_TonemapInput tone0, SCSS_TonemapInput tone1, float3 albedo)
 {
 	// A three-tiered tone system.
 	// Input x is potentially affected by occlusion map.
+
+	x = x;
 	half offset0 = _1st_ShadeColor_Step * tone0.bias; 
 	half width0  = _1st_ShadeColor_Feather;
 	half factor0 = saturate(simpleSharpen(x, width0, offset0));
@@ -153,7 +155,10 @@ float3 sampleCrossToneLighting(float x, SCSS_TonemapInput tone0, SCSS_TonemapInp
 
 	float3 final;
 	final = lerp(tone1.col, tone0.col, factor1);
-	final = lerp(final, 1.0, factor0);
+
+	if (_CrosstoneToneSeparation == 0) 	final = lerp(final, 1.0, factor0) * albedo;
+	if (_CrosstoneToneSeparation == 1) 	final = lerp(final, albedo, factor0);
+	
 	return final;
 
 	// v0 + t * (v1 - v0);
@@ -221,8 +226,7 @@ void getDirectIndirectLighting(float3 normal, inout float3 directLighting, inout
 	break;
 	case 1: // Standard
 		directLighting = 
-		indirectLighting = BetterSH9(half4(normal, 1.0))
-						 + SHEvalLinearL2(half4(normal, 1.0));
+		indirectLighting = BetterSH9(half4(normal, 1.0));
 	break;
 	case 2: // Cubed
 		directLighting   = BetterSH9(half4(0.0,  1.0, 0.0, 1.0));
@@ -238,14 +242,14 @@ void getDirectIndirectLighting(float3 normal, inout float3 directLighting, inout
 }
 
 // For baked lighting.
-half3 calcDiffuseGI(SCSS_TonemapInput tone[2], float occlusion, half3 normal, half perceptualRoughness, half softness)
+half3 calcDiffuseGI(float3 albedo, SCSS_TonemapInput tone[2], float occlusion, half3 normal, half softness)
 {
 	float3 ambientLightDirection = Unity_SafeNormalize((unity_SHAr.xyz + unity_SHAg.xyz + unity_SHAb.xyz) * _LightSkew.xyz);
 
 	float ambientLight = dot(normal, ambientLightDirection);
 	ambientLight = ambientLight * 0.5 + 0.5;
 
-	if (1)	ambientLight = getGreyscaleSH(normal);
+	if (_IndirectShadingType == 0) ambientLight = getGreyscaleSH(normal);
 
 	float3 directLighting = 0.0;
 	float3 indirectLighting = 0.0;
@@ -263,25 +267,36 @@ half3 calcDiffuseGI(SCSS_TonemapInput tone[2], float occlusion, half3 normal, ha
 
 	#if defined(SCSS_CROSSTONE)
 	ambientLight *= occlusion;
-	float3 indirectContribution = sampleCrossToneLighting(ambientLight, tone[0], tone[1]);
-	indirectLighting = lerp(indirectLighting, directLighting, tone[0].col);
-	indirectAverage = lerp(indirectAverage, directLighting, tone[0].col);
+	indirectAverage *= albedo;
+	float3 indirectContribution = sampleCrossToneLighting(ambientLight, tone[0], tone[1], albedo);
 	#endif
 
 	// Make this a UI value later.
 	half ambientLightSplitThreshold = 1.0/3.0;
+	half ambientLightSplitFactor = saturate(dot(abs((directLighting-indirectLighting)/indirectAverage), 
+		ambientLightSplitThreshold));
 
-	float3 lightContribution = 
+	float3 lightContribution;
+
+	if (_CrosstoneToneSeparation == 0) lightContribution = 
 	lerp(indirectAverage,
 	lerp(indirectLighting, directLighting, indirectContribution),
-	saturate(dot(abs((directLighting-indirectLighting)/indirectAverage), 
-		ambientLightSplitThreshold)));
+	ambientLightSplitFactor) * albedo;
+
+	if (_CrosstoneToneSeparation == 1) lightContribution = 
+	lerp(indirectAverage,
+	lerp(indirectLighting, directLighting, ambientLight)*indirectContribution,
+	ambientLightSplitFactor);
+
+	#if !defined(SCSS_CROSSTONE)
+	lightContribution *= albedo;
+	#endif
 
 	return lightContribution;
 }
 
 // For directional lights where attenuation is shadow.
-half3 calcDiffuseBase(SCSS_TonemapInput tone[2], float occlusion, half3 normal, half perceptualRoughness, 
+half3 calcDiffuseBase(float3 albedo, SCSS_TonemapInput tone[2], float occlusion, half3 normal, half perceptualRoughness, 
 	half attenuation, half softness, SCSS_LightParam d, SCSS_Light l)
 {
 	float remappedLight = getRemappedLight(perceptualRoughness, d);
@@ -291,12 +306,12 @@ half3 calcDiffuseBase(SCSS_TonemapInput tone[2], float occlusion, half3 normal, 
 
 	#if !defined(SCSS_CROSSTONE)
 	remappedLight = applyShadowLift(remappedLight, occlusion);
-	float3 lightContribution = lerp(tone[0].col, 1.0, sampleRampWithOptions(remappedLight, softness));;
+	float3 lightContribution = lerp(tone[0].col, 1.0, sampleRampWithOptions(remappedLight, softness)) * albedo;
 	#endif
 
 	#if defined(SCSS_CROSSTONE)
 	remappedLight *= occlusion;
-	float3 lightContribution = sampleCrossToneLighting(remappedLight, tone[0], tone[1]);
+	float3 lightContribution = sampleCrossToneLighting(remappedLight, tone[0], tone[1], albedo);
 	#endif
 
 	lightContribution *= l.color;
@@ -305,7 +320,7 @@ half3 calcDiffuseBase(SCSS_TonemapInput tone[2], float occlusion, half3 normal, 
 }
 
 // For point/spot lights where attenuation is shadow+attenuation.
-half3 calcDiffuseAdd(SCSS_TonemapInput tone[2], float occlusion, half perceptualRoughness, 
+half3 calcDiffuseAdd(float3 albedo, SCSS_TonemapInput tone[2], float occlusion, half perceptualRoughness, 
 	half softness, SCSS_LightParam d, SCSS_Light l)
 {
 	float remappedLight = getRemappedLight(perceptualRoughness, d);
@@ -318,11 +333,11 @@ half3 calcDiffuseAdd(SCSS_TonemapInput tone[2], float occlusion, half perceptual
 	float3 directLighting = l.color;
 	float3 indirectLighting = l.color * tone[0].col;
 
-	lightContribution = lerp(indirectLighting, directLighting, lightContribution);
+	lightContribution = lerp(indirectLighting, directLighting, lightContribution) * albedo;
 	#endif
 
 	#if defined(SCSS_CROSSTONE)
-	float3 lightContribution = sampleCrossToneLighting(remappedLight, tone[0], tone[1]);
+	float3 lightContribution = sampleCrossToneLighting(remappedLight, tone[0], tone[1], albedo);
 	lightContribution *= l.color;
 	#endif
 
@@ -485,7 +500,8 @@ half3 calcSpecularCel(SCSS_Input c, float perceptualRoughness, float attenuation
 {
 	return calcSpecularCel(c.specColor, c.smoothness, c.normal, c.oneMinusReflectivity, perceptualRoughness, attenuation, d, l, i);
 }
-#endif
+
+#endif // _SPECULAR
 
 float3 SCSS_ShadeBase(SCSS_Input c, VertexOutput i, SCSS_Light l, float attenuation)
 {	
@@ -493,8 +509,9 @@ float3 SCSS_ShadeBase(SCSS_Input c, VertexOutput i, SCSS_Light l, float attenuat
 
 	SCSS_LightParam d = initialiseLightParam(l, c.normal, i.posWorld.xyz);
 
-	finalColor  = calcDiffuseGI(c.tone, c.occlusion, c.normal, c.perceptualRoughness, c.softness);
-	finalColor += calcDiffuseBase(c.tone, c.occlusion, c.normal, c.perceptualRoughness, attenuation, c.softness, d, l);
+	finalColor  = calcDiffuseGI(c.albedo, c.tone, c.occlusion, c.normal, c.softness);
+	finalColor += calcDiffuseBase(c.albedo, c.tone, c.occlusion, c.normal, 
+		c.perceptualRoughness, attenuation, c.softness, d, l);
 
 	// Prepare fake light params for subsurface scattering.
 	SCSS_Light iL = l;
@@ -503,27 +520,23 @@ float3 SCSS_ShadeBase(SCSS_Input c, VertexOutput i, SCSS_Light l, float attenuat
 	iL.dir = Unity_SafeNormalize((unity_SHAr.xyz + unity_SHAg.xyz + unity_SHAb.xyz) * _LightSkew.xyz);
 	iD = initialiseLightParam(iL, c.normal, i.posWorld.xyz);
 
-	#if defined(_SUBSURFACE)
-	if (i.is_outline == 0)
-	{
-		finalColor += getSubsurfaceScatteringLight(l, c.normal, d.viewDir,
-			attenuation, c.thickness);
-		finalColor += getSubsurfaceScatteringLight(iL, c.normal, iD.viewDir,
-			1, c.thickness);
-	}
-	#endif
-
-	finalColor *= c.albedo; 
-
 	// Prepare fake light params for spec/fresnel which simulate specular.
 	SCSS_Light fL = l;
 	SCSS_LightParam fD = d;
 	fL.color = attenuation * fL.color + GetSHLength();
 	fL.dir = Unity_SafeNormalize(fL.dir + (unity_SHAr.xyz + unity_SHAg.xyz + unity_SHAb.xyz) * _LightSkew.xyz);
 	fD = initialiseLightParam(fL, c.normal, i.posWorld.xyz);
-	
+
 	if (i.is_outline == 0)
 	{
+		#if defined(_SUBSURFACE)
+		#if defined(USING_DIRECTIONAL_LIGHT)
+		finalColor += getSubsurfaceScatteringLight(l, c.normal, d.viewDir,
+			attenuation, c.thickness) * c.albedo;
+		#endif
+		finalColor += getSubsurfaceScatteringLight(iL, c.normal, iD.viewDir,
+			1, c.thickness) * c.albedo;
+		#endif
 
 		#if defined(_METALLICGLOSSMAP)
 	    finalColor += calcSpecularBase(c, c.perceptualRoughness, attenuation, d, l, i);
@@ -543,7 +556,7 @@ float3 SCSS_ShadeLight(SCSS_Input c, VertexOutput i, SCSS_Light l, half attenuat
 
 	SCSS_LightParam d = initialiseLightParam(l, c.normal, i.posWorld.xyz);
 
-    finalColor = calcDiffuseAdd(c.tone, c.occlusion, c.perceptualRoughness, c.softness, d, l) * c.albedo;
+    finalColor = calcDiffuseAdd(c.albedo, c.tone, c.occlusion, c.perceptualRoughness, c.softness, d, l);
 
 	if (i.is_outline == 0)
 	{
@@ -696,13 +709,17 @@ float3 SCSS_ApplyLighting(SCSS_Input c, VertexOutput i, float4 texcoords)
 	finalColor *= _LightWrappingCompensationFactor;
 
 	#if defined(UNITY_PASS_FORWARDBASE)
+	float3 emission;
 	float4 emissionDetail = EmissionDetail(texcoords.zw);
 
 	finalColor = max(0, finalColor - saturate((1-emissionDetail.w)- (1-c.emission)));
-	finalColor += emissionDetail.rgb * c.emission * _EmissionColor.rgb;
+	emission = emissionDetail.rgb * c.emission * _EmissionColor.rgb;
 
 	// Emissive c.rim. To restore masking behaviour, multiply by emissionMask.
-	finalColor += _CustomFresnelColor.xyz * (pow(d.rlPow4.y, rcp(_CustomFresnelColor.w+0.0001)));
+	emission += _CustomFresnelColor.xyz * (pow(d.rlPow4.y, rcp(_CustomFresnelColor.w+0.0001)));
+
+	emission *= (1-i.is_outline);
+	finalColor += emission;
 	#endif
 
 	return finalColor;

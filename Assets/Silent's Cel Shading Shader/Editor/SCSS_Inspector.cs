@@ -28,6 +28,18 @@ namespace SilentCelShading.Unity
 			None
 		}
 
+		public enum ToneSeparationType
+		{
+			Combined,
+			Separate
+		}
+
+		public enum IndirectShadingType
+		{
+			Dynamic,
+			Directional
+		}
+
 		public static class LightrampStyles
 		{
 			public static GUIContent lightingRamp = new GUIContent("Lighting Ramp", "Specifies the falloff of the lighting. In other words, it controls how light affects your model and how soft or sharp the transition between light and shadow is. \nNote: If a Lighting Ramp is not set, the material will have no shading.");
@@ -46,6 +58,7 @@ namespace SilentCelShading.Unity
 
 		public static class CrosstoneStyles
 		{
+			public static GUIContent useToneSeparation = new GUIContent("Tone Blending Mode", "Specifies the method used to blend tone with the albedo texture. Combined will merge one over the other, while Seperate will not.");
 			public static GUIContent shadeMap1 = new GUIContent("1st Shading Tone", "Specifies the colour of shading to use for the first gradation. Tinted by the colour field.");
 			public static GUIContent shadeMap1Color = new GUIContent("1st Shading Colour");
 			public static GUIContent shadeMap1Step = new GUIContent("1st Shading Breakpoint", "Sets the point at which the shading begins to transition from lit to shaded, based on the light hitting the material.");
@@ -144,6 +157,7 @@ namespace SilentCelShading.Unity
 		protected MaterialProperty lightRampType;
 		protected MaterialProperty shadowMaskType;
 
+		protected MaterialProperty useToneSeparation;
 		protected MaterialProperty shadeMap1;
 		protected MaterialProperty shadeMap1Color;
 		protected MaterialProperty shadeMap1Step;
@@ -157,6 +171,7 @@ namespace SilentCelShading.Unity
 		protected MaterialProperty vertexColorType;
 
 		protected MaterialProperty lightingCalculationType;
+		protected MaterialProperty indirectShadingType;
 		protected MaterialProperty lightSkew;
 		protected MaterialProperty pixelSampleMode;
 		protected MaterialProperty highlights;
@@ -215,6 +230,7 @@ namespace SilentCelShading.Unity
 
 		protected void FindCrosstoneProperties(MaterialProperty[] props)
 		{
+ 			useToneSeparation = FindProperty("_CrosstoneToneSeparation", props);
  			shadeMap1 = FindProperty("_1st_ShadeMap", props);
  			shadeMap1Color = FindProperty("_1st_ShadeColor", props);
  			shadeMap1Step = FindProperty("_1st_ShadeColor_Step", props);
@@ -332,6 +348,7 @@ namespace SilentCelShading.Unity
 			vertexColorType = FindProperty("_VertexColorType", props);
 
 			lightingCalculationType = FindProperty("_LightingCalculationType", props);
+			indirectShadingType = FindProperty("_IndirectShadingType", props);
 			lightSkew = FindProperty("_LightSkew", props);
 			pixelSampleMode = FindProperty("_PixelSampleMode", props); 
 			diffuseGeomShadowFactor = FindProperty("_DiffuseGeomShadowFactor", props); 
@@ -388,6 +405,23 @@ namespace SilentCelShading.Unity
         protected void LightrampOptions(MaterialEditor materialEditor, Material material)
         { 
 			EditorGUILayout.LabelField(CommonStyles.shadingOptionsTitle, EditorStyles.boldLabel);
+
+            var lMode = (LightRampType)lightRampType.floatValue;
+            EditorGUI.BeginChangeCheck();
+            
+            lMode = (LightRampType)EditorGUILayout.Popup("Lighting Ramp Type", (int)lMode, Enum.GetNames(typeof(LightRampType)));
+
+            if (EditorGUI.EndChangeCheck())
+            {
+                materialEditor.RegisterPropertyChangeUndo("Lighting Ramp Type");
+                lightRampType.floatValue = (float)lMode;
+
+                foreach (var obj in lightRampType.targets)
+                {
+                    SetupMaterialWithLightRampType((Material)obj, (LightRampType)material.GetFloat("_LightRampType"));
+                }
+
+            } 
             if (((LightRampType)material.GetFloat("_LightRampType")) != LightRampType.None) 
             {
 
@@ -430,6 +464,9 @@ namespace SilentCelShading.Unity
 		{ 
 			EditorGUILayout.LabelField(CommonStyles.shadingOptionsTitle, EditorStyles.boldLabel);
 
+			materialEditor.ShaderProperty(useToneSeparation, CrosstoneStyles.useToneSeparation);
+
+            EditorGUILayout.Space();
 			materialEditor.TexturePropertySingleLine(CrosstoneStyles.shadeMap1, shadeMap1, shadeMap1Color);
 			materialEditor.ShaderProperty(shadeMap1Step, CrosstoneStyles.shadeMap1Step);
 			materialEditor.ShaderProperty(shadeMap1Feather, CrosstoneStyles.shadeMap1Feather);
@@ -713,6 +750,8 @@ namespace SilentCelShading.Unity
 				}
 
 			}  
+
+			materialEditor.ShaderProperty(indirectShadingType, CommonStyles.indirectShadingType);
 
 			EditorGUILayout.Space();
 

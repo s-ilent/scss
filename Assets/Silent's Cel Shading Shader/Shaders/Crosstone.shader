@@ -29,6 +29,8 @@ Shader "Silent's Cel Shading/Crosstone (Outline)"
         _2nd_ShadeColor_Step ("2nd_ShadeColor_Step", Range(0, 1)) = 0
         _2nd_ShadeColor_Feather ("2nd_ShadeColor_Feather", Range(0.0001, 1)) = 0.0001
 		[Space]
+		[Enum(ToneSeparationType)]_CrosstoneToneSeparation ("Don't combine tone with albedo", Float) = 0
+		[Space]
 		[Header(Outline)]
 		[Enum(OutlineMode)] _OutlineMode("Outline Mode", Float) = 0.0
 		_OutlineMask("Outline Map", 2D) = "white" {}
@@ -106,6 +108,7 @@ Shader "Silent's Cel Shading/Crosstone (Outline)"
 		[Space]
 		[Header(System Lighting)]
 		[Enum(LightingCalculationType)] _LightingCalculationType ("Lighting Calculation Type", Float) = 0.0
+		[Enum(IndirectShadingType)] _IndirectShadingType ("Indirect Shading Type", Float) = 0.0
 		_LightSkew ("Light Skew", Vector) = (1, 0.1, 1, 0)
         _DiffuseGeomShadowFactor ("Diffuse Geometric Shadowing Factor", Range(0, 1)) = 1
         _LightWrappingCompensationFactor("Light Wrapping Compensation Factor", Range(0.5, 1)) = 0.8
@@ -165,6 +168,7 @@ Shader "Silent's Cel Shading/Crosstone (Outline)"
 
         CGINCLUDE
 		#pragma shader_feature _ _ALPHATEST_ON _ALPHABLEND_ON _ALPHAPREMULTIPLY_ON
+		#pragma multi_compile _ UNITY_HDR_ON
 
 		#define SCSS_CROSSTONE
 		#define SCSS_USE_OUTLINE_TEXTURE
@@ -183,7 +187,6 @@ Shader "Silent's Cel Shading/Crosstone (Outline)"
 			#endif
 
 			#pragma multi_compile _ VERTEXLIGHT_ON
-			#pragma multi_compile ___ UNITY_HDR_ON
 
 			#pragma multi_compile_fwdbase
 			#pragma multi_compile_fog

@@ -137,6 +137,9 @@ uniform float _2nd_ShadeColor_Feather;
 uniform float _DiffuseGeomShadowFactor;
 uniform float _LightWrappingCompensationFactor;
 
+uniform float _IndirectShadingType;
+uniform float _CrosstoneToneSeparation;
+
 uniform float _UseInteriorOutline;
 uniform float _InteriorOutlineWidth;
 
