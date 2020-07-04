@@ -110,35 +110,6 @@ float3 getSubsurfaceScatteringLight (SCSS_Light l, float3 normalDirection, float
 }
 #endif
 
-// Sample ramp with the specified options.
-// rampPosition: 0-1 position on the light ramp from light to dark
-// softness: 0-1 position on the light ramp on the other axis
-float3 sampleRampWithOptions(float rampPosition, half softness) 
-{
-	if (_LightRampType == 3) // No sampling
-	{
-		return saturate(rampPosition*2-1);
-	}
-	if (_LightRampType == 2) // None
-	{
-		float shadeWidth = 0.0002 * (1+softness*100);
-
-		const float shadeOffset = 0.5; 
-		float lightContribution = simpleSharpen(rampPosition, shadeWidth, shadeOffset);
-		return saturate(lightContribution);
-	}
-	if (_LightRampType == 1) // Vertical
-	{
-		float2 rampUV = float2(softness, rampPosition);
-		return tex2D(_Ramp, saturate(rampUV));
-	}
-	else // Horizontal
-	{
-		float2 rampUV = float2(rampPosition, softness);
-		return tex2D(_Ramp, saturate(rampUV));
-	}
-}
-
 float3 sampleCrossToneLighting(float x, SCSS_TonemapInput tone0, SCSS_TonemapInput tone1, float3 albedo)
 {
 	// A three-tiered tone system.
@@ -200,18 +171,26 @@ float applyAttenuation(half NdotL, half attenuation)
 	return NdotL;
 }
 
-half3 calcVertexLight(float4 vertexAttenuation, float occlusion, float3 tonemap, half softness)
+half3 calcVertexLight(float4 vertexAttenuation, float occlusion, SCSS_TonemapInput tone[2], half softness)
 {
 	float3 vertexContribution = 0;
 	#if defined(UNITY_PASS_FORWARDBASE)
-		// Vertex lighting based on Shade4PointLights
-		float4 vertexAttenuationFalloff = saturate(vertexAttenuation * 10);
-		vertexAttenuation = applyShadowLift(vertexAttenuation, occlusion);
 
-	    vertexContribution += unity_LightColor[0] * (sampleRampWithOptions(vertexAttenuation.x, softness)+tonemap) * vertexAttenuationFalloff.x;
-	    vertexContribution += unity_LightColor[1] * (sampleRampWithOptions(vertexAttenuation.y, softness)+tonemap) * vertexAttenuationFalloff.y;
-	    vertexContribution += unity_LightColor[2] * (sampleRampWithOptions(vertexAttenuation.z, softness)+tonemap) * vertexAttenuationFalloff.z;
-	    vertexContribution += unity_LightColor[3] * (sampleRampWithOptions(vertexAttenuation.w, softness)+tonemap) * vertexAttenuationFalloff.w;
+		#if !defined(SCSS_CROSSTONE)
+		vertexAttenuation = applyShadowLift(vertexAttenuation, occlusion);
+    	for (int num = 0; num < 4; num++) {
+    		vertexContribution += unity_LightColor[num] * 
+    			(sampleRampWithOptions(vertexAttenuation[num], softness)+tone[0].col);
+    	}
+    	#endif
+
+		#if defined(SCSS_CROSSTONE)
+    	for (int num = 0; num < 4; num++) {
+    		vertexContribution += unity_LightColor[num] * 
+    			sampleCrossToneLighting(vertexAttenuation[num], tone[0], tone[1], 1.0);
+    	}
+    	#endif
+
 	#endif
 	return vertexContribution;
 }
@@ -278,6 +257,7 @@ half3 calcDiffuseGI(float3 albedo, SCSS_TonemapInput tone[2], float occlusion, h
 
 	float3 lightContribution;
 
+	#if defined(SCSS_CROSSTONE)
 	if (_CrosstoneToneSeparation == 0) lightContribution = 
 	lerp(indirectAverage,
 	lerp(indirectLighting, directLighting, indirectContribution),
@@ -287,9 +267,13 @@ half3 calcDiffuseGI(float3 albedo, SCSS_TonemapInput tone[2], float occlusion, h
 	lerp(indirectAverage,
 	lerp(indirectLighting, directLighting, ambientLight)*indirectContribution,
 	ambientLightSplitFactor);
+	#endif
 
 	#if !defined(SCSS_CROSSTONE)
-	lightContribution *= albedo;
+	lightContribution = 
+	lerp(indirectAverage,
+	lerp(indirectLighting, directLighting, indirectContribution),
+	ambientLightSplitFactor) * albedo;
 	#endif
 
 	return lightContribution;
@@ -672,7 +656,7 @@ float3 SCSS_ApplyLighting(SCSS_Input c, VertexOutput i, float4 texcoords)
 
 	// Proper cheap vertex lights. 
 	#if defined(VERTEXLIGHT_ON) && !defined(SCSS_UNIMPORTANT_LIGHTS_FRAGMENT)
-	finalColor += c.albedo * calcVertexLight(i.vertexLight, c.occlusion, c.tone[0].col, c.softness);
+	finalColor += c.albedo * calcVertexLight(i.vertexLight, c.occlusion, c.tone, c.softness);
 	#endif
 
 	if (_UseFresnel == 2 && i.is_outline == 0)

@@ -100,7 +100,7 @@ namespace SilentCelShading.Unity
 
         protected const string LegacyShadersPath = "Legacy Shaders/";
         protected const string TransparentShadersPath = "/Transparent/";
-        protected const string CutoutShadersPath = "/Transparent/Cutout/";
+        protected const string TransparentCutoutShadersPath = "/Transparent/Cutout/";
 
         public override void OnGUI(MaterialEditor materialEditor, MaterialProperty[] props)
         {
@@ -434,6 +434,15 @@ namespace SilentCelShading.Unity
                     }
                 }
 
+                material.SetFloat(propertyName, propertyValue.Value);
+            }
+        }
+
+
+        protected static void SetFloatProperty(Material material, string propertyName, float? propertyValue)
+        {
+            if (propertyValue.HasValue)
+            {
                 material.SetFloat(propertyName, propertyValue.Value);
             }
         }

@@ -32,7 +32,7 @@ Shader "Silent's Cel Shading/Crosstone (Outline)"
 		[Enum(ToneSeparationType)]_CrosstoneToneSeparation ("Don't combine tone with albedo", Float) = 0
 		[Space]
 		[Header(Outline)]
-		[Enum(OutlineMode)] _OutlineMode("Outline Mode", Float) = 0.0
+		[Enum(OutlineMode)] _OutlineMode("Outline Mode", Float) = 1.0
 		_OutlineMask("Outline Map", 2D) = "white" {}
 		_outline_width("Outline Width", Float) = 0.1
 		_outline_color("Outline Colour", Color) = (0.5,0.5,0.5,1)

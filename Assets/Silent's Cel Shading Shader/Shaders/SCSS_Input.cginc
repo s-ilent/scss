@@ -48,20 +48,23 @@ uniform float _CelSpecularSoftness;
 uniform float _Anisotropy; // Can not be removed yet.
 #endif
 
-UNITY_DECLARE_TEX2D_NOSAMPLER(_ShadowMask); uniform half4 _ShadowMask_ST;
-UNITY_DECLARE_TEX2D_NOSAMPLER(_ThicknessMap); uniform half4 _ThicknessMap_ST;
-
+#if defined(SCSS_CROSSTONE)
 UNITY_DECLARE_TEX2D_NOSAMPLER(_1st_ShadeMap);
 UNITY_DECLARE_TEX2D_NOSAMPLER(_2nd_ShadeMap);
 UNITY_DECLARE_TEX2D_NOSAMPLER(_ShadingGradeMap);
+#endif
 
+uniform float _Shadow;
+uniform float _ShadowLift;
+
+#if !defined(SCSS_CROSSTONE)
+UNITY_DECLARE_TEX2D_NOSAMPLER(_ShadowMask); uniform half4 _ShadowMask_ST;
 uniform sampler2D _Ramp; uniform half4 _Ramp_ST;
 uniform float _LightRampType;
-uniform float _Shadow;
 uniform float4 _ShadowMaskColor;
 uniform float _ShadowMaskType;
-uniform float _ShadowLift;
 uniform float _IndirectLightingBoost;
+#endif
 
 UNITY_DECLARE_TEX2D_NOSAMPLER(_MatcapMask); uniform half4 _MatcapMask_ST; 
 uniform sampler2D _Matcap1; uniform half4 _Matcap1_ST; 
@@ -112,6 +115,7 @@ uniform float _Matcap3Blend;
 uniform float _Matcap4Blend;
 
 #if defined(_SUBSURFACE)
+UNITY_DECLARE_TEX2D_NOSAMPLER(_ThicknessMap); uniform half4 _ThicknessMap_ST;
 uniform float _UseSubsurfaceScattering;
 uniform float _ThicknessMapPower;
 uniform float _ThicknessMapInvert;
@@ -450,6 +454,7 @@ float3 AutoToneMapping(float3 color)
 	return color;
 }
 
+#if !defined(SCSS_CROSSTONE)
 SCSS_TonemapInput Tonemap(float2 uv, inout float occlusion)
 {
 	SCSS_TonemapInput t = (SCSS_TonemapInput)0;
@@ -481,6 +486,37 @@ SCSS_TonemapInput Tonemap(float2 uv, inout float occlusion)
 	return t;
 }
 
+// Sample ramp with the specified options.
+// rampPosition: 0-1 position on the light ramp from light to dark
+// softness: 0-1 position on the light ramp on the other axis
+float3 sampleRampWithOptions(float rampPosition, half softness) 
+{
+	if (_LightRampType == 3) // No sampling
+	{
+		return saturate(rampPosition*2-1);
+	}
+	if (_LightRampType == 2) // None
+	{
+		float shadeWidth = 0.0002 * (1+softness*100);
+
+		const float shadeOffset = 0.5; 
+		float lightContribution = simpleSharpen(rampPosition, shadeWidth, shadeOffset);
+		return saturate(lightContribution);
+	}
+	if (_LightRampType == 1) // Vertical
+	{
+		float2 rampUV = float2(softness, rampPosition);
+		return tex2D(_Ramp, saturate(rampUV));
+	}
+	else // Horizontal
+	{
+		float2 rampUV = float2(rampPosition, softness);
+		return tex2D(_Ramp, saturate(rampUV));
+	}
+}
+#endif
+
+#if defined(SCSS_CROSSTONE)
 // Tonemaps contain tone in RGB, occlusion in A.
 // Midpoint/width is handled in the application function.
 SCSS_TonemapInput Tonemap1st (float2 uv)
@@ -507,6 +543,7 @@ float ShadingGradeMap (float2 uv)
 	float4 tonemap = UNITY_SAMPLE_TEX2D_SAMPLER(_ShadingGradeMap, _MainTex, uv.xy);
 	return tonemap.r;
 }
+#endif
 
 float innerOutline (VertexOutput i)
 {
@@ -516,6 +553,29 @@ float innerOutline (VertexOutput i)
 	float baseRim = d.NdotV;
 	baseRim = simpleSharpen(baseRim, 0, _InteriorOutlineWidth * OutlineMask(i.uv0.xy));
 	return baseRim;
+}
+
+float3 applyOutline(float3 col, float is_outline)
+{    
+	col = lerp(col, col * _outline_color.rgb, is_outline);
+    if (_OutlineMode == 2) 
+    {
+        col = lerp(col, _outline_color.rgb, is_outline);
+    }
+    return col;
+}
+
+SCSS_Input applyOutline(SCSS_Input c, float is_outline)
+{
+
+	c.albedo = applyOutline(c.albedo, is_outline);
+    if (_CrosstoneToneSeparation == 1) 
+    {
+        c.tone[0].col = applyOutline(c.tone[0].col, is_outline);
+        c.tone[1].col = applyOutline(c.tone[1].col, is_outline);
+    }
+
+    return c;
 }
 
 #endif // SCSS_INPUT_INCLUDED
