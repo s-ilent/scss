@@ -251,12 +251,6 @@ float4 frag(VertexOutput i, uint facing : SV_IsFrontFace) : SV_Target
 	
 	c.softness = i.extraData.g;
 
-	c.albedo = lerp(c.albedo, c.albedo * _outline_color.rgb, i.is_outline);
-	if (_OutlineMode == 2) 
-	{
-		c.albedo = lerp(c.albedo, _outline_color.rgb, i.is_outline);
-	}
-
 	c.alpha = Alpha(texcoords.xy);
 
 	c.alpha *= UNITY_SAMPLE_TEX2D_SAMPLER (_ColorMask, _MainTex, texcoords.xy).r;
@@ -276,6 +270,8 @@ float4 frag(VertexOutput i, uint facing : SV_IsFrontFace) : SV_Target
 	c.tone[1] = Tonemap2nd(texcoords.xy);
 	c.occlusion = ShadingGradeMap(texcoords.xy);
 	#endif
+
+	c = applyOutline(c, i.is_outline);
 
 	// Specular variable setup
 
