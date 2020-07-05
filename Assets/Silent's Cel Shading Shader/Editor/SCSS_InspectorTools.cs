@@ -156,6 +156,13 @@ namespace SilentCelShading.Unity
 
 			public static GUIContent indirectShadingType = new GUIContent("Indirect Shading Type","Sets the method used to shade indirect lighting. Directional will pick a single direction as a fake light source, so light will always be sharp. Dynamic will use the overall shading as a base, allowing for blobbier and more accurate lighting. ");
 
+			public static GUIContent useAnimation = new GUIContent("Use Animation", "Enables the spritesheet system, where textures provided to the shader are divided into sections and displayed seperately over time.");
+			public static GUIContent animationSpeed = new GUIContent("Animation Speed", "The animation speed is derived from the Unity time parameter, where 1.0 is one cycle every 20 seconds. ");
+			public static GUIContent animationTotalFrames = new GUIContent("Total Frames", "The maximum number of frames that will play in the animation. ");
+			public static GUIContent animationFrameNumber = new GUIContent("Frame Number", "Sets the frame number to begin playing the animation on.");
+			public static GUIContent animationColumns = new GUIContent("Columns", "Sets the number of frames present in a horizontal row.");
+			public static GUIContent animationRows = new GUIContent("Rows", "Sets the number of frames present in a vertical column.");
+
 			public static GUIContent manualButton = new GUIContent("This shader has a manual. Check it out!","For information on new features, old features, and just how to use the shader in general, check out the manual on the shader wiki!");
 		}
 

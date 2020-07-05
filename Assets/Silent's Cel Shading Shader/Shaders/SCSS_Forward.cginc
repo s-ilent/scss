@@ -7,7 +7,7 @@ v2g vert(appdata_full v) {
     UNITY_INITIALIZE_VERTEX_OUTPUT_STEREO(o);
 
 	o.pos = UnityObjectToClipPos(v.vertex);
-	o.uv0 = v.texcoord;
+	o.uv0 = AnimateTexcoords(v.texcoord);
 	o.uv1 = v.texcoord1;
 	o.normal = v.normal;
 	o.normalDir = UnityObjectToWorldNormal(v.normal);
@@ -145,7 +145,7 @@ VertexOutput vert_nogeom(appdata_full v) {
     UNITY_INITIALIZE_VERTEX_OUTPUT_STEREO(o);
 
 	o.pos = UnityObjectToClipPos(v.vertex);
-	o.uv0 = v.texcoord;
+	o.uv0 = AnimateTexcoords(v.texcoord);
 	o.uv1 = v.texcoord1;
 	o.normalDir = UnityObjectToWorldNormal(v.normal);
 	o.tangentDir = UnityObjectToWorldDir(v.tangent.xyz);
