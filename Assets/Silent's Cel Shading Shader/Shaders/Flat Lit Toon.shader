@@ -94,6 +94,14 @@ Shader "Silent's Cel Shading/Lightramp (Outline)"
 		_SSSDist ("Scattering Distance", Range(0, 10)) = 1
 		_SSSAmbient ("Scattering Ambient", Range(0, 1)) = 0
 		[Space]
+		[Header(Animation)]
+		[Toggle(_)]_UseAnimation ("Use Animation", Float) = 0.0
+		_AnimationSpeed ("_AnimationSpeed", Float) = 10
+		_TotalFrames ("_TotalFrames", Int) = 4
+		_FrameNumber ("_FrameNumber", Int) = 0
+		_Columns ("_Columns", Int) = 2
+		_Rows ("_Rows", Int) = 2
+		[Space]
 		[Header(Other)]
 		[Toggle(_SMOOTHNESS_TEXTURE_ALBEDO_CHANNEL_A)]_AlbedoAlphaMode("Albedo Alpha Mode", Float) = 0.0
 		[HDR]_CustomFresnelColor("Emissive Fresnel Color", Color) = (0,0,0,1)

@@ -148,6 +148,13 @@ namespace SilentCelShading.Unity
 		protected MaterialProperty scatteringDistortion;
 		protected MaterialProperty scatteringAmbient;
 
+		protected MaterialProperty useAnimation;
+		protected MaterialProperty animationSpeed;
+		protected MaterialProperty animationTotalFrames;
+		protected MaterialProperty animationFrameNumber;
+		protected MaterialProperty animationColumns;
+		protected MaterialProperty animationRows;
+
 		protected MaterialProperty lightingRamp;
 		protected MaterialProperty shadowLift; 
 		protected MaterialProperty shadowMask;
@@ -212,6 +219,7 @@ namespace SilentCelShading.Unity
 			MatcapOptions(materialEditor, material);
 			SubsurfaceOptions(materialEditor, material);
 			DetailMapOptions(materialEditor, material);
+			AnimationOptions(materialEditor, material);
 			OutlineOptions(materialEditor, material);
 			AdvancedOptions(materialEditor, material);
 		}
@@ -301,6 +309,16 @@ namespace SilentCelShading.Unity
 			uvSetSecondary = FindProperty("_UVSec", props);
 		}
 
+		protected void FindAnimationProperties(MaterialProperty[] props)
+		{
+			useAnimation = FindProperty("_UseAnimation", props);
+			animationSpeed = FindProperty("_AnimationSpeed", props);
+			animationTotalFrames = FindProperty("_TotalFrames", props);
+			animationFrameNumber = FindProperty("_FrameNumber", props);
+			animationColumns = FindProperty("_Columns", props);
+			animationRows = FindProperty("_Rows", props);
+		}
+
 		protected override void FindProperties(MaterialProperty[] props)
 		{ 
 			base.FindProperties(props);
@@ -344,6 +362,7 @@ namespace SilentCelShading.Unity
 			FindSpecularProperties(props);
 			FindScatteringProperties(props);
 			FindDetailMapProperties(props);
+			FindAnimationProperties(props);
 
 			vertexColorType = FindProperty("_VertexColorType", props);
 
@@ -494,6 +513,21 @@ namespace SilentCelShading.Unity
 			EditorGUILayout.Space();
 			
 			EditorGUI.EndChangeCheck();
+		}
+
+		protected void AnimationOptions(MaterialEditor materialEditor, Material material)
+		{ 
+			EditorGUI.BeginChangeCheck();
+			materialEditor.ShaderProperty(useAnimation, CommonStyles.useAnimation);
+			if (PropertyEnabled(useAnimation))
+			{
+				materialEditor.ShaderProperty(animationSpeed, CommonStyles.animationSpeed);
+				materialEditor.ShaderProperty(animationTotalFrames, CommonStyles.animationTotalFrames);
+				materialEditor.ShaderProperty(animationFrameNumber, CommonStyles.animationFrameNumber);
+				materialEditor.ShaderProperty(animationColumns, CommonStyles.animationColumns);
+				materialEditor.ShaderProperty(animationRows, CommonStyles.animationRows);
+			}
+
 		}
 
 		protected void RimlightOptions(MaterialEditor materialEditor, Material material)

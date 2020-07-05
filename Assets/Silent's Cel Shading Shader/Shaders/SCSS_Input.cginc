@@ -149,6 +149,15 @@ uniform float _InteriorOutlineWidth;
 
 uniform sampler2D _OutlineMask; uniform half4 _OutlineMask_ST; 
 
+// Animation
+
+uniform float _UseAnimation;
+uniform float _AnimationSpeed;
+uniform int _TotalFrames;
+uniform int _FrameNumber;
+uniform int _Columns;
+uniform int _Rows;
+
 //-------------------------------------------------------------------------------------
 // Input functions
 
@@ -278,6 +287,33 @@ SCSS_RimLightInput initialiseRimParam()
 	rim.invTint = _FresnelTintInv.rgb;
 	rim.invAlpha = _FresnelTintInv.a;
 	return rim;
+}
+
+float2 AnimateTexcoords(float2 texcoord)
+{
+	float2 spriteUV = texcoord;
+	if (_UseAnimation)
+	{
+		_FrameNumber += frac(_Time[0] * _AnimationSpeed) * _TotalFrames;
+
+		float frame = clamp(_FrameNumber, 0, _TotalFrames);
+
+		float2 offPerFrame = float2((1 / (float)_Columns), (1 / (float)_Rows));
+
+		float2 spriteSize = texcoord * offPerFrame;
+
+		float2 currentSprite = 
+				float2(frame * offPerFrame.x,  1 - offPerFrame.y);
+		
+		float rowIndex;
+		float mod = modf(frame / (float)_Columns, rowIndex);
+		currentSprite.y -= rowIndex * offPerFrame.y;
+		currentSprite.x -= rowIndex * _Columns * offPerFrame.x;
+		
+		spriteUV = (spriteSize + currentSprite); 
+	}
+	return spriteUV;
+
 }
 
 float4 TexCoords(VertexOutput v)
