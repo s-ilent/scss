@@ -138,6 +138,8 @@ uniform float _1st_ShadeColor_Feather;
 uniform float _2nd_ShadeColor_Step;
 uniform float _2nd_ShadeColor_Feather;
 
+uniform float _Tweak_ShadingGradeMapLevel;
+
 uniform float _DiffuseGeomShadowFactor;
 uniform float _LightWrappingCompensationFactor;
 
@@ -574,10 +576,17 @@ SCSS_TonemapInput Tonemap2nd (float2 uv)
 	return t;
 }
 
+float adjustShadeMap(float x, float y)
+{
+	// Might be changed later.
+	return (x * (1+y));
+
+}
+
 float ShadingGradeMap (float2 uv)
 {
 	float4 tonemap = UNITY_SAMPLE_TEX2D_SAMPLER(_ShadingGradeMap, _MainTex, uv.xy);
-	return tonemap.r;
+	return adjustShadeMap(tonemap.g, _Tweak_ShadingGradeMapLevel);
 }
 #endif
 

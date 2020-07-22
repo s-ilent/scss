@@ -251,8 +251,10 @@ half3 calcDiffuseGI(float3 albedo, SCSS_TonemapInput tone[2], float occlusion, h
 	#endif
 
 	// Make this a UI value later.
-	half ambientLightSplitThreshold = 1.0/3.0;
-	half ambientLightSplitFactor = saturate(dot(abs((directLighting-indirectLighting)/indirectAverage), 
+	const half ambientLightSplitThreshold = 1.0/3.0;
+	half ambientLightSplitFactor = 
+	saturate(
+		dot(abs((directLighting-indirectLighting)/indirectAverage), 
 		ambientLightSplitThreshold));
 
 	float3 lightContribution;
@@ -265,7 +267,7 @@ half3 calcDiffuseGI(float3 albedo, SCSS_TonemapInput tone[2], float occlusion, h
 
 	if (_CrosstoneToneSeparation == 1) lightContribution = 
 	lerp(indirectAverage,
-	lerp(indirectLighting, directLighting, ambientLight)*indirectContribution,
+	directLighting*indirectContribution,
 	ambientLightSplitFactor);
 	#endif
 
@@ -514,10 +516,10 @@ float3 SCSS_ShadeBase(SCSS_Input c, VertexOutput i, SCSS_Light l, float attenuat
 	if (i.is_outline == 0)
 	{
 		#if defined(_SUBSURFACE)
-		#if defined(USING_DIRECTIONAL_LIGHT)
-		finalColor += getSubsurfaceScatteringLight(l, c.normal, d.viewDir,
-			attenuation, c.thickness) * c.albedo;
-		#endif
+			#if defined(USING_DIRECTIONAL_LIGHT)
+			finalColor += getSubsurfaceScatteringLight(l, c.normal, d.viewDir,
+				attenuation, c.thickness) * c.albedo;
+			#endif
 		finalColor += getSubsurfaceScatteringLight(iL, c.normal, iD.viewDir,
 			1, c.thickness) * c.albedo;
 		#endif
@@ -619,6 +621,7 @@ float3 SCSS_ApplyLighting(SCSS_Input c, VertexOutput i, float4 texcoords)
 	float fresnelLightMaskInv = 
 		saturate(pow(saturate(-fresnelLightMaskBase), _FresnelLightMask));
 	
+	// Lit
 	if (_UseFresnel == 1 && i.is_outline == 0) 
 	{
 		float3 sharpFresnel = sharpenLighting(d.rlPow4.y * c.rim.width * fresnelLightMask, 
@@ -628,6 +631,7 @@ float3 SCSS_ApplyLighting(SCSS_Input c, VertexOutput i, float4 texcoords)
 		c.albedo += c.albedo * sharpFresnel;
 	}
 
+	// AmbientAlt
 	if (_UseFresnel == 3 && i.is_outline == 0)
 	{
 		float sharpFresnel = sharpenLighting(d.rlPow4.y*c.rim.width, c.rim.power)
@@ -659,6 +663,7 @@ float3 SCSS_ApplyLighting(SCSS_Input c, VertexOutput i, float4 texcoords)
 	finalColor += c.albedo * calcVertexLight(i.vertexLight, c.occlusion, c.tone, c.softness);
 	#endif
 
+	// Ambient
 	if (_UseFresnel == 2 && i.is_outline == 0)
 	{
 		float3 sharpFresnel = sharpenLighting(d.rlPow4.y * c.rim.width * fresnelLightMask, 
@@ -674,7 +679,6 @@ float3 SCSS_ApplyLighting(SCSS_Input c, VertexOutput i, float4 texcoords)
     #if !UNITY_HDR_ON && SCSS_CLAMP_IN_NON_HDR
         l.color = saturate(l.color);
     #endif
-
 
     // Apply full lighting to unimportant lights. This is cheaper than you might expect.
 	#if defined(UNITY_PASS_FORWARDBASE) && defined(VERTEXLIGHT_ON) && defined(SCSS_UNIMPORTANT_LIGHTS_FRAGMENT)

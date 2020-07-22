@@ -77,7 +77,7 @@ float rDither(float gray, float2 pos) {
 	#define steps 4
 	// pos is screen pixel position in 0-res range
     // Calculated noised gray value
-    float noised = (2./steps) * T(intensity(float2(pos.xy))) + gray - (1./steps);
+    float noised = (2./steps) * T(intensity(float2(pos.xy))) + gray - (1./steps); 
     // Clamp to the number of gray levels we want
     return floor(steps * noised) / (steps-1.);
     #undef steps
@@ -456,25 +456,40 @@ float3 applyMatcap(sampler2D src, half2 matcapUV, float3 dst, float3 light, int 
     return applyBlendMode(blendMode, dst, tex2D(src, matcapUV) * light, blendStrength);
 }
 
-// Fresnel/stylish lighting helpers
+// Stylish lighting helpers
 
 float lerpstep( float a, float b, float t)
 {
     return saturate( ( t - a ) / ( b - a ) );
 }
 
+float smootherstep(float a, float b, float t) 
+{
+    t = saturate( ( t - a ) / ( b - a ) );
+    return t * t * t * (t * (t * 6. - 15.) + 10.);
+}
+
 float sharpenLighting (float inLight, float softness)
 {
     float2 lightStep = 0.5 + float2(-1, 1) * fwidth(inLight);
     lightStep = lerp(float2(0.0, 1.0), lightStep, 1-softness);
-    inLight = lerpstep(lightStep.x, lightStep.y, inLight);
+    inLight = smoothstep(lightStep.x, lightStep.y, inLight);
     return inLight;
 }
 
-float simpleSharpen (float x, float width, float mid)
+// By default, use smootherstep because it has the best visual appearance.
+// But some functions might work better with lerpstep.
+float simpleSharpen (float x, float width, float mid, const float smoothnessMode = 2)
 {
     width = max(width, fwidth(x));
-    x = lerpstep(mid-width, mid, x);
+
+    [flatten]
+    switch (smoothnessMode)
+    {
+        case 0: x = lerpstep(mid-width, mid, x); break;
+        case 1: x = smoothstep(mid-width, mid, x); break;
+        case 2: x = smootherstep(mid-width, mid, x); break;
+    }
 
     return x;
 }
