@@ -19,10 +19,11 @@ Shader "Silent's Cel Shading/Crosstone"
 		[Space]
 		[Header(Lighting)]
         _1st_ShadeMap ("1st_ShadeMap", 2D) = "white" {}
-        _1st_ShadeColor ("1st_ShadeColor", Color) = (1,1,1,1)
+        _1st_ShadeColor ("1st_ShadeColor", Color) = (0,0,0,1)
         _2nd_ShadeMap ("2nd_ShadeMap", 2D) = "white" {}
-        _2nd_ShadeColor ("2nd_ShadeColor", Color) = (1,1,1,1)
+        _2nd_ShadeColor ("2nd_ShadeColor", Color) = (0,0,0,1)
         _ShadingGradeMap ("ShadingGradeMap", 2D) = "white" {}
+        _Tweak_ShadingGradeMapLevel ("ShadingGradeMap Adjustment", Range(-0.5, 0.5)) = 0
 		[Space]
         _1st_ShadeColor_Step ("1st_ShadeColor_Step", Range(0, 1)) = 0.5
         _1st_ShadeColor_Feather ("1st_ShadeColor_Feather", Range(0.0001, 1)) = 0.0001

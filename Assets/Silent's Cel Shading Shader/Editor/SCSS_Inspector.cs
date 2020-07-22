@@ -67,7 +67,8 @@ namespace SilentCelShading.Unity
 			public static GUIContent shadeMap2Color = new GUIContent("2nd Shading Colour");
 			public static GUIContent shadeMap2Step = new GUIContent("2nd Shading Breakpoint", "Sets the point at which the shading begins to transition from shaded to fully shaded, based on the light hitting the material.");
 			public static GUIContent shadeMap2Feather = new GUIContent("1st Shading Width", "Sets the width of the transition between shaded and fully shaded.");
-			public static GUIContent shadingGradeMap = new GUIContent("Shading Adjustment Map", "Adds additional shading to darkened regions, and acts as occlusion.");
+			public static GUIContent shadingGradeMap = new GUIContent("Shading Adjustment Map", "Adds additional shading to darkened regions, and acts as occlusion. The slider adjusts the map further.");
+			public static GUIContent shadingGradeMapLevel = new GUIContent("Shading Adjustment Level", "Modifies the middle point of the shading adjustment.");
 		} 
 
 #region MaterialProperty definitions
@@ -174,6 +175,7 @@ namespace SilentCelShading.Unity
 		protected MaterialProperty shadeMap2Step;
 		protected MaterialProperty shadeMap2Feather;
 		protected MaterialProperty shadingGradeMap;
+		protected MaterialProperty shadingGradeMapLevel;
 
 		protected MaterialProperty vertexColorType;
 
@@ -248,6 +250,7 @@ namespace SilentCelShading.Unity
  			shadeMap2Step = FindProperty("_2nd_ShadeColor_Step", props);
  			shadeMap2Feather = FindProperty("_2nd_ShadeColor_Feather", props);
  			shadingGradeMap = FindProperty("_ShadingGradeMap", props);
+ 			shadingGradeMapLevel = FindProperty("_Tweak_ShadingGradeMapLevel", props);
 		}
 
 		protected void FindMatcapProperties(MaterialProperty[] props)
@@ -496,7 +499,7 @@ namespace SilentCelShading.Unity
 			materialEditor.ShaderProperty(shadeMap2Feather, CrosstoneStyles.shadeMap2Feather);
 			
 			EditorGUILayout.Space();
-			materialEditor.TexturePropertySingleLine(CrosstoneStyles.shadingGradeMap, shadingGradeMap);
+			materialEditor.TexturePropertySingleLine(CrosstoneStyles.shadingGradeMap, shadingGradeMap, shadingGradeMapLevel);
 		}
 
 		protected void RenderingOptions(MaterialEditor materialEditor, Material material)
@@ -534,19 +537,22 @@ namespace SilentCelShading.Unity
 		{	
 			EditorGUI.BeginChangeCheck();
 			materialEditor.ShaderProperty(useFresnel, CommonStyles.useFresnel);
+			bool isTintable = 
+				(AmbientFresnelType)useFresnel.floatValue == AmbientFresnelType.Lit
+				|| (AmbientFresnelType)useFresnel.floatValue == AmbientFresnelType.Ambient;
 
 			if (PropertyEnabled(useFresnel))
 			{
 				materialEditor.ShaderProperty(fresnelWidth, CommonStyles.fresnelWidth);
 				materialEditor.ShaderProperty(fresnelStrength, CommonStyles.fresnelStrength);
-				materialEditor.ShaderProperty(fresnelTint, CommonStyles.fresnelTint);	
+				if (isTintable) materialEditor.ShaderProperty(fresnelTint, CommonStyles.fresnelTint);	
 
 				materialEditor.ShaderProperty(useFresnelLightMask, CommonStyles.useFresnelLightMask);
 				if (PropertyEnabled(useFresnelLightMask))
 				{
 					EditorGUI.indentLevel += 2;
 					materialEditor.ShaderProperty(fresnelLightMask, CommonStyles.fresnelLightMask);
-					materialEditor.ShaderProperty(fresnelTintInv, CommonStyles.fresnelTintInv);
+					if (isTintable) materialEditor.ShaderProperty(fresnelTintInv, CommonStyles.fresnelTintInv);
 					materialEditor.ShaderProperty(fresnelWidthInv, CommonStyles.fresnelWidthInv);
 					materialEditor.ShaderProperty(fresnelStrengthInv, CommonStyles.fresnelStrengthInv);
 					EditorGUI.indentLevel -= 2;
@@ -1002,7 +1008,7 @@ protected Vector4? GetSerializedMaterialVector4(Material material, string propNa
             	if (oldShader.name.Contains("UnityChanToonShader"))
                 {
                     normalMapTexture = material.GetTexture("_NormalMap");
-                    // _Tweak_ShadingGradeMapLevel is not supported yet.
+                    // _Tweak_ShadingGradeMapLevel is named the same.
 
                     useToneSeparation = GetFloatProperty(material, "_Use_BaseAs1st");
 

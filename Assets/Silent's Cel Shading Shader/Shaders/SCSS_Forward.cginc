@@ -242,6 +242,7 @@ float4 frag(VertexOutput i, uint facing : SV_IsFrontFace) : SV_Target
 	c.emission = Emission(texcoords.xy);
 
 	// Vertex colour application. 
+	[flatten]
 	switch (_VertexColorType)
 	{
 		case 2: 

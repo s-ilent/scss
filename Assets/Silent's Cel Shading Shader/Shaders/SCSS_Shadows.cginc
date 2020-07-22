@@ -60,6 +60,8 @@ void vertShadowCaster(VertexInput v,
     out float4 opos : SV_POSITION)
 {
     TRANSFER_SHADOW_CASTER_NOPOS(o, opos)
+    //TRANSFER_SHADOW_CASTER_NOPOS_LEGACY (o, opos)
+
     #if defined(UNITY_STANDARD_USE_SHADOW_UVS)
         o.tex = TRANSFORM_TEX(v.uv0, _MainTex);
     #endif
