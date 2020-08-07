@@ -340,7 +340,7 @@ float4 TexCoords(VertexOutput v)
 
 half OutlineMask(float2 uv)
 {
-    //return UNITY_SAMPLE_TEX2D_SAMPLER (_ColorMask, _MainTex, uv).r;
+	// Needs LOD, sampled in vertex function
     return tex2Dlod(_OutlineMask, float4(uv, 0, 0)).r;
 }
 
@@ -421,7 +421,7 @@ half4 SpecularGloss(float4 texcoords, half mask)
 #else
     sg = _SpecColor;
     #ifdef _SMOOTHNESS_TEXTURE_ALBEDO_CHANNEL_A
-        sg.a = UNITY_SAMPLE_TEX2D(_MainTex, texcoords.xy).a * _Smoothness; // _GlossMapScale is what Standard uses for this
+        sg.a *= UNITY_SAMPLE_TEX2D(_MainTex, texcoords.xy).a; // _GlossMapScale is what Standard uses for this
     #else
     //    sg.a = _Smoothness; // _Glossiness is what Standard uses for this
     #endif
