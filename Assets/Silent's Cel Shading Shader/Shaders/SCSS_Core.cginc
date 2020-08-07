@@ -110,7 +110,7 @@ float3 getSubsurfaceScatteringLight (SCSS_Light l, float3 normalDirection, float
 }
 #endif
 
-float3 sampleCrossToneLighting(float x, SCSS_TonemapInput tone0, SCSS_TonemapInput tone1, float3 albedo)
+float3 sampleCrossToneLighting(inout float x, SCSS_TonemapInput tone0, SCSS_TonemapInput tone1, float3 albedo)
 {
 	// A three-tiered tone system.
 	// Input x is potentially affected by occlusion map.
@@ -130,7 +130,10 @@ float3 sampleCrossToneLighting(float x, SCSS_TonemapInput tone0, SCSS_TonemapInp
 	if (_CrosstoneToneSeparation == 0) 	final = lerp(final, 1.0, factor0) * albedo;
 	if (_CrosstoneToneSeparation == 1) 	final = lerp(final, albedo, factor0);
 	
+	x = factor0;
+	
 	return final;
+
 
 	// v0 + t * (v1 - v0);
 }
@@ -195,7 +198,7 @@ half3 calcVertexLight(float4 vertexAttenuation, float occlusion, SCSS_TonemapInp
 	return vertexContribution;
 }
 
-void getDirectIndirectLighting(float3 normal, inout float3 directLighting, inout float3 indirectLighting)
+void getDirectIndirectLighting(float3 normal, out float3 directLighting, out float3 indirectLighting)
 {
 	switch (_LightingCalculationType)
 	{
@@ -220,15 +223,29 @@ void getDirectIndirectLighting(float3 normal, inout float3 directLighting, inout
 
 }
 
-// For baked lighting.
-half3 calcDiffuseGI(float3 albedo, SCSS_TonemapInput tone[2], float occlusion, half3 normal, half softness)
+float  getAmbientLight (float3 normal)
 {
 	float3 ambientLightDirection = Unity_SafeNormalize((unity_SHAr.xyz + unity_SHAg.xyz + unity_SHAb.xyz) * _LightSkew.xyz);
+
+	if (_IndirectShadingType == 2) // Flatten
+	{
+		ambientLightDirection = any(_LightColor0) 
+		? normalize(_WorldSpaceLightPos0) 
+		: ambientLightDirection;
+	}
 
 	float ambientLight = dot(normal, ambientLightDirection);
 	ambientLight = ambientLight * 0.5 + 0.5;
 
-	if (_IndirectShadingType == 0) ambientLight = getGreyscaleSH(normal);
+	if (_IndirectShadingType == 0) // Dynamic
+		ambientLight = getGreyscaleSH(normal);
+	return ambientLight;
+}
+
+// For baked lighting.
+half3 calcDiffuseGI(float3 albedo, SCSS_TonemapInput tone[2], float occlusion, half3 normal, half softness)
+{
+	float ambientLight = getAmbientLight(normal);
 
 	float3 directLighting = 0.0;
 	float3 indirectLighting = 0.0;
@@ -288,7 +305,10 @@ half3 calcDiffuseBase(float3 albedo, SCSS_TonemapInput tone[2], float occlusion,
 	float remappedLight = getRemappedLight(perceptualRoughness, d);
 	remappedLight = remappedLight * 0.5 + 0.5;
 
-	remappedLight = applyAttenuation(remappedLight, attenuation);
+	if (_IndirectShadingType != 2) // Flatten
+	{
+		remappedLight = applyAttenuation(remappedLight, attenuation);
+	}
 
 	#if !defined(SCSS_CROSSTONE)
 	remappedLight = applyShadowLift(remappedLight, occlusion);
@@ -468,16 +488,22 @@ half3 calcSpecularCel(float3 specColor, float smoothness, float3 normal, float o
 		return (spec * specColor *  l.color) + (spec * specColor * envLight);
 	}
 	if (_SpecularType == 5) {
+		float3 strandTangent = (_Anisotropy < 0)
+		? i.tangentDir
+		: i.bitangentDir;
 		_Anisotropy = abs(_Anisotropy);
-		float spec = StrandSpecular(i.tangentDir, 
+		float spec = StrandSpecular(strandTangent, 
 			d.viewDir, l.dir, d.halfDir, 
 			_Anisotropy*100, 1.0 );
-		spec += StrandSpecular(i.tangentDir, 
+		float spec2 = StrandSpecular(strandTangent, 
 			d.viewDir, l.dir, d.halfDir, 
 			_Anisotropy*10, 0.05 );
-		spec = sharpenLighting(frac(spec), 0.02)+floor(spec);
-		return max(0, spec * specColor *  l.color * smoothness) + 
-			UNITY_SAMPLE_TEXCUBE_LOD(unity_SpecCube0, normal, UNITY_SPECCUBE_LOD_STEPS) * specColor;
+		spec  = sharpenLighting(frac(spec), _CelSpecularSoftness)+floor(spec);
+		spec2 = sharpenLighting(frac(spec2), _CelSpecularSoftness)+floor(spec2);
+		spec += spec2;
+		
+    	float3 envLight = UNITY_SAMPLE_TEXCUBE_LOD(unity_SpecCube0, normal, UNITY_SPECCUBE_LOD_STEPS);
+		return (spec * specColor *  l.color) + (spec * specColor * envLight);
 	}
 	return 0;
 }
