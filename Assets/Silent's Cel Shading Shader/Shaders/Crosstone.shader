@@ -26,9 +26,9 @@ Shader "Silent's Cel Shading/Crosstone (Outline)"
         _Tweak_ShadingGradeMapLevel ("ShadingGradeMap Adjustment", Range(-0.5, 0.5)) = 0
 		[Space]
         _1st_ShadeColor_Step ("1st_ShadeColor_Step", Range(0, 1)) = 0.5
-        _1st_ShadeColor_Feather ("1st_ShadeColor_Feather", Range(0.0001, 1)) = 0.0001
+        _1st_ShadeColor_Feather ("1st_ShadeColor_Feather", Range(0.001, 1)) = 0.01
         _2nd_ShadeColor_Step ("2nd_ShadeColor_Step", Range(0, 1)) = 0
-        _2nd_ShadeColor_Feather ("2nd_ShadeColor_Feather", Range(0.0001, 1)) = 0.0001
+        _2nd_ShadeColor_Feather ("2nd_ShadeColor_Feather", Range(0.001, 1)) = 0.01
 		[Space]
 		[Enum(ToneSeparationType)]_CrosstoneToneSeparation ("Don't combine tone with albedo", Float) = 0
 		[Space]

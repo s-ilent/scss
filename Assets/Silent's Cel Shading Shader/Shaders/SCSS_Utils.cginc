@@ -368,7 +368,7 @@ float3 ShiftTangent (float3 T, float3 N, float shift)
 	return normalize(shiftedT);
 }
 
-float StrandSpecular(float3 T, float3 V, float3 L, float3 H, float exponent, float strength)
+float StrandSpecular(float3 T, float3 H, float exponent, float strength)
 {
 	//float3 H = normalize(L+V);
 	float dotTH = dot(T, H);
@@ -481,7 +481,9 @@ float sharpenLighting (float inLight, float softness)
 // But some functions might work better with lerpstep.
 float simpleSharpen (float x, float width, float mid, const float smoothnessMode = 2)
 {
-    width = max(width, fwidth(x));
+    float2 dx = float2(ddx(x), ddy(x));
+    float rf = (dot(dx, dx)*2);
+    width = max(width, rf);
 
     [flatten]
     switch (smoothnessMode)

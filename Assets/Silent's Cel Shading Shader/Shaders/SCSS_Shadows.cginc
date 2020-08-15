@@ -52,7 +52,6 @@ struct VertexOutputShadowCaster
 // and inputting VPOS in the pixel shader, since they both map to "POSITION" semantic on
 // some platforms, and then things don't go well.
 
-
 void vertShadowCaster(VertexInput v,
     #if !defined(V2F_SHADOW_CASTER_NOPOS_IS_EMPTY) || defined(UNITY_STANDARD_USE_SHADOW_UVS)
         out VertexOutputShadowCaster o,

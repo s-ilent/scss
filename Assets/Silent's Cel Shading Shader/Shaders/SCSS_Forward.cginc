@@ -1,8 +1,8 @@
-v2g vert(appdata_full v) {
-	v2g o = (v2g)0;
+VertexOutput vert(appdata_full v) {
+	VertexOutput o = (VertexOutput)0;
 
     UNITY_SETUP_INSTANCE_ID(v);
-    UNITY_INITIALIZE_OUTPUT(v2g, o);
+    UNITY_INITIALIZE_OUTPUT(VertexOutput, o);
     UNITY_TRANSFER_INSTANCE_ID(v, o);
     UNITY_INITIALIZE_VERTEX_OUTPUT_STEREO(o);
 
@@ -20,6 +20,7 @@ v2g vert(appdata_full v) {
 
 	// Extra data handling
 	// X: Outline width | Y: Ramp softness
+	// Z: Outline Z offset | 
 	if (_VertexColorType == 2) 
 	{
 		o.color = 1.0; // Reset
@@ -56,62 +57,36 @@ v2g vert(appdata_full v) {
 	return o;
 }
 
+VertexOutput vert_nogeom(appdata_full v) {
+	VertexOutput o = (VertexOutput)0;
+
+	o = vert(v);
+	
+	o.extraData.x = false;
+	return o;
+}
+
 [maxvertexcount(6)]
-void geom(triangle v2g IN[3], inout TriangleStream<VertexOutput> tristream)
+void geom(triangle VertexOutput IN[3], inout TriangleStream<VertexOutput> tristream)
 {
 	VertexOutput o = (VertexOutput)0;
-	for (int i = 2; i >= 0; i--)
-	{
-		// If the outline triangle is too small, don't emit it.
-		if (IN[i].extraData.r <= 1.e-9)
-		{
-			continue;
-		}
 
-		o.uv0 = IN[i].uv0;
-		o.uv1 = IN[i].uv1;
-		o.posWorld = mul(unity_ObjectToWorld, IN[i].vertex);
-		o.normalDir = IN[i].normalDir;
-		o.tangentDir = IN[i].tangentDir;
-		o.bitangentDir = IN[i].bitangentDir;
-		o.is_outline = true;
+    #if defined(UNITY_REVERSED_Z)
+        const float far_clip_value_raw = 0.0;
+    #else
+        const float far_clip_value_raw = 1.0;
+    #endif
 
-		o.pos = UnityObjectToClipPos(IN[i].vertex + normalize(IN[i].normal) * IN[i].extraData.r);
-		//o.pos.z *= sign(o.pos.z) * (2*any(_outline_width_var))-1; // 
-
-		// Pass-through the shadow coordinates if this pass has shadows.
-		#if defined (SHADOWS_SCREEN) || ( defined (SHADOWS_DEPTH) && defined (SPOT) ) || defined (SHADOWS_CUBE) || (defined (UNITY_LIGHT_PROBE_PROXY_VOLUME) && UNITY_VERSION<600)
-		o._ShadowCoord = IN[i]._ShadowCoord;
-		#endif
-
-		// Pass-through the fog coordinates if this pass has fog.
-		#if defined(FOG_LINEAR) || defined(FOG_EXP) || defined(FOG_EXP2)
-		o.fogCoord = IN[i].fogCoord;
-		#endif
-
-		// Pass-through the vertex light information.
-		o.vertexLight = IN[i].vertexLight;
-		o.color = IN[i].color;
-		o.extraData = IN[i].extraData;
-
-		UNITY_TRANSFER_INSTANCE_ID(IN[i], o);
-
-		tristream.Append(o);
-	}
-
-	tristream.RestartStrip();
-
+	// Generate base vertex
 	for (int ii = 0; ii < 3; ii++)
 	{
-		o.pos = UnityObjectToClipPos(IN[ii].vertex);
+		o.pos = IN[ii].pos;
 		o.uv0 = IN[ii].uv0;
 		o.uv1 = IN[ii].uv1;
-		o.posWorld = mul(unity_ObjectToWorld, IN[ii].vertex);
+		o.posWorld = IN[ii].posWorld;
 		o.normalDir = IN[ii].normalDir;
 		o.tangentDir = IN[ii].tangentDir;
 		o.bitangentDir = IN[ii].bitangentDir;
-		o.posWorld = mul(unity_ObjectToWorld, IN[ii].vertex); 
-		o.is_outline = false;
 
 		// Pass-through the shadow coordinates if this pass has shadows.
 		#if defined (SHADOWS_SCREEN) || ( defined (SHADOWS_DEPTH) && defined (SPOT) ) || defined (SHADOWS_CUBE) || (defined (UNITY_LIGHT_PROBE_PROXY_VOLUME) && UNITY_VERSION<600)
@@ -128,58 +103,29 @@ void geom(triangle v2g IN[3], inout TriangleStream<VertexOutput> tristream)
 		o.color = IN[ii].color;
 		o.extraData = IN[ii].extraData;
 
+		o.extraData.x = false;
+
 		UNITY_TRANSFER_INSTANCE_ID(IN[i], o);
 
 		tristream.Append(o);
 	}
 
 	tristream.RestartStrip();
-}
 
-VertexOutput vert_nogeom(appdata_full v) {
-	VertexOutput o = (VertexOutput)0;
-
-    UNITY_SETUP_INSTANCE_ID(v);
-    UNITY_INITIALIZE_OUTPUT(VertexOutput, o);
-    UNITY_TRANSFER_INSTANCE_ID(v, o);
-    UNITY_INITIALIZE_VERTEX_OUTPUT_STEREO(o);
-
-	o.pos = UnityObjectToClipPos(v.vertex);
-	o.uv0 = AnimateTexcoords(v.texcoord);
-	o.uv1 = v.texcoord1;
-	o.normalDir = UnityObjectToWorldNormal(v.normal);
-	o.tangentDir = UnityObjectToWorldDir(v.tangent.xyz);
-    half sign = v.tangent.w * unity_WorldTransformParams.w;
-	o.bitangentDir = cross(o.normalDir, o.tangentDir) * sign;
-	float4 objPos = mul(unity_ObjectToWorld, float4(0, 0, 0, 1));
-	o.posWorld = mul(unity_ObjectToWorld, v.vertex);
-	o.is_outline = false;
-
-	// Extra data handling
-	// X: Outline width | Y: Ramp softness
-	if (_VertexColorType == 2) 
+	// Generate outline vertex
+	// If the outline triangle is too small, don't emit it.
+	if ((IN[0].extraData.r + IN[1].extraData.r + IN[2].extraData.r) >= 1.e-9)
 	{
-		o.color = 1.0; // Reset
-		o.extraData = v.color;
-	} else {
-		o.color = v.color;
-		o.extraData = 0.0; 
-		o.extraData.x = v.color.a;
+		for (int i = 2; i >= 0; i--)
+		{
+			o.pos = UnityObjectToClipPos(IN[i].vertex + normalize(IN[i].normal) * IN[i].extraData.r);
+			//o.pos.z = lerp(far_clip_value_raw, o.pos.z, IN[i].extraData.z);
+			o.extraData.x = true;
+			tristream.Append(o);
+		}
+
+		tristream.RestartStrip();
 	}
-
-	#if (UNITY_VERSION<600)
-	TRANSFER_SHADOW(o);
-	#else
-	UNITY_TRANSFER_SHADOW(o, v.texcoord);
-	#endif
-
-	UNITY_TRANSFER_FOG(o, o.pos);
-#if VERTEXLIGHT_ON
-	o.vertexLight = VertexLightContribution(o.posWorld, o.normalDir);
-#else
-	o.vertexLight = 0;
-#endif
-	return o;
 }
 
 float4 frag(VertexOutput i, uint facing : SV_IsFrontFace) : SV_Target
@@ -196,14 +142,17 @@ float4 frag(VertexOutput i, uint facing : SV_IsFrontFace) : SV_Target
 		i.tangentDir *= -1;
 		i.bitangentDir *= -1;
 	}
-	if (i.is_outline && !facing) discard;
+
+	float isOutline = i.extraData.x;
+
+	if (isOutline && !facing) discard;
 
 	if (_UseInteriorOutline)
 	{
-	    i.is_outline = max(i.is_outline, 1-innerOutline(i));
+	    isOutline = max(isOutline, 1-innerOutline(i));
 	}
 	
-    float outlineDarken = 1-i.is_outline;
+    float outlineDarken = 1-isOutline;
 
 	float4 texcoords = TexCoords(i);
 
@@ -247,7 +196,7 @@ float4 frag(VertexOutput i, uint facing : SV_IsFrontFace) : SV_Target
 	{
 		case 2: 
 		case 0: c.albedo = c.albedo * i.color.rgb; break;
-		case 1: c.albedo = lerp(c.albedo, i.color.rgb, i.is_outline); break;
+		case 1: c.albedo = lerp(c.albedo, i.color.rgb, isOutline); break;
 	}
 	
 	c.softness = i.extraData.g;
@@ -272,7 +221,7 @@ float4 frag(VertexOutput i, uint facing : SV_IsFrontFace) : SV_Target
 	c.occlusion = ShadingGradeMap(texcoords.xy);
 	#endif
 
-	c = applyOutline(c, i.is_outline);
+	c = applyOutline(c, isOutline);
 
 	// Specular variable setup
 
@@ -307,7 +256,7 @@ float4 frag(VertexOutput i, uint facing : SV_IsFrontFace) : SV_Target
 		{
 			c.albedo.xyz = c.albedo.xyz * (c.oneMinusReflectivity); 
 			//c.tone[0].col = c.tone[0].col * (c.oneMinusReflectivity); 
-//Astonemapismultipliedagainstalbedo,isthisnecessary?
+			// As tonemap is multiplied against albedo, is this necessary?
 		}
 
 	    i.tangentDir = ShiftTangent(normalize(i.tangentDir), c.normal, c.smoothness);
