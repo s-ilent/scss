@@ -133,9 +133,6 @@ float3 sampleCrossToneLighting(inout float x, SCSS_TonemapInput tone0, SCSS_Tone
 	x = factor0;
 	
 	return final;
-
-
-	// v0 + t * (v1 - v0);
 }
 
 float applyShadowLift(float baseLight, float occlusion)
@@ -200,6 +197,8 @@ half3 calcVertexLight(float4 vertexAttenuation, float occlusion, SCSS_TonemapInp
 
 void getDirectIndirectLighting(float3 normal, out float3 directLighting, out float3 indirectLighting)
 {
+	directLighting = 0.0;
+	indirectLighting = 0.0;
 	switch (_LightingCalculationType)
 	{
 	case 0: // Arktoon
@@ -220,10 +219,9 @@ void getDirectIndirectLighting(float3 normal, out float3 directLighting, out flo
 		indirectLighting = BetterSH9(-ambientDir); 
 	break;
 	}
-
 }
 
-float  getAmbientLight (float3 normal)
+float getAmbientLight (float3 normal)
 {
 	float3 ambientLightDirection = Unity_SafeNormalize((unity_SHAr.xyz + unity_SHAg.xyz + unity_SHAb.xyz) * _LightSkew.xyz);
 
@@ -247,8 +245,7 @@ half3 calcDiffuseGI(float3 albedo, SCSS_TonemapInput tone[2], float occlusion, h
 {
 	float ambientLight = getAmbientLight(normal);
 
-	float3 directLighting = 0.0;
-	float3 indirectLighting = 0.0;
+	float3 directLighting, indirectLighting;
 
 	getDirectIndirectLighting(normal, /*out*/ directLighting, /*out*/ indirectLighting);
 	
@@ -268,11 +265,11 @@ half3 calcDiffuseGI(float3 albedo, SCSS_TonemapInput tone[2], float occlusion, h
 	#endif
 
 	// Make this a UI value later.
-	const half ambientLightSplitThreshold = 1.0/3.0;
+	const half ambientLightSplitThreshold = 1.0/6.0;
 	half ambientLightSplitFactor = 
 	saturate(
 		dot(abs((directLighting-indirectLighting)/indirectAverage), 
-		ambientLightSplitThreshold));
+		ambientLightSplitThreshold * sRGB_Luminance));
 
 	float3 lightContribution;
 
@@ -492,12 +489,12 @@ half3 calcSpecularCel(float3 specColor, float smoothness, float3 normal, float o
 		? i.tangentDir
 		: i.bitangentDir;
 		_Anisotropy = abs(_Anisotropy);
-		float spec = StrandSpecular(strandTangent, 
-			d.viewDir, l.dir, d.halfDir, 
-			_Anisotropy*100, 1.0 );
-		float spec2 = StrandSpecular(strandTangent, 
-			d.viewDir, l.dir, d.halfDir, 
-			_Anisotropy*10, 0.05 );
+		strandTangent = lerp(normal, strandTangent, _Anisotropy);
+		float exponent = smoothness;
+		float spec  = StrandSpecular(strandTangent, d.halfDir, 
+			exponent*80, 1.0 );
+		float spec2 = StrandSpecular(strandTangent, d.halfDir, 
+			exponent*40, 0.5 );
 		spec  = sharpenLighting(frac(spec), _CelSpecularSoftness)+floor(spec);
 		spec2 = sharpenLighting(frac(spec2), _CelSpecularSoftness)+floor(spec2);
 		spec += spec2;
@@ -519,6 +516,8 @@ float3 SCSS_ShadeBase(SCSS_Input c, VertexOutput i, SCSS_Light l, float attenuat
 {	
 	float3 finalColor;
 
+	float isOutline = i.extraData.x;
+
 	SCSS_LightParam d = initialiseLightParam(l, c.normal, i.posWorld.xyz);
 
 	finalColor  = calcDiffuseGI(c.albedo, c.tone, c.occlusion, c.normal, c.softness);
@@ -539,7 +538,7 @@ float3 SCSS_ShadeBase(SCSS_Input c, VertexOutput i, SCSS_Light l, float attenuat
 	fL.dir = Unity_SafeNormalize(fL.dir + (unity_SHAr.xyz + unity_SHAg.xyz + unity_SHAb.xyz) * _LightSkew.xyz);
 	fD = initialiseLightParam(fL, c.normal, i.posWorld.xyz);
 
-	if (i.is_outline == 0)
+	if (isOutline <= 0)
 	{
 		#if defined(_SUBSURFACE)
 			#if defined(USING_DIRECTIONAL_LIGHT)
@@ -566,11 +565,13 @@ float3 SCSS_ShadeLight(SCSS_Input c, VertexOutput i, SCSS_Light l, half attenuat
 {
 	float3 finalColor;
 
+	float isOutline = i.extraData.x;
+
 	SCSS_LightParam d = initialiseLightParam(l, c.normal, i.posWorld.xyz);
 
     finalColor = calcDiffuseAdd(c.albedo, c.tone, c.occlusion, c.perceptualRoughness, c.softness, d, l);
 
-	if (i.is_outline == 0)
+	if (isOutline <= 0)
 	{
 		#if defined(_SUBSURFACE) 
 		finalColor += c.albedo * getSubsurfaceScatteringLight(l, c.normal, d.viewDir,
@@ -596,6 +597,11 @@ float3 SCSS_ApplyLighting(SCSS_Input c, VertexOutput i, float4 texcoords)
 	#if defined(SCSS_SCREEN_SHADOW_FILTER)
 	correctedScreenShadowsForMSAA(i._ShadowCoord, attenuation);
 	#endif
+
+	attenuation = LerpOneTo(attenuation, 0.5);
+	//return attenuation;
+
+	float isOutline = i.extraData.x;
 
 	// Lighting parameters
 	SCSS_Light l = MainLight(i.posWorld.xyz);
@@ -626,7 +632,7 @@ float3 SCSS_ApplyLighting(SCSS_Input c, VertexOutput i, float4 texcoords)
 	#endif
 
 	// Apply matcap before specular effect.
-	if (_UseMatcap >= 1 && i.is_outline == 0) 
+	if (_UseMatcap >= 1 && isOutline <= 0) 
 	{
 		half2 matcapUV;
 		if (_UseMatcap == 1) matcapUV = getMatcapUVsOriented(c.normal, d.viewDir, float3(0, 1, 0));
@@ -648,7 +654,7 @@ float3 SCSS_ApplyLighting(SCSS_Input c, VertexOutput i, float4 texcoords)
 		saturate(pow(saturate(-fresnelLightMaskBase), _FresnelLightMask));
 	
 	// Lit
-	if (_UseFresnel == 1 && i.is_outline == 0) 
+	if (_UseFresnel == 1 && isOutline <= 0) 
 	{
 		float3 sharpFresnel = sharpenLighting(d.rlPow4.y * c.rim.width * fresnelLightMask, 
 			c.rim.power) * c.rim.tint * c.rim.alpha;
@@ -658,14 +664,14 @@ float3 SCSS_ApplyLighting(SCSS_Input c, VertexOutput i, float4 texcoords)
 	}
 
 	// AmbientAlt
-	if (_UseFresnel == 3 && i.is_outline == 0)
+	if (_UseFresnel == 3 && isOutline <= 0)
 	{
 		float sharpFresnel = sharpenLighting(d.rlPow4.y*c.rim.width, c.rim.power)
 		 * c.rim.alpha;
 		c.occlusion += saturate(sharpFresnel);
 	}
 
-	if (_UseFresnel == 4 && i.is_outline == 0)
+	if (_UseFresnel == 4 && isOutline <= 0)
 	{
 		float3 sharpFresnel = sharpenLighting(d.rlPow4.y * c.rim.width * fresnelLightMask, 
 			c.rim.power);
@@ -690,7 +696,7 @@ float3 SCSS_ApplyLighting(SCSS_Input c, VertexOutput i, float4 texcoords)
 	#endif
 
 	// Ambient
-	if (_UseFresnel == 2 && i.is_outline == 0)
+	if (_UseFresnel == 2 && isOutline <= 0)
 	{
 		float3 sharpFresnel = sharpenLighting(d.rlPow4.y * c.rim.width * fresnelLightMask, 
 			c.rim.power) * c.rim.tint * c.rim.alpha;
@@ -732,7 +738,7 @@ float3 SCSS_ApplyLighting(SCSS_Input c, VertexOutput i, float4 texcoords)
 	// Emissive c.rim. To restore masking behaviour, multiply by emissionMask.
 	emission += _CustomFresnelColor.xyz * (pow(d.rlPow4.y, rcp(_CustomFresnelColor.w+0.0001)));
 
-	emission *= (1-i.is_outline);
+	emission *= (1-isOutline);
 	finalColor += emission;
 	#endif
 

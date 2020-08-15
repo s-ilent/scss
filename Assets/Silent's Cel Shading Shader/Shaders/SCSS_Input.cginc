@@ -163,12 +163,12 @@ uniform int _Rows;
 //-------------------------------------------------------------------------------------
 // Input functions
 
-struct v2g
+struct VertexOutput
 {
     UNITY_VERTEX_INPUT_INSTANCE_ID
     UNITY_VERTEX_OUTPUT_STEREO
 
-	UNITY_POSITION(vertex);
+	UNITY_POSITION(pos);
 	float3 normal : NORMAL;
 	fixed4 color : COLOR0_centroid;
 	float2 uv0 : TEXCOORD0;
@@ -177,26 +177,7 @@ struct v2g
 	float3 normalDir : TEXCOORD3;
 	float3 tangentDir : TEXCOORD4;
 	float3 bitangentDir : TEXCOORD5;
-	float4 pos : CLIP_POS;
-	half4 vertexLight : TEXCOORD6;
-	half4 extraData : TEXCOORD7;
-	UNITY_SHADOW_COORDS(8)
-	UNITY_FOG_COORDS(9)
-};
-
-struct VertexOutput
-{
-    UNITY_VERTEX_INPUT_INSTANCE_ID
-    UNITY_VERTEX_OUTPUT_STEREO
-
-	UNITY_POSITION(pos);
-	float4 color : COLOR;
-	float2 uv0 : TEXCOORD0;
-	float2 uv1 : TEXCOORD1;
-	float4 posWorld : TEXCOORD2;
-	float3 normalDir : TEXCOORD3;
-	float3 tangentDir : TEXCOORD4;
-	float3 bitangentDir : TEXCOORD5;
+	float4 vertex : VERTEX;
 	half4 vertexLight : TEXCOORD6;
 	half4 extraData : TEXCOORD7;
 	float is_outline : IS_OUTLINE;

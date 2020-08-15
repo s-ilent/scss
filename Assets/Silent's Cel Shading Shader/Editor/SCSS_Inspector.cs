@@ -37,7 +37,8 @@ namespace SilentCelShading.Unity
 		public enum IndirectShadingType
 		{
 			Dynamic,
-			Directional
+			Directional,
+			Flatten
 		}
 
 		public static class LightrampStyles
