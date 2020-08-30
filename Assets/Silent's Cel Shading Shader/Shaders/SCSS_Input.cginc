@@ -178,11 +178,22 @@ struct VertexOutput
 	float3 tangentDir : TEXCOORD4;
 	float3 bitangentDir : TEXCOORD5;
 	float4 vertex : VERTEX;
+
+	#if defined(VERTEXLIGHT_ON)
 	half4 vertexLight : TEXCOORD6;
-	half4 extraData : TEXCOORD7;
-	float is_outline : IS_OUTLINE;
+	#endif
+
+	half4 extraData : EXTRA_DATA;
+
+	// Pass-through the shadow coordinates if this pass has shadows.
+	#if defined(USING_SHADOWS_UNITY)
 	UNITY_SHADOW_COORDS(8)
+	#endif
+
+	// Pass-through the fog coordinates if this pass has fog.
+	#if defined(FOG_LINEAR) || defined(FOG_EXP) || defined(FOG_EXP2)
 	UNITY_FOG_COORDS(9)
+	#endif
 };
 
 struct SCSS_RimLightInput
