@@ -302,10 +302,7 @@ half3 calcDiffuseBase(float3 albedo, SCSS_TonemapInput tone[2], float occlusion,
 	float remappedLight = getRemappedLight(perceptualRoughness, d);
 	remappedLight = remappedLight * 0.5 + 0.5;
 
-	if (_IndirectShadingType != 2) // Flatten
-	{
-		remappedLight = applyAttenuation(remappedLight, attenuation);
-	}
+	remappedLight = applyAttenuation(remappedLight, attenuation);
 
 	#if !defined(SCSS_CROSSTONE)
 	remappedLight = applyShadowLift(remappedLight, occlusion);
@@ -594,12 +591,10 @@ float3 SCSS_ApplyLighting(SCSS_Input c, VertexOutput i, float4 texcoords)
 {
 	UNITY_LIGHT_ATTENUATION(attenuation, i, i.posWorld.xyz);
 
-	#if defined(SCSS_SCREEN_SHADOW_FILTER)
+	#if defined(SCSS_SCREEN_SHADOW_FILTER) && defined(USING_SHADOWS_UNITY)
 	correctedScreenShadowsForMSAA(i._ShadowCoord, attenuation);
 	#endif
 
-	attenuation = LerpOneTo(attenuation, 0.5);
-	//return attenuation;
 
 	float isOutline = i.extraData.x;
 

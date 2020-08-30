@@ -42,18 +42,20 @@ VertexOutput vert(appdata_full v) {
 	// That looks good at a distance, but not perfect. 
 	o.extraData.x *= min(distance(o.posWorld,_WorldSpaceCameraPos)*4, 1); 
 
-	#if (UNITY_VERSION<600)
+#if (UNITY_VERSION<600)
 	TRANSFER_SHADOW(o);
-	#else
-	UNITY_TRANSFER_SHADOW(o, v.texcoord);
-	#endif
-
-	UNITY_TRANSFER_FOG(o, o.pos);
-#if VERTEXLIGHT_ON
-	o.vertexLight = VertexLightContribution(o.posWorld, o.normalDir);
 #else
-	o.vertexLight = 0;
+	UNITY_TRANSFER_SHADOW(o, v.texcoord);
 #endif
+
+#if defined(FOG_LINEAR) || defined(FOG_EXP) || defined(FOG_EXP2)
+	UNITY_TRANSFER_FOG(o, o.pos);
+#endif
+
+#if defined(VERTEXLIGHT_ON)
+	o.vertexLight = VertexLightContribution(o.posWorld, o.normalDir);
+#endif
+
 	return o;
 }
 
@@ -69,8 +71,6 @@ VertexOutput vert_nogeom(appdata_full v) {
 [maxvertexcount(6)]
 void geom(triangle VertexOutput IN[3], inout TriangleStream<VertexOutput> tristream)
 {
-	VertexOutput o = (VertexOutput)0;
-
     #if defined(UNITY_REVERSED_Z)
         const float far_clip_value_raw = 0.0;
     #else
@@ -78,34 +78,11 @@ void geom(triangle VertexOutput IN[3], inout TriangleStream<VertexOutput> tristr
     #endif
 
 	// Generate base vertex
+	[unroll]
 	for (int ii = 0; ii < 3; ii++)
 	{
-		o.pos = IN[ii].pos;
-		o.uv0 = IN[ii].uv0;
-		o.uv1 = IN[ii].uv1;
-		o.posWorld = IN[ii].posWorld;
-		o.normalDir = IN[ii].normalDir;
-		o.tangentDir = IN[ii].tangentDir;
-		o.bitangentDir = IN[ii].bitangentDir;
-
-		// Pass-through the shadow coordinates if this pass has shadows.
-		#if defined (SHADOWS_SCREEN) || ( defined (SHADOWS_DEPTH) && defined (SPOT) ) || defined (SHADOWS_CUBE) || (defined (UNITY_LIGHT_PROBE_PROXY_VOLUME) && UNITY_VERSION<600)
-		o._ShadowCoord = IN[ii]._ShadowCoord;
-		#endif
-
-		// Pass-through the fog coordinates if this pass has fog.
-		#if defined(FOG_LINEAR) || defined(FOG_EXP) || defined(FOG_EXP2)
-		o.fogCoord = IN[ii].fogCoord;
-		#endif
-
-		// Pass-through the vertex light information.
-		o.vertexLight = IN[ii].vertexLight;
-		o.color = IN[ii].color;
-		o.extraData = IN[ii].extraData;
-
+		VertexOutput o = IN[ii];
 		o.extraData.x = false;
-
-		UNITY_TRANSFER_INSTANCE_ID(IN[i], o);
 
 		tristream.Append(o);
 	}
@@ -116,11 +93,15 @@ void geom(triangle VertexOutput IN[3], inout TriangleStream<VertexOutput> tristr
 	// If the outline triangle is too small, don't emit it.
 	if ((IN[0].extraData.r + IN[1].extraData.r + IN[2].extraData.r) >= 1.e-9)
 	{
+		[unroll]
 		for (int i = 2; i >= 0; i--)
 		{
-			o.pos = UnityObjectToClipPos(IN[i].vertex + normalize(IN[i].normal) * IN[i].extraData.r);
-			//o.pos.z = lerp(far_clip_value_raw, o.pos.z, IN[i].extraData.z);
+			VertexOutput o = IN[i];
+			o.pos = UnityObjectToClipPos(o.vertex + normalize(o.normal) * o.extraData.r);
+			//o.pos.z = lerp(far_clip_value_raw, o.pos.z, o.extraData.z);
+
 			o.extraData.x = true;
+
 			tristream.Append(o);
 		}
 
@@ -130,6 +111,9 @@ void geom(triangle VertexOutput IN[3], inout TriangleStream<VertexOutput> tristr
 
 float4 frag(VertexOutput i, uint facing : SV_IsFrontFace) : SV_Target
 {
+	float isOutline = i.extraData.x;
+	if (isOutline && !facing) discard;
+
     UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(i);
 
 	// Backface correction. If a polygon is facing away from the camera, it's lit incorrectly.
@@ -142,10 +126,6 @@ float4 frag(VertexOutput i, uint facing : SV_IsFrontFace) : SV_Target
 		i.tangentDir *= -1;
 		i.bitangentDir *= -1;
 	}
-
-	float isOutline = i.extraData.x;
-
-	if (isOutline && !facing) discard;
 
 	if (_UseInteriorOutline)
 	{
@@ -223,6 +203,14 @@ float4 frag(VertexOutput i, uint facing : SV_IsFrontFace) : SV_Target
 
 	c = applyOutline(c, isOutline);
 
+    // Rim lighting parameters. 
+	c.rim = initialiseRimParam();
+	c.rim.power *= RimMask(texcoords.xy);
+	c.rim.tint *= outlineDarken;
+
+	// Scattering parameters
+	c.thickness = Thickness(texcoords.xy);
+
 	// Specular variable setup
 
 	// Disable PBR dielectric setup in cel specular mode.
@@ -272,14 +260,6 @@ float4 frag(VertexOutput i, uint facing : SV_IsFrontFace) : SV_Target
     // allowing to handle transparency in physically correct way - only diffuse component gets affected by alpha
     half outputAlpha;
     c.albedo = PreMultiplyAlpha (c.albedo, c.alpha, c.oneMinusReflectivity, /*out*/ outputAlpha);
-
-    // Rim lighting parameters. 
-	c.rim = initialiseRimParam();
-	c.rim.power *= RimMask(texcoords.xy);
-	c.rim.tint *= outlineDarken;
-
-	// Scattering parameters
-	c.thickness = Thickness(texcoords.xy);
 
 	// Lighting handling
 	float3 finalColor = SCSS_ApplyLighting(c, i, texcoords);

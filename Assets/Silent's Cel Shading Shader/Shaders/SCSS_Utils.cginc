@@ -2,9 +2,13 @@
 #define SCSS_UTILS_INCLUDED
 
 #ifndef USING_DIRECTIONAL_LIGHT
-#if defined (DIRECTIONAL_COOKIE) || defined (DIRECTIONAL)
-#define USING_DIRECTIONAL_LIGHT
+    #if defined (DIRECTIONAL_COOKIE) || defined (DIRECTIONAL)
+        #define USING_DIRECTIONAL_LIGHT
+    #endif
 #endif
+
+#if defined (SHADOWS_SCREEN) || ( defined (SHADOWS_DEPTH) && defined (SPOT) ) || defined (SHADOWS_CUBE) || (defined (UNITY_LIGHT_PROBE_PROXY_VOLUME) && UNITY_VERSION<600)
+    #define USING_SHADOWS_UNITY
 #endif
 
 sampler2D_float _CameraDepthTexture;

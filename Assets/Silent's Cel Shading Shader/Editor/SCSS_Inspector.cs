@@ -402,18 +402,19 @@ namespace SilentCelShading.Unity
 			
 			{
 				EditorGUI.BeginChangeCheck();
-				GUILayout.Label(CommonStyles.mainOptionsTitle, EditorStyles.boldLabel, new GUILayoutOption[0]);
+				GUILayout.Label(CommonStyles.mainOptionsTitle, EditorStyles.boldLabel);
 
 				materialEditor.TexturePropertySingleLine(CommonStyles.mainTexture, mainTexture, color);
+				materialEditor.TexturePropertySingleLine(CommonStyles.normalMap, normalMap, normalMapScale);
+
 				EditorGUI.indentLevel += 2;
 				if ((RenderingMode)renderingMode.floatValue == RenderingMode.Cutout)
 				{
 					materialEditor.ShaderProperty(alphaCutoff, CommonStyles.alphaCutoff.text);
 					materialEditor.ShaderProperty(alphaSharp, CommonStyles.alphaSharp.text);
 				}
-				materialEditor.TexturePropertySingleLine(CommonStyles.colorMask, colorMask);
 				EditorGUI.indentLevel -= 2;
-				materialEditor.TexturePropertySingleLine(CommonStyles.normalMap, normalMap, normalMapScale);
+				materialEditor.TexturePropertySingleLine(CommonStyles.colorMask, colorMask);
 				EditorGUILayout.Space();
 			}
 			EditorGUI.EndChangeCheck();
@@ -599,9 +600,16 @@ namespace SilentCelShading.Unity
 				materialEditor.ShaderProperty(useEnergyConservation, CommonStyles.useEnergyConservation);
 				break;
 				case SpecularType.Anisotropic:
+				materialEditor.TexturePropertySingleLine(CommonStyles.specularMap, specularMap, specularTint);
+				materialEditor.ShaderProperty(smoothness, CommonStyles.smoothness);
+				materialEditor.ShaderProperty(anisotropy, CommonStyles.anisotropy);
+				materialEditor.ShaderProperty(useMetallic, CommonStyles.useMetallic);
+				materialEditor.ShaderProperty(useEnergyConservation, CommonStyles.useEnergyConservation);
+				break;
 				case SpecularType.CelStrand:
 				materialEditor.TexturePropertySingleLine(CommonStyles.specularMap, specularMap, specularTint);
 				materialEditor.ShaderProperty(smoothness, CommonStyles.smoothness);
+				materialEditor.ShaderProperty(celSpecularSoftness, CommonStyles.celSpecularSoftness);
 				materialEditor.ShaderProperty(anisotropy, CommonStyles.anisotropy);
 				materialEditor.ShaderProperty(useMetallic, CommonStyles.useMetallic);
 				materialEditor.ShaderProperty(useEnergyConservation, CommonStyles.useEnergyConservation);
@@ -736,7 +744,7 @@ namespace SilentCelShading.Unity
 			}
 			EditorGUILayout.Space();
 
-			GUILayout.Label(CommonStyles.advancedOptionsTitle, EditorStyles.boldLabel, new GUILayoutOption[0]);
+			GUILayout.Label(CommonStyles.advancedOptionsTitle, EditorStyles.boldLabel);
 
 			EditorGUI.BeginChangeCheck();
 
