@@ -360,6 +360,12 @@ namespace SilentCelShading.Unity
                     }
                     break;
             }
+
+            // If Stencil is set to NotEqual, raise the queue by 1.
+            if (material.GetInt("_StencilComp") == (int)CompareFunction.NotEqual)
+            {
+                material.renderQueue += 1;
+            }
         }
 
 
@@ -373,6 +379,16 @@ namespace SilentCelShading.Unity
             if (material.HasProperty(propertyName))
             {
                 return material.GetFloat(propertyName);
+            }
+
+            return null;
+        }
+
+        protected static int? GetIntProperty(Material material, string propertyName)
+        {
+            if (material.HasProperty(propertyName))
+            {
+                return material.GetInt(propertyName);
             }
 
             return null;
@@ -460,6 +476,14 @@ namespace SilentCelShading.Unity
             if (propertyValue.HasValue)
             {
                 material.SetColor(propertyName, propertyValue.Value);
+            }
+        }
+
+        protected static void SetIntProperty(Material material, string propertyName, int? propertyValue)
+        {
+            if (propertyValue.HasValue)
+            {
+                material.SetInt(propertyName, propertyValue.Value);
             }
         }
 

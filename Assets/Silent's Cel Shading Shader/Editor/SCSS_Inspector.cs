@@ -966,8 +966,6 @@ protected Vector4? GetSerializedMaterialVector4(Material material, string propNa
 					SetKeyword(material, "_EMISSION", shouldEmissionBeEnabled);
 		}
 
-
-
         public override void AssignNewShaderToMaterial(Material material, Shader oldShader, Shader newShader)
         {
             // Cache old shader properties with potentially different names than the new shader.
@@ -990,6 +988,7 @@ protected Vector4? GetSerializedMaterialVector4(Material material, string propNa
             float? shadeMap2Feather = GetFloatProperty(material, "_2nd_ShadeColor_Feather");
 
             float? useMatcap = GetFloatProperty(material, "_UseMatcap");
+            Texture matcapMask = material.GetTexture("_MatcapMask");
             Texture matcapTexture = material.GetTexture("_Matcap1");
             float? matcapBlend = GetFloatProperty(material, "_Matcap1Blend");
 
@@ -1010,7 +1009,14 @@ protected Vector4? GetSerializedMaterialVector4(Material material, string propNa
             float? fresnelStrengthInv = GetFloatProperty(material, "_FresnelStrengthInv");
 
             float? outlineMode = GetFloatProperty(material, "_OutlineMode");
+            float? outlineWidth = GetFloatProperty(material, "_outline_width");
             Color? outlineColor = GetColorProperty(material, "_outline_color");
+            Texture outlineMask = material.GetTexture("_OutlineMask");
+
+            int? stencilReference = GetIntProperty(material, "_Stencil");
+            int? stencilComparison = GetIntProperty(material, "_StencilComp");
+            int? stencilOperation = GetIntProperty(material, "_StencilOp");
+            int? stencilFail = GetIntProperty(material, "_StencilFail");
 
             if (oldShader)
             {
@@ -1019,7 +1025,10 @@ protected Vector4? GetSerializedMaterialVector4(Material material, string propNa
                     normalMapTexture = material.GetTexture("_NormalMap");
                     // _Tweak_ShadingGradeMapLevel is named the same.
 
+                    // Tone seperation is based on whether BaseAs1st is set.
+                    // 1stAs2nd is seperate, but supporting it would be overengineering.
                     useToneSeparation = GetFloatProperty(material, "_Use_BaseAs1st");
+                    if (useToneSeparation.HasValue) useToneSeparation = (float)1.0 - useToneSeparation;
 
                     // HighColor is only supported in Specular mode
                     specularMap = material.GetTexture("_HighColor_Tex");
@@ -1053,6 +1062,7 @@ protected Vector4? GetSerializedMaterialVector4(Material material, string propNa
                     // Matcap properties are not fully supported
                     useMatcap = GetFloatProperty(material, "_MatCap");
                     matcapTexture = material.GetTexture("_MatCap_Sampler");
+                    matcapMask = material.GetTexture("_Set_MatcapMask");
                     // _MatCapColor is not yet supported.
                     // _Is_LightColor_MatCap is not supported.
                     matcapBlend = GetFloatProperty(material, "_Is_BlendAddToMatCap");
@@ -1074,8 +1084,29 @@ protected Vector4? GetSerializedMaterialVector4(Material material, string propNa
                     	outlineMode = (float)0.0;
                 	}
                     outlineColor = GetColorProperty(material, "_Outline_Color");
+            		outlineWidth = GetFloatProperty(material, "_Outline_Width") * (float)0.1;
+            		outlineMask = material.GetTexture("_Outline_Sampler");
 
-                    // TODO: Stencil properties
+                    // Stencil properties
+                    if (oldShader.name.Contains("StencilMask"))
+                    {
+                    	Debug.Log(GetIntProperty(material, "_StencilNo") % 256);
+                    	stencilReference = (int)GetIntProperty(material, "_StencilNo") % 256;
+                    	stencilComparison = (int)CompareFunction.Always;
+                    	stencilOperation = (int)StencilOp.Replace;
+						stencilFail = (int)StencilOp.Replace;
+
+                	}
+                    if (oldShader.name.Contains("StencilOut"))
+                    {
+                    	Debug.Log(GetIntProperty(material, "_StencilNo") % 256);
+                    	stencilReference = (int)GetIntProperty(material, "_StencilNo") % 256;
+                    	stencilComparison = (int)CompareFunction.NotEqual;
+                    	stencilOperation = (int)StencilOp.Keep;
+						stencilFail = (int)StencilOp.Keep;
+                	}
+
+
                 }
             }
 
@@ -1094,9 +1125,17 @@ protected Vector4? GetSerializedMaterialVector4(Material material, string propNa
             {
                 material.SetTexture("_Matcap1", matcapTexture);
             }
+            if (matcapMask)
+            {
+                material.SetTexture("_MatcapMask", matcapMask);
+            }
             if (specularMap)
             {
                 material.SetTexture("_SpecGlossMap", specularMap);
+            }
+            if (outlineMask)
+            {
+                material.SetTexture("_OutlineMask", outlineMask);
             }
 
             SetFloatProperty(material, "_BumpScale", normalMapScale);
@@ -1123,6 +1162,12 @@ protected Vector4? GetSerializedMaterialVector4(Material material, string propNa
 
             SetFloatProperty(material, "_OutlineMode", outlineMode);
             SetColorProperty(material, "_outline_color", outlineColor);
+            SetFloatProperty(material, "_outline_width", outlineWidth);
+
+			SetIntProperty(material, "_Stencil", stencilReference);
+			SetIntProperty(material, "_StencilComp", stencilComparison);
+			SetIntProperty(material, "_StencilOp", stencilOperation);
+			SetIntProperty(material, "_StencilFail", stencilFail);
 
             if (outlineMode.HasValue) SetupMaterialWithOutlineMode(material, (OutlineMode)outlineMode);
 
@@ -1146,11 +1191,11 @@ protected Vector4? GetSerializedMaterialVector4(Material material, string propNa
 
             	if (oldShader.name.Contains("UnityChanToonShader"))
                 {
-	            	if (oldShader.name.Contains("_Clipping"))
+	            	if (oldShader.name.Contains("Clipping"))
 	                {
 	                    mode = RenderingMode.Cutout;
 	                }
-	            	if (oldShader.name.Contains("_TransClipping"))
+	            	if (oldShader.name.Contains("TransClipping"))
 	                {
 	                    mode = RenderingMode.Fade;
 	                }
