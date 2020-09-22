@@ -9,6 +9,7 @@ Shader "Silent's Cel Shading/Lightramp"
 		[Toggle(_)]_AlphaSharp("Disable Dithering for Cutout", Float) = 0.0
 		[Space]
 		_ColorMask("Color Mask Map", 2D) = "white" {}
+		_ClippingMask ("Alpha Transparency Map", 2D) = "white" {}
 		_BumpMap("Normal Map", 2D) = "bump" {}
 		_BumpScale("Normal Map Scale", Float) = 1.0
 		[Enum(VertexColorType)]_VertexColorType ("Vertex Colour Type", Float) = 2.0
@@ -53,6 +54,7 @@ Shader "Silent's Cel Shading/Lightramp"
 		[Toggle(_)]_UseEnergyConservation ("Energy Conservation", Float) = 1.0
 		_Smoothness ("Smoothness", Range(0, 1)) = 1
 		_CelSpecularSoftness ("Softness", Range(1, 0)) = 0.02
+		_CelSpecularSteps("Steps", Range(1, 4)) = 1
 		_Anisotropy("Anisotropy", Range(-1,1)) = 0.8
 		[Space]
 		[Header(Matcap)]
@@ -101,9 +103,13 @@ Shader "Silent's Cel Shading/Lightramp"
 		_FrameNumber ("_FrameNumber", Int) = 0
 		_Columns ("_Columns", Int) = 2
 		_Rows ("_Rows", Int) = 2
+		[Header(Vanishing)]
+		[Toggle(_)]_UseVanishing ("Use Vanishing", Float) = 0.0
+		_VanishingStart("Vanishing Start", Float) = 0.0
+		_VanishingEnd("Vanishing End", Float) = 0.0
 		[Space]
 		[Header(Other)]
-		[Toggle(_SMOOTHNESS_TEXTURE_ALBEDO_CHANNEL_A)]_AlbedoAlphaMode("Albedo Alpha Mode", Float) = 0.0
+		[Toggle(_)]_AlbedoAlphaMode("Albedo Alpha Mode", Float) = 0.0
 		[HDR]_CustomFresnelColor("Emissive Fresnel Color", Color) = (0,0,0,1)
 		[Toggle(_)]_PixelSampleMode("Sharp Sampling Mode", Float) = 0.0
 		[Space]

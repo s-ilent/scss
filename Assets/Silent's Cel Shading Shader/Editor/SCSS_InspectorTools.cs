@@ -21,7 +21,8 @@ namespace SilentCelShading.Unity
 		public enum AlbedoAlphaMode
 		{
 			Transparency,
-			Smoothness
+			Smoothness,
+			ClippingMask
 		}
 
 		public enum SpecularType
@@ -85,6 +86,7 @@ namespace SilentCelShading.Unity
 			public static GUIContent lightingCalculationType = new GUIContent("Lighting Calculation Type", "Sets the method used to perform the direct/indirect lighting calculation.");
 
 			public static GUIContent mainTexture = new GUIContent("Main Texture", "Main Color Texture (RGBA)");
+			public static GUIContent clippingMask = new GUIContent("Clipping Mask", "Additional texture for transparency.");
 			public static GUIContent alphaCutoff = new GUIContent("Alpha Cutoff", "Threshold for transparency cutoff");
 			public static GUIContent alphaSharp = new GUIContent("Disable Dithering", "Treats transparency cutoff as a hard edge, instead of a soft dithered one.");
 			public static GUIContent colorMask = new GUIContent("Tint Mask", "Masks material colour tinting (G) and detail maps (A).");
@@ -101,6 +103,7 @@ namespace SilentCelShading.Unity
 			public static GUIContent useEnergyConservation = new GUIContent("Use Energy Conservation", "Reduces the intensity of the diffuse on specular areas, to realistically conserve energy.");
 			public static GUIContent useMetallic = new GUIContent("Use as Metalness", "Metalness maps are greyscale maps that contain the metalness of a surface. This is different to specular maps, which are RGB (colour) maps that contain the specular parts of a surface.");
 			public static GUIContent celSpecularSoftness = new GUIContent("Softness", "Sets the softness of the falloff of cel specular highlights.");
+			public static GUIContent celSpecularSteps = new GUIContent("Steps", "Sets the number of steps in cel specular highlights.");
 
 			public static GUIContent useFresnel = new GUIContent("Rim Lighting Style", "Applies a customisable rim lighting effect.");
 			public static GUIContent fresnelWidth = new GUIContent("Rim Width", "Sets the width of the rim lighting.");
@@ -162,6 +165,10 @@ namespace SilentCelShading.Unity
 			public static GUIContent animationFrameNumber = new GUIContent("Frame Number", "Sets the frame number to begin playing the animation on.");
 			public static GUIContent animationColumns = new GUIContent("Columns", "Sets the number of frames present in a horizontal row.");
 			public static GUIContent animationRows = new GUIContent("Rows", "Sets the number of frames present in a vertical column.");
+
+			public static GUIContent useVanishing =  new GUIContent("Use Vanishing", "Enables the vanishing effect, which fades the material out at a set start and end point. Ineffective in opaque blend mode.");
+			public static GUIContent vanishingStart =  new GUIContent("Start Vanishing", "The inner bound of the vanishing effect. The higher this is, the further out the material will finishing vanishing. If Start is higher than End, the material will be invisible at a distance.");
+			public static GUIContent vanishingEnd =  new GUIContent("End Vanishing", "The outer bound of the vanishing effect. The higher this is, the further out the material will begin to vanish. If End is higher than Start, the material will be invisible up close.");
 
 			public static GUIContent manualButton = new GUIContent("This shader has a manual. Check it out!","For information on new features, old features, and just how to use the shader in general, check out the manual on the shader wiki!");
 		}

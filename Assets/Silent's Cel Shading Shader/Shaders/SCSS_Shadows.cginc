@@ -23,10 +23,16 @@
 uniform float4      _Color;
 uniform float       _Cutoff;
 uniform sampler2D   _MainTex;
+uniform sampler2D   _ClippingMask;
 uniform float4      _MainTex_ST;
 #ifdef UNITY_STANDARD_USE_DITHER_MASK
     uniform sampler3D   _DitherMaskLOD;
 #endif
+
+uniform float       _AlbedoAlphaMode;
+uniform float       _VanishingStart;
+uniform float       _VanishingEnd;
+uniform float       _UseVanishing;
 
 struct VertexInput
 {
@@ -72,6 +78,30 @@ float interleaved_gradient(float2 uv : SV_POSITION) : SV_Target
     return frac(magic.z * frac(dot(uv, magic.xy)));
 }
 
+// Duplicate things to refactor later.
+
+float lerpstep( float a, float b, float t)
+{
+    return saturate( ( t - a ) / ( b - a ) );
+}
+
+half Alpha(float2 uv)
+{
+    half alpha = _Color.a;
+    switch(_AlbedoAlphaMode)
+    {
+        case 0: alpha *= tex2D(_MainTex, uv).a; break;
+        case 2: alpha *= tex2D(_ClippingMask, uv); break;
+    }
+    return alpha;
+}
+
+void applyVanishing (inout float alpha) {
+    const fixed3 baseWorldPos = unity_ObjectToWorld._m03_m13_m23;
+    float closeDist = distance(_WorldSpaceCameraPos, baseWorldPos);
+    float vanishing = saturate(lerpstep(_VanishingStart, _VanishingEnd, closeDist));
+    alpha = lerp(alpha, alpha * vanishing, _UseVanishing);
+}
 
 half4 fragShadowCaster(
     #if !defined(V2F_SHADOW_CASTER_NOPOS_IS_EMPTY) || defined(UNITY_STANDARD_USE_SHADOW_UVS)
@@ -85,11 +115,13 @@ half4 fragShadowCaster(
 ) : SV_Target
 {
     #if defined(UNITY_STANDARD_USE_SHADOW_UVS)
-        half alpha = tex2D(_MainTex, i.tex).a * _Color.a;
+        half alpha = Alpha(i.tex);
 
         #if defined(ALPHAFUNCTION)
         alphaFunction(alpha);
         #endif
+
+        applyVanishing(alpha);
 
         #if defined(_ALPHATEST_ON)
             //clip(alpha - _Cutoff);

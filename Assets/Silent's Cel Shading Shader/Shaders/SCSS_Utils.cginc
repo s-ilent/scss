@@ -23,6 +23,7 @@ struct SCSS_Light
     half  intensity; 
 };
 
+
 SCSS_Light MainLight()
 {
     SCSS_Light l;
@@ -96,7 +97,6 @@ inline void applyAlphaClip(inout float alpha, float cutoff, float2 pos, bool sha
     // Switch between dithered alpha and sharp-edge alpha.
         if (!sharpen) {
             float mask = (T(intensity(pos)));
-            alpha = alpha*alpha*alpha*alpha;
             alpha = saturate(alpha + alpha * mask); 
         }
         else {
