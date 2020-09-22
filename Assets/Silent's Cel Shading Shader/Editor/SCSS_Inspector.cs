@@ -77,6 +77,7 @@ namespace SilentCelShading.Unity
 		protected MaterialProperty color;
 		protected MaterialProperty colorMask;
 		protected MaterialProperty albedoAlphaMode;
+		protected MaterialProperty clippingMask;
 
 		protected MaterialProperty outlineMode;
 		protected MaterialProperty outlineWidth;
@@ -106,6 +107,7 @@ namespace SilentCelShading.Unity
 		protected MaterialProperty anisotropy;
 		protected MaterialProperty useMetallic;
 		protected MaterialProperty celSpecularSoftness;
+		protected MaterialProperty celSpecularSteps;
 
 		protected MaterialProperty useFresnel;
 		protected MaterialProperty fresnelWidth;
@@ -156,6 +158,10 @@ namespace SilentCelShading.Unity
 		protected MaterialProperty animationFrameNumber;
 		protected MaterialProperty animationColumns;
 		protected MaterialProperty animationRows;
+
+		protected MaterialProperty useVanishing;
+		protected MaterialProperty vanishingStart;
+		protected MaterialProperty vanishingEnd;
 
 		protected MaterialProperty lightingRamp;
 		protected MaterialProperty shadowLift; 
@@ -223,6 +229,7 @@ namespace SilentCelShading.Unity
 			SubsurfaceOptions(materialEditor, material);
 			DetailMapOptions(materialEditor, material);
 			AnimationOptions(materialEditor, material);
+			VanishingOptions(materialEditor, material);
 			OutlineOptions(materialEditor, material);
 			AdvancedOptions(materialEditor, material);
 		}
@@ -279,6 +286,7 @@ namespace SilentCelShading.Unity
 			specularTint = FindProperty("_SpecColor", props);
 			smoothness = FindProperty("_Smoothness", props);
 			celSpecularSoftness = FindProperty("_CelSpecularSoftness", props);
+			celSpecularSteps = FindProperty("_CelSpecularSteps", props);
 			anisotropy = FindProperty("_Anisotropy", props);
 			useMetallic = FindProperty("_UseMetallic", props);
 			useEnergyConservation = FindProperty("_UseEnergyConservation", props);
@@ -323,6 +331,13 @@ namespace SilentCelShading.Unity
 			animationRows = FindProperty("_Rows", props);
 		}
 
+		protected void FindVanishingProperties(MaterialProperty[] props)
+		{
+			vanishingStart = FindProperty("_VanishingStart", props);
+			vanishingEnd = FindProperty("_VanishingEnd", props);
+			useVanishing = FindProperty("_UseVanishing", props);
+		}
+
 		protected override void FindProperties(MaterialProperty[] props)
 		{ 
 			base.FindProperties(props);
@@ -331,6 +346,7 @@ namespace SilentCelShading.Unity
 			color = FindProperty("_Color", props);
 			colorMask = FindProperty("_ColorMask", props);
 			albedoAlphaMode = FindProperty("_AlbedoAlphaMode", props);
+			clippingMask = FindProperty("_ClippingMask", props);
 
 			alphaCutoff = FindProperty("_Cutoff", props);
 			alphaSharp = FindProperty("_AlphaSharp", props);
@@ -367,6 +383,7 @@ namespace SilentCelShading.Unity
 			FindScatteringProperties(props);
 			FindDetailMapProperties(props);
 			FindAnimationProperties(props);
+			FindVanishingProperties(props);
 
 			vertexColorType = FindProperty("_VertexColorType", props);
 
@@ -406,6 +423,11 @@ namespace SilentCelShading.Unity
 
 				materialEditor.TexturePropertySingleLine(CommonStyles.mainTexture, mainTexture, color);
 				materialEditor.TexturePropertySingleLine(CommonStyles.normalMap, normalMap, normalMapScale);
+
+				if ((AlbedoAlphaMode)albedoAlphaMode.floatValue == AlbedoAlphaMode.ClippingMask)
+				{
+					materialEditor.TexturePropertySingleLine(CommonStyles.clippingMask, clippingMask);
+				}
 
 				EditorGUI.indentLevel += 2;
 				if ((RenderingMode)renderingMode.floatValue == RenderingMode.Cutout)
@@ -535,6 +557,18 @@ namespace SilentCelShading.Unity
 
 		}
 
+		protected void VanishingOptions(MaterialEditor materialEditor, Material material)
+		{ 
+			EditorGUI.BeginChangeCheck();
+			materialEditor.ShaderProperty(useVanishing, CommonStyles.useVanishing);
+			if (PropertyEnabled(useVanishing))
+			{
+				materialEditor.ShaderProperty(vanishingStart, CommonStyles.vanishingStart);
+				materialEditor.ShaderProperty(vanishingEnd, CommonStyles.vanishingEnd);
+			}
+
+		}
+
 		protected void RimlightOptions(MaterialEditor materialEditor, Material material)
 		{	
 			EditorGUI.BeginChangeCheck();
@@ -596,6 +630,7 @@ namespace SilentCelShading.Unity
 				materialEditor.TexturePropertySingleLine(CommonStyles.specularMap, specularMap, specularTint);
 				materialEditor.ShaderProperty(smoothness, CommonStyles.smoothness);
 				materialEditor.ShaderProperty(celSpecularSoftness, CommonStyles.celSpecularSoftness);
+				materialEditor.ShaderProperty(celSpecularSteps, CommonStyles.celSpecularSteps);
 				materialEditor.ShaderProperty(useMetallic, CommonStyles.useMetallic);
 				materialEditor.ShaderProperty(useEnergyConservation, CommonStyles.useEnergyConservation);
 				break;
@@ -610,6 +645,7 @@ namespace SilentCelShading.Unity
 				materialEditor.TexturePropertySingleLine(CommonStyles.specularMap, specularMap, specularTint);
 				materialEditor.ShaderProperty(smoothness, CommonStyles.smoothness);
 				materialEditor.ShaderProperty(celSpecularSoftness, CommonStyles.celSpecularSoftness);
+				materialEditor.ShaderProperty(celSpecularSteps, CommonStyles.celSpecularSteps);
 				materialEditor.ShaderProperty(anisotropy, CommonStyles.anisotropy);
 				materialEditor.ShaderProperty(useMetallic, CommonStyles.useMetallic);
 				materialEditor.ShaderProperty(useEnergyConservation, CommonStyles.useEnergyConservation);

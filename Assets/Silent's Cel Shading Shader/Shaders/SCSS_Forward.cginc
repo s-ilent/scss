@@ -98,7 +98,7 @@ void geom(triangle VertexOutput IN[3], inout TriangleStream<VertexOutput> tristr
 		{
 			VertexOutput o = IN[i];
 			o.pos = UnityObjectToClipPos(o.vertex + normalize(o.normal) * o.extraData.r);
-			//o.pos.z = lerp(far_clip_value_raw, o.pos.z, o.extraData.z);
+			o.pos.z = lerp(far_clip_value_raw, o.pos.z, o.extraData.z);
 
 			o.extraData.x = true;
 
@@ -188,6 +188,8 @@ float4 frag(VertexOutput i, uint facing : SV_IsFrontFace) : SV_Target
     #if defined(ALPHAFUNCTION)
     alphaFunction(c.alpha);
 	#endif
+
+	applyVanishing(c.alpha);
 	
 	applyAlphaClip(c.alpha, _Cutoff, i.pos.xy, _AlphaSharp);
 

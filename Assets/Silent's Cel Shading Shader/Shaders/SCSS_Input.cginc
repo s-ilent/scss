@@ -20,6 +20,7 @@
 
 UNITY_DECLARE_TEX2D(_MainTex); uniform half4 _MainTex_ST; uniform half4 _MainTex_TexelSize;
 UNITY_DECLARE_TEX2D_NOSAMPLER(_ColorMask); uniform half4 _ColorMask_ST;
+UNITY_DECLARE_TEX2D_NOSAMPLER(_ClippingMask); uniform half4 _ClippingMask_ST;
 UNITY_DECLARE_TEX2D_NOSAMPLER(_BumpMap); uniform half4 _BumpMap_ST;
 UNITY_DECLARE_TEX2D_NOSAMPLER(_EmissionMap); uniform half4 _EmissionMap_ST;
 
@@ -42,6 +43,7 @@ uniform float _Smoothness;
 uniform float _UseEnergyConservation;
 uniform float _Anisotropy;
 uniform float _CelSpecularSoftness;
+uniform float _CelSpecularSteps;
 #else
 #define _SpecularType 0
 #define _UseEnergyConservation 0
@@ -77,6 +79,7 @@ uniform float _BumpScale;
 uniform float _Cutoff;
 uniform float _AlphaSharp;
 uniform float _UVSec;
+uniform float _AlbedoAlphaMode;
 
 uniform float4 _EmissionColor;
 uniform float4 _EmissionDetailParams;
@@ -152,13 +155,17 @@ uniform float _InteriorOutlineWidth;
 uniform sampler2D _OutlineMask; uniform half4 _OutlineMask_ST; 
 
 // Animation
-
 uniform float _UseAnimation;
 uniform float _AnimationSpeed;
 uniform int _TotalFrames;
 uniform int _FrameNumber;
 uniform int _Columns;
 uniform int _Rows;
+
+// Vanishing
+uniform float _UseVanishing;
+uniform float _VanishingStart;
+uniform float _VanishingEnd;
 
 //-------------------------------------------------------------------------------------
 // Input functions
@@ -240,7 +247,28 @@ struct SCSS_LightParam
 	half3 viewDir, halfDir, reflDir;
 	half2 rlPow4;
 	half NdotL, NdotV, LdotH, NdotH;
+	half NdotAmb;
 };
+
+#if defined(UNITY_STANDARD_BRDF_INCLUDED)
+float getAmbientLight (float3 normal)
+{
+	float3 ambientLightDirection = Unity_SafeNormalize((unity_SHAr.xyz + unity_SHAg.xyz + unity_SHAb.xyz) * _LightSkew.xyz);
+
+	if (_IndirectShadingType == 2) // Flatten
+	{
+		ambientLightDirection = any(_LightColor0) 
+		? normalize(_WorldSpaceLightPos0) 
+		: ambientLightDirection;
+	}
+
+	float ambientLight = dot(normal, ambientLightDirection);
+	ambientLight = ambientLight * 0.5 + 0.5;
+
+	if (_IndirectShadingType == 0) // Dynamic
+		ambientLight = getGreyscaleSH(normal);
+	return ambientLight;
+}
 
 SCSS_LightParam initialiseLightParam (SCSS_Light l, float3 normal, float3 posWorld)
 {
@@ -253,8 +281,10 @@ SCSS_LightParam initialiseLightParam (SCSS_Light l, float3 normal, float3 posWor
 	d.LdotH = (dot(l.dir, d.halfDir));
 	d.NdotH = (dot(normal, d.halfDir)); // Saturate seems to cause artifacts
 	d.rlPow4 = Pow4(float2(dot(d.reflDir, l.dir), 1 - d.NdotV));  
+	d.NdotAmb = getAmbientLight(normal);
 	return d;
 }
+#endif
 
 // Allows saturate to be called on light params. 
 // Does not affect directions. Those are already normalized.
@@ -390,11 +420,13 @@ half3 Albedo(float4 texcoords)
 
 half Alpha(float2 uv)
 {
-#if defined(_SMOOTHNESS_TEXTURE_ALBEDO_CHANNEL_A)
-    return _Color.a;
-#else
-    return UNITY_SAMPLE_TEX2D(_MainTex, uv).a * _Color.a;
-#endif
+	half alpha = _Color.a;
+	switch(_AlbedoAlphaMode)
+	{
+		case 0: alpha *= UNITY_SAMPLE_TEX2D(_MainTex, uv).a; break;
+		case 2: alpha *= UNITY_SAMPLE_TEX2D_SAMPLER(_ClippingMask, _MainTex, uv); break;
+	}
+	return alpha;
 }
 
 
@@ -402,21 +434,15 @@ half4 SpecularGloss(float4 texcoords, half mask)
 {
     half4 sg;
 #if _SPECULAR
-    #ifdef _SMOOTHNESS_TEXTURE_ALBEDO_CHANNEL_A
-        sg.rgb = UNITY_SAMPLE_TEX2D_SAMPLER(_SpecGlossMap, _MainTex, texcoords.xy).rgb;
-        sg.a = UNITY_SAMPLE_TEX2D(_MainTex, texcoords.xy).a;
-    #else
-        sg = UNITY_SAMPLE_TEX2D_SAMPLER(_SpecGlossMap, _MainTex, texcoords.xy);
-    #endif
+    sg = UNITY_SAMPLE_TEX2D_SAMPLER(_SpecGlossMap, _MainTex, texcoords.xy);
+
+    sg.a = _AlbedoAlphaMode == 1? UNITY_SAMPLE_TEX2D(_MainTex, texcoords.xy).a : sg.a;
+
     sg.rgb *= _SpecColor;
     sg.a *= _Smoothness; // _GlossMapScale is what Standard uses for this
 #else
     sg = _SpecColor;
-    #ifdef _SMOOTHNESS_TEXTURE_ALBEDO_CHANNEL_A
-        sg.a *= UNITY_SAMPLE_TEX2D(_MainTex, texcoords.xy).a; // _GlossMapScale is what Standard uses for this
-    #else
-    //    sg.a = _Smoothness; // _Glossiness is what Standard uses for this
-    #endif
+    sg.a = _AlbedoAlphaMode == 1? UNITY_SAMPLE_TEX2D(_MainTex, texcoords.xy).a : sg.a;
 #endif
 
 #if _DETAIL 
@@ -613,6 +639,13 @@ SCSS_Input applyOutline(SCSS_Input c, float is_outline)
     }
 
     return c;
+}
+
+void applyVanishing (inout float alpha) {
+    const fixed3 baseWorldPos = unity_ObjectToWorld._m03_m13_m23;
+    float closeDist = distance(_WorldSpaceCameraPos, baseWorldPos);
+    float vanishing = saturate(lerpstep(_VanishingStart, _VanishingEnd, closeDist));
+    alpha = lerp(alpha, alpha * vanishing, _UseVanishing);
 }
 
 #endif // SCSS_INPUT_INCLUDED
