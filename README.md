@@ -1,5 +1,5 @@
 <div style="width: 5em">
-![Silent's Cel Shading Shaders](https://cdn.discordapp.com/attachments/414634326995763201/758187535137636372/SCSS_header_1.png)
+![Silent's Cel Shading Shaders](https://cdn.discordapp.com/attachments/414634326995763201/758190255521398784/SCSS_header_1.png)
 </div>
 
 Shaders for Unity for cel shading, designed to take Unity's lighting into account while also presenting materials in the best possible way. Featuring lots of features with good performance!
