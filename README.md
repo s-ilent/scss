@@ -1,5 +1,5 @@
 # Silent's Cel Shading Shaders
-Shaders for Unity for cel shading, originally based off CubedParadox's Flat Lit Toon, now remade and featuring tons of improvements and handy features.
+Shaders for Unity for cel shading, designed to take Unity's lighting into account while also presenting materials in the best possible way. Featuring lots of features with good performance!
 # [Want to know how to use this shader? Here's the manual!](https://gitlab.com/s-ilent/SCSS/wikis/Manual/Setting-Overview)
 # [Can't find the Download link? Click here!](https://gitlab.com/s-ilent/SCSS/-/archive/master/SCSS-master.zip)
 * After downloading, install the shader by moving the contents of the Assets folder into your project's Assets folder.
@@ -8,6 +8,7 @@ Shaders for Unity for cel shading, originally based off CubedParadox's Flat Lit 
 
   A shadow tone map system is integrated, which allows for true anime-style material shade colouring and light bias. 
   Provides a light ramp system that are integrated seamlessly into lighting. 
+  Or use the Crosstone system and define your own shadow tones!
 
 * **NPR**
 
@@ -38,7 +39,7 @@ Shaders for Unity for cel shading, originally based off CubedParadox's Flat Lit 
 
 # [For more details, please check the setting overview!](https://gitlab.com/s-ilent/SCSS/wikis/Manual/Setting-Overview)
 
-Tested with Unity 5.6.3p1 and Unity 2017.4.15f1 LTS.
+Tested with Unity 2018.4.20f1 LTS.
 
 For support, contact me on Discord.
 ![Silent＃0264](https://files.catbox.moe/lv2mdh.png)
