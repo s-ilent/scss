@@ -46,5 +46,8 @@ Shaders for Unity for cel shading, designed to take Unity's lighting into accoun
 
 Tested with Unity 2018.4.20f1 LTS.
 
-For support, contact me on Discord.
-![Silent＃0264](https://files.catbox.moe/lv2mdh.png)
+For support, contact me on Discord or Twitter.
+
+![Silent＃0264](https://files.catbox.moe/lv2mdh.png) 
+
+![@Silent0264](https://files.catbox.moe/zma5gi.png)
