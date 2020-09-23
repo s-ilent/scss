@@ -1,14 +1,23 @@
-# Silent's Cel Shading Shaders
+<div style="width: 5em">
+![Silent's Cel Shading Shaders](https://cdn.discordapp.com/attachments/414634326995763201/758187535137636372/SCSS_header_1.png)
+</div>
+
 Shaders for Unity for cel shading, designed to take Unity's lighting into account while also presenting materials in the best possible way. Featuring lots of features with good performance!
 # [Want to know how to use this shader? Here's the manual!](https://gitlab.com/s-ilent/SCSS/wikis/Manual/Setting-Overview)
 # [Can't find the Download link? Click here!](https://gitlab.com/s-ilent/SCSS/-/archive/master/SCSS-master.zip)
 * After downloading, install the shader by moving the contents of the Assets folder into your project's Assets folder.
+
+<div style="width: 5em">
+![Suitable for shade or shine!](https://cdn.discordapp.com/attachments/414634326995763201/758184322708275220/Crosstone_proto.jpg)
+</div>
+
 ## Features include:
 * **Customisable lighting**
 
   A shadow tone map system is integrated, which allows for true anime-style material shade colouring and light bias. 
   Provides a light ramp system that are integrated seamlessly into lighting. 
-  Or use the Crosstone system and define your own shadow tones!
+  Or, use the Crosstone system and define multiple shadow tones.
+  All integrated with Unity's lighting system!
 
 * **NPR**
 
@@ -31,10 +40,6 @@ Shaders for Unity for cel shading, designed to take Unity's lighting into accoun
 
 <div style="width: 5em">
 ![Too Much Preview](https://cdn.discordapp.com/attachments/414634326995763201/694118872110071880/screen_10328x5640_2020-03-30_19-58-06.png.jpg)
-</div>
-
-<div style="width: 5em">
-![Too Much Preview](https://cdn.discordapp.com/attachments/429349528156504064/580024394995204096/Unity_2019-05-20_21-39-24.png)
 </div>
 
 # [For more details, please check the setting overview!](https://gitlab.com/s-ilent/SCSS/wikis/Manual/Setting-Overview)
