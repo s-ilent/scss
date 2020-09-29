@@ -27,7 +27,7 @@ VertexOutput vert(appdata_full v) {
 		o.extraData = v.color;
 	} else {
 		o.color = v.color;
-		o.extraData = 0.0; 
+		o.extraData = float4(0.0, 0.0, 1.0, 1.0); 
 		o.extraData.x = v.color.a;
 	}
 
@@ -98,7 +98,10 @@ void geom(triangle VertexOutput IN[3], inout TriangleStream<VertexOutput> tristr
 		{
 			VertexOutput o = IN[i];
 			o.pos = UnityObjectToClipPos(o.vertex + normalize(o.normal) * o.extraData.r);
-			o.pos.z = lerp(far_clip_value_raw, o.pos.z, o.extraData.z);
+
+			// Possible future parameter depending on what people need
+			float zPushLimit = lerp(far_clip_value_raw, o.pos.z, 0.9);
+			o.pos.z = lerp(zPushLimit, o.pos.z, 1-o.extraData.z);
 
 			o.extraData.x = true;
 
