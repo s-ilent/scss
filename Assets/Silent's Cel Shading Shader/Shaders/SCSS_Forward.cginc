@@ -101,7 +101,7 @@ void geom(triangle VertexOutput IN[3], inout TriangleStream<VertexOutput> tristr
 
 			// Possible future parameter depending on what people need
 			float zPushLimit = lerp(far_clip_value_raw, o.pos.z, 0.9);
-			o.pos.z = lerp(zPushLimit, o.pos.z, 1-o.extraData.z);
+			o.pos.z = lerp(zPushLimit, o.pos.z, o.extraData.z);
 
 			o.extraData.x = true;
 
