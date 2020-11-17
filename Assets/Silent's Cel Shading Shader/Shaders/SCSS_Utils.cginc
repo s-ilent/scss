@@ -16,37 +16,6 @@ float4 _CameraDepthTexture_TexelSize;
 
 #define sRGB_Luminance float3(0.2126, 0.7152, 0.0722)
 
-struct SCSS_Light
-{
-    half3 color;
-    half3 dir;
-    half  intensity; 
-};
-
-
-SCSS_Light MainLight()
-{
-    SCSS_Light l;
-
-    l.color = _LightColor0.rgb;
-    l.intensity = _LightColor0.w;
-    l.dir = Unity_SafeNormalize(_WorldSpaceLightPos0.xyz); 
-
-    // Workaround for scenes with HDR off blowing out in VRchat.
-    #if !UNITY_HDR_ON && SCSS_CLAMP_IN_NON_HDR
-        l.color = saturate(l.color);
-    #endif
-
-    return l;
-}
-
-SCSS_Light MainLight(float3 worldPos)
-{
-    SCSS_Light l = MainLight();
-    l.dir = Unity_SafeNormalize(UnityWorldSpaceLightDir(worldPos)); 
-    return l;
-}
-
 float interleaved_gradient(float2 uv : SV_POSITION) : SV_Target
 {
 	float3 magic = float3(0.06711056, 0.00583715, 52.9829189);
@@ -96,8 +65,10 @@ inline void applyAlphaClip(inout float alpha, float cutoff, float2 pos, bool sha
     #if defined(_ALPHATEST_ON)
     // Switch between dithered alpha and sharp-edge alpha.
         if (!sharpen) {
+            alpha = (1+cutoff) * alpha - cutoff;
             float mask = (T(intensity(pos)));
-            alpha = saturate(alpha + alpha * mask); 
+            const float width = 0.15;
+            alpha = alpha - (mask * sqrt(1-(alpha)) * width);
         }
         else {
             alpha = ((alpha - cutoff) / max(fwidth(alpha), 0.0001) + 0.5);
@@ -113,6 +84,46 @@ inline float3 BlendNormalsPD(float3 n1, float3 n2) {
 
 float2 invlerp(float2 A, float2 B, float2 T){
     return (T - A)/(B - A);
+}
+
+// Stylish lighting helpers
+
+float lerpstep( float a, float b, float t)
+{
+    return saturate( ( t - a ) / ( b - a ) );
+}
+
+float smootherstep(float a, float b, float t) 
+{
+    t = saturate( ( t - a ) / ( b - a ) );
+    return t * t * t * (t * (t * 6. - 15.) + 10.);
+}
+
+float sharpenLighting (float inLight, float softness)
+{
+    float2 lightStep = 0.5 + float2(-1, 1) * fwidth(inLight);
+    lightStep = lerp(float2(0.0, 1.0), lightStep, 1-softness);
+    inLight = smoothstep(lightStep.x, lightStep.y, inLight);
+    return inLight;
+}
+
+// By default, use smootherstep because it has the best visual appearance.
+// But some functions might work better with lerpstep.
+float simpleSharpen (float x, float width, float mid, const float smoothnessMode = 2)
+{
+    float2 dx = float2(ddx(x), ddy(x));
+    float rf = (dot(dx, dx)*2);
+    width = max(width, rf);
+
+    [flatten]
+    switch (smoothnessMode)
+    {
+        case 0: x = lerpstep(mid-width, mid, x); break;
+        case 1: x = smoothstep(mid-width, mid, x); break;
+        case 2: x = smootherstep(mid-width, mid, x); break;
+    }
+
+    return x;
 }
 
 // Returns pixel sharpened to nearest pixel boundary. 
@@ -140,6 +151,39 @@ bool backfaceInMirror()
 	#else
 	return false;
 	#endif
+}
+
+#if defined(UNITY_STANDARD_BRDF_INCLUDED)
+
+struct SCSS_Light
+{
+    half3 color;
+    half3 dir;
+    half  intensity; 
+};
+
+
+SCSS_Light MainLight()
+{
+    SCSS_Light l;
+
+    l.color = _LightColor0.rgb;
+    l.intensity = _LightColor0.w;
+    l.dir = Unity_SafeNormalize(_WorldSpaceLightPos0.xyz); 
+
+    // Workaround for scenes with HDR off blowing out in VRchat.
+    #if !UNITY_HDR_ON && SCSS_CLAMP_IN_NON_HDR
+        l.color = saturate(l.color);
+    #endif
+
+    return l;
+}
+
+SCSS_Light MainLight(float3 worldPos)
+{
+    SCSS_Light l = MainLight();
+    l.dir = Unity_SafeNormalize(UnityWorldSpaceLightDir(worldPos)); 
+    return l;
 }
 
 //-----------------------------------------------------------------------------
@@ -460,44 +504,6 @@ float3 applyMatcap(sampler2D src, half2 matcapUV, float3 dst, float3 light, int 
     return applyBlendMode(blendMode, dst, tex2D(src, matcapUV) * light, blendStrength);
 }
 
-// Stylish lighting helpers
-
-float lerpstep( float a, float b, float t)
-{
-    return saturate( ( t - a ) / ( b - a ) );
-}
-
-float smootherstep(float a, float b, float t) 
-{
-    t = saturate( ( t - a ) / ( b - a ) );
-    return t * t * t * (t * (t * 6. - 15.) + 10.);
-}
-
-float sharpenLighting (float inLight, float softness)
-{
-    float2 lightStep = 0.5 + float2(-1, 1) * fwidth(inLight);
-    lightStep = lerp(float2(0.0, 1.0), lightStep, 1-softness);
-    inLight = smoothstep(lightStep.x, lightStep.y, inLight);
-    return inLight;
-}
-
-// By default, use smootherstep because it has the best visual appearance.
-// But some functions might work better with lerpstep.
-float simpleSharpen (float x, float width, float mid, const float smoothnessMode = 2)
-{
-    float2 dx = float2(ddx(x), ddy(x));
-    float rf = (dot(dx, dx)*2);
-    width = max(width, rf);
-
-    [flatten]
-    switch (smoothnessMode)
-    {
-        case 0: x = lerpstep(mid-width, mid, x); break;
-        case 1: x = smoothstep(mid-width, mid, x); break;
-        case 2: x = smootherstep(mid-width, mid, x); break;
-    }
-
-    return x;
-}
+#endif // if UNITY_STANDARD_BRDF_INCLUDED
 
 #endif // SCSS_UTILS_INCLUDED

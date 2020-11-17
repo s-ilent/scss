@@ -1,0 +1,90 @@
+_MainTex	Main Texture	Main Color Texture (RGBA)
+_LightingCalculationType	Lighting Calculation Type	Sets the method used to perform the direct/indirect lighting calculation.
+_ClippingMask	Clipping Mask	Additional texture for transparency.
+_Cutoff	Alpha Cutoff	Threshold for transparency cutoff
+_AlphaSharp	Disable Dithering	Treats transparency cutoff as a hard edge, instead of a soft dithered one.
+_ColorMask	Tint Mask	Masks material colour tinting (G) and detail maps (A).
+_BumpMap	Normal Map	Normal Map (RGB)
+_EmissionMap	Emission Map	Emission (RGB)
+_DetailEmissionMap	Emission Detail Mask	A map combined with the main emission map to add detail.
+_EmissionDetailParams	Emission Detail Parameters	XY: Scroll pow
+_SpecGlossMap	Specular Map	Specular Map (RGBA, RGB: Specular/Metalness, A: Smoothness)
+_SpecularType	Specular Style	Allows you to set the shading used for specular. 
+_Smoothness	Smoothness	The smoothness of the material. The specular map's alpha channel is used for this, with this slider being a multiplier.
+_Anisotropy	Anisotropy	Direction of the anisotropic specular highlights.
+_UseEnergyConservation	Use Energy Conservation	Reduces the intensity of the diffuse on specular areas, to realistically conserve energy.
+_UseMetallic	Use as Metalness	Metalness maps are greyscale maps that contain the metalness of a surface. This is different to specular maps, which are RGB (colour) maps that contain the specular parts of a surface.
+_CelSpecularSoftness	Softness	Sets the softness of the falloff of cel specular highlights.
+_CelSpecularSteps	Steps	Sets the number of steps in cel specular highlights.
+_UseFresnel	Rim Lighting Style	Applies a customisable rim lighting effect.
+_FresnelWidth	Rim Width	Sets the width of the rim lighting.
+_FresnelStrength	Rim Softness	Sets the sharpness of the rim edge. 
+_FresnelTint	Rim Tint	Tints the colours of the rim lighting. To make it brighter, change the brightness to a valur higher than 1.
+_UseFresnelLightMask	Use Light Direction Mask	Uses the light direction to split the rim light into two. The backside of the rim light can be adjusted seperately.
+_FresnelLightMask	Light Direction Mask Strength	The higher this is, the less the rim light becomes visible in the area between the rim and inverse rim.
+_FresnelTintInv	Inverse Rim Tint	Tints the colours of the inverse rim lighting. To make it brighter, change the brightness to a valur higher than 1.
+_FresnelWidthInv	Inverse Rim Width	Sets the width of the inverse rim lighting.
+_FresnelStrengthInv	Inverse Rim Softness	Sets the sharpness of the inverse rim edge. 
+_CustomFresnelColor	Emissive Rim	RGB sets the colour of the additive rim light. Alpha controls the power/width of the effect.
+_outline_color	Outline Colour	Sets the colour used for outlines. In tint mode, this is multiplied against the texture.
+_outline_width	Outline Width	Sets the width of outlines in cm.
+_OutlineMask	Outline Mask	Sets the width of outlines.
+_UseMatcap	Use Matcap	Enables the use of material capture textures.
+_MatcapTitle	Matcap	Enables the use of material capture textures.
+_Matcap1	Matcap 1	Matcap (RGB). Controlled by the matcap mask's R channel.
+_Matcap2	Matcap 2	Matcap (RGB). Controlled by the matcap mask's G channel.
+_Matcap3	Matcap 3	Matcap (RGB). Controlled by the matcap mask's B channel.
+_Matcap4	Matcap 4	Matcap (RGB). Controlled by the matcap mask's A channel.
+_MatcapStrength	Matcap Strength	Power of the matcap. Higher is stronger.
+_MatcapMask	Matcap Mask	Determines the strength of the matcaps by the intensity of the different colour channels.
+_UseSubsurfaceScattering	Use Subsurface Scattering	Enables a light scattering effect useful for cloth and skin.
+_ThicknessMap	Thickness Map	Thickness Map (RGB)
+_ThicknessMapPower	Thickness Map Power	Boosts the intensity of the thickness map.
+_ThicknessMapInvert	Invert Thickness	Inverts the map used for thickness from a scale where 1 produces an effect, to a scale where 0 produces an effect.
+_SSSCol	Scattering Color	The colour used for the subsurface scattering effect.
+_SSSIntensity	Scattering Intensity	Strength of the subsurface scattering effect.
+_SSSPow	Scattering Power	Controls the power of the scattering effect.
+_SSSDist	Scattering Distortion	Controls the level of distortion light receives when passing through the material.
+_SSSAmbient	Scattering Ambient	Controls the intensity of ambient light received from scattering.
+_LightSkew	Light Skew	Skews the direction of the received lighting. The default is (1, 0.1, 1, 0), which corresponds to normal strength on the X and Z axis, while reducing the effect of the Y axis. This essentially stops you from getting those harsh lights from above or below that look so weird on cel shaded models. But that's just a default...
+_PixelSampleMode	Pixel Art Mode	Treats the main texture as pixel art. Great for retro avatars! Note: When using this, you should make sure mipmaps are Enabled and texture sampling is set to Trilinear.
+_UseDetailMaps	Use Detail Maps	Applies detail maps over the top of other textures for a more detailed appearance.
+_DetailAlbedoMap	Detail Albedo x2	An albedo map multiplied over the main albedo map to provide extra detail.
+_DetailNormalMap	Detail Normal	A normal map combined with the main normal map to add extra detail.
+_SpecularDetailMask	Specular Detail Mask	The detail pattern to use over the specular map.
+_UvSet	Secondary UV Source	Selects which UV channel to use for detail maps.
+_SpecularHighlights	Specular Highlights	Toggles specular highlights. Only applicable if specular is active.
+_GlossyReflections	Reflections	Toggles glossy reflections. Only applicable if specular is active.
+_DiffuseGeomShadowFactor	Diffuse Geometric Shadowing Factor	Controls the power of the geometric shadowing function, which alters the falloff of diffuse light at glancing angles. It's more realistic, but that can be undesirable for cel shading.
+_LightWrappingCompensationFactor	Light Reduction	Compensation factor for the light wrapping inherent in cel shading. For cel shaded models, this should be around 0.75. Realistic lighting should set this to 1 to disable it. 
+_IndirectShadingType	Indirect Shading Type	Sets the method used to shade indirect lighting. Directional will pick a single direction as a fake light source, so light will always be sharp. Dynamic will use the overall shading as a base, allowing for blobbier and more accurate lighting. 
+_UseAnimation	Use Animation	Enables the spritesheet system, where textures provided to the shader are divided into sections and displayed seperately over time.
+_AnimationSpeed	Animation Speed	The animation speed is derived from the Unity time parameter, where 1.0 is one cycle every 20 seconds. 
+_TotalFrames	Total Frames	The maximum number of frames that will play in the animation. 
+_FrameNumber	Frame Number	Sets the frame number to begin playing the animation on.
+_Columns	Columns	Sets the number of frames present in a horizontal row.
+_Rows	Rows	Sets the number of frames present in a vertical column.
+_UseVanishing	Use Vanishing	Enables the vanishing effect, which fades the material out at a set start and end point. Ineffective in opaque blend mode.
+_VanishingStart	Start Vanishing	The inner bound of the vanishing effect. The higher this is, the further out the material will finishing vanishing. If Start is higher than End, the material will be invisible at a distance.
+_VanishingEnd	End Vanishing	The outer bound of the vanishing effect. The higher this is, the further out the material will begin to vanish. If End is higher than Start, the material will be invisible up close.
+_ManualButton	This shader has a manual. Check it out!	For information on new features, old features, and just how to use the shader in general, check out the manual on the shader wiki!
+_Ramp	Lighting Ramp	Specifies the falloff of the lighting. In other words, it controls how light affects your model and how soft or sharp the transition between light and shadow is. \nNote: If a Lighting Ramp is not set, the material will have no shading.
+_ShadowMask	Shadow Mask	In Occlusion mode, specifies areas of shadow influence. RGB darkens, alpha lightens. In Tone mode, specifies colour of shading to use. RGB tints, alpha darkens.
+_ShadowLift	Shadow Lift	Increasing this warps the lighting received to make more things lit.
+_IndirectLightingBoost	Indirect Lighting Boost	Blends the lighting of shadows with the lighting of direct light, making them brighter.
+_Shadow	Shadow Mask Lightening	Sets the power of the shadow mask.
+_LightRampType	Lighting Ramp Type	For if you use lightramps that run from bottom to top instead of left to right, or none at all.
+_ShadowMaskType	Shadow Mask Style	Changes how the shadow mask is used.
+_VertexColorType	Vertex Colour Type	Sets how the vertex colour should be used. Outline only affects the colour of outlines. Additional data uses the red channel for outline width and the green for ramp softness. 
+_GradientEditorButton	Open Gradient Editor	Opens the gradient editor window with the current material focused. This allows you to create a new lighting ramp and view the results on this material in realtime.
+_CrosstoneToneSeparation	Tone Blending Mode	Specifies the method used to blend tone with the albedo texture. Combined will merge one over the other, while Seperate will not.
+_1st_ShadeMap	1st Shading Tone	Specifies the colour of shading to use for the first gradation. Tinted by the colour field.
+_1st_ShadeColor	1st Shading Colour	
+_1st_ShadeColor_Step	1st Shading Breakpoint	Sets the point at which the shading begins to transition from lit to shaded, based on the light hitting the material.
+_1st_ShadeColor_Feather	1st Shading Width	Sets the width of the transition between lit and shaded.
+_2nd_ShadeMap	2nd Shading Tone	Specifies the colour of shading to use for the second gradation. Tinted by the colour field.
+_2nd_ShadeColor	2nd Shading Colour	
+_2nd_ShadeColor_Step	2nd Shading Breakpoint	Sets the point at which the shading begins to transition from shaded to fully shaded, based on the light hitting the material.
+_2nd_ShadeColor_Feather	2nd Shading Width	Sets the width of the transition between shaded and fully shaded.
+_ShadingGradeMap	Shading Adjustment Map	Adds additional shading to darkened regions, and acts as occlusion. The slider adjusts the map further.
+_ShadingGradeMapLevel	Shading Adjustment Level	Modifies the middle point of the shading adjustment.

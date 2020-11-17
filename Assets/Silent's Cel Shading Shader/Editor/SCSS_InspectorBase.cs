@@ -374,6 +374,16 @@ namespace SilentCelShading.Unity
             return (property.floatValue != 0.0f);
         }
 
+        protected static Texture GetTextureProperty(Material material, string propertyName)
+        {
+            if (material.HasProperty(propertyName))
+            {
+                return material.GetTexture(propertyName);
+            }
+
+            return null;
+        }
+
         protected static float? GetFloatProperty(Material material, string propertyName)
         {
             if (material.HasProperty(propertyName))
