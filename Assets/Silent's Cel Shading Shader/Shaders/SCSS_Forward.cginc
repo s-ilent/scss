@@ -206,6 +206,8 @@ float4 frag(VertexOutput i, uint facing : SV_IsFrontFace) : SV_Target
 	c.occlusion = ShadingGradeMap(texcoords.xy);
 	#endif
 
+	c = applyDetail(c, texcoords);
+
 	c = applyOutline(c, isOutline);
 
     // Rim lighting parameters. 
@@ -248,8 +250,7 @@ float4 frag(VertexOutput i, uint facing : SV_IsFrontFace) : SV_Target
 		if (_UseEnergyConservation == 1)
 		{
 			c.albedo.xyz = c.albedo.xyz * (c.oneMinusReflectivity); 
-			//c.tone[0].col = c.tone[0].col * (c.oneMinusReflectivity); 
-			// As tonemap is multiplied against albedo, is this necessary?
+			if (_CrosstoneToneSeparation) c.tone[0].col = c.tone[0].col * (c.oneMinusReflectivity); 
 		}
 
 	    i.tangentDir = ShiftTangent(normalize(i.tangentDir), c.normal, c.smoothness);

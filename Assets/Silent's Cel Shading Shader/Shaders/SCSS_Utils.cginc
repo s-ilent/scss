@@ -61,13 +61,16 @@ float rDither(float gray, float2 pos) {
 
 inline void applyAlphaClip(inout float alpha, float cutoff, float2 pos, bool sharpen)
 {
+    // Get the amount of MSAA samples present
+    half samplecount = GetRenderTargetSampleCount();
+
     pos += _SinTime.x%4;
     #if defined(_ALPHATEST_ON)
     // Switch between dithered alpha and sharp-edge alpha.
         if (!sharpen) {
             alpha = (1+cutoff) * alpha - cutoff;
             float mask = (T(intensity(pos)));
-            const float width = 0.15;
+            const float width = 1 / (samplecount*2-1);
             alpha = alpha - (mask * sqrt(1-(alpha)) * width);
         }
         else {
