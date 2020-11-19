@@ -6,7 +6,7 @@ Shader "Hidden/Silent's Cel Shading/Old/Cutout"
 		_MainTex("Main Texture", 2D) = "white" {}
 		_Color("Tint", Color) = (1,1,1,1)
 		_Cutoff("Alpha Cutoff", Range(0,1)) = 0.5
-		[Toggle(_)]_AlphaSharp("Disable Dithering for Cutout", Float) = 0.0
+		[ToggleUI]_AlphaSharp("Disable Dithering for Cutout", Float) = 0.0
 		[Space]
 		_ColorMask("Color Mask Map", 2D) = "white" {}
 		_BumpMap("Normal Map", 2D) = "bump" {}
@@ -43,8 +43,8 @@ Shader "Hidden/Silent's Cel Shading/Old/Cutout"
 		[Enum(SpecularType)] _SpecularType ("Specular Type", Float) = 0.0
         _SpecColor("Specular", Color) = (1,1,1)
 		_SpecGlossMap ("Specular Map", 2D) = "black" {}
-		[Toggle(_)]_UseMetallic ("Use as Metallic", Float) = 0.0
-		[Toggle(_)]_UseEnergyConservation ("Energy Conservation", Float) = 1.0
+		[ToggleUI]_UseMetallic ("Use as Metallic", Float) = 0.0
+		[ToggleUI]_UseEnergyConservation ("Energy Conservation", Float) = 1.0
 		_Smoothness ("Smoothness", Range(0, 1)) = 1
 		_Anisotropy("Anisotropy", Range(-1,1)) = 0.8
 		[Space]
@@ -79,7 +79,7 @@ Shader "Hidden/Silent's Cel Shading/Old/Cutout"
 		[Header(Subsurface Scattering)]
 		[Toggle(_SUNDISK_NONE)]_UseSubsurfaceScattering ("Use Subsurface Scattering", Float) = 0.0
 		_ThicknessMap("Thickness Map", 2D) = "black" {}
-		[Toggle(_)]_ThicknessMapInvert("Invert Thickness", Float) = 0.0
+		[ToggleUI]_ThicknessMapInvert("Invert Thickness", Float) = 0.0
 		_ThicknessMapPower ("Thickness Map Power", Range(0.01, 10)) = 1
 		_SSSCol ("Scattering Color", Color) = (1,1,1,1)
 		_SSSIntensity ("Scattering Intensity", Range(0, 10)) = 1
@@ -90,7 +90,7 @@ Shader "Hidden/Silent's Cel Shading/Old/Cutout"
 		[Header(Other)]
 		[Toggle(_SMOOTHNESS_TEXTURE_ALBEDO_CHANNEL_A)]_AlbedoAlphaMode("Albedo Alpha Mode", Float) = 0.0
 		[HDR]_CustomFresnelColor("Emissive Fresnel Color", Color) = (0,0,0,1)
-		[Toggle(_)]_PixelSampleMode("Sharp Sampling Mode", Float) = 0.0
+		[ToggleUI]_PixelSampleMode("Sharp Sampling Mode", Float) = 0.0
 		[Space]
 		[Header(System Lighting)]
 		[Enum(LightingCalculationType)] _LightingCalculationType ("Lighting Calculation Type", Float) = 0.0

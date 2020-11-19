@@ -5,6 +5,7 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine.Rendering;
 using Object = UnityEngine.Object;
+using System.Linq;
 
 // Parts of this file are based on https://github.com/Microsoft/MixedRealityToolkit-Unity/
 // licensed under the MIT license. 
@@ -81,12 +82,26 @@ namespace SilentCelShading.Unity
 			public static string shadingOptionsTitle = "Shading Options";
 			public static string outlineOptionsTitle = "Outline Options";
 			public static string advancedOptionsTitle = "Advanced Options";
-			public static GUIContent matcapTitle = new GUIContent("Matcap", "Enables the use of material capture textures.");
 
 			public static string albedoMapAlphaSmoothnessName = "_SMOOTHNESS_TEXTURE_ALBEDO_CHANNEL_A";
 			public static readonly string[] albedoAlphaModeNames = Enum.GetNames(typeof(AlbedoAlphaMode));
+		}
 
-			public static GUIContent manualButton = new GUIContent("This shader has a manual. Check it out!","For information on new features, old features, and just how to use the shader in general, check out the manual on the shader wiki!");
+		public class SCSSBoot : AssetPostprocessor {
+			private static void OnPostprocessAllAssets(string[] importedAssets, string[] deletedAssets, string[] movedAssets,
+			string[] movedFromAssetPaths) {
+			var isUpdated = importedAssets.Any(path => path.StartsWith("Assets/")) &&
+							importedAssets.Any(path => path.Contains("SCSS_InspectorData"));
+
+			if (isUpdated) {
+				InitializeOnLoad();
+			}
+			}
+
+			[InitializeOnLoadMethod]
+			private static void InitializeOnLoad() {
+			InspectorCommon.LoadInspectorData();
+			}
 		}
 
 		static private TextAsset inspectorData;
@@ -96,7 +111,7 @@ namespace SilentCelShading.Unity
 		{
 			char[] recordSep = new char[] {'\n'};
 			char[] fieldSep = new char[] {'\t'};
-			if (styles.Count == 0)
+			//if (styles.Count == 0)
 			{
 					string[] guids = AssetDatabase.FindAssets("t:TextAsset SCSS_InspectorData." + Application.systemLanguage);
 					if (guids.Length == 0)
@@ -109,7 +124,7 @@ namespace SilentCelShading.Unity
 				foreach (string record in records)
 				{
 					string[] fields = record.Split(fieldSep, 3, System.StringSplitOptions.None); 
-					if (fields.Length != 3) {Debug.Log("Field " + fields[0] + " only has " + fields.Length + " fields!");};
+					if (fields.Length != 3) {Debug.LogWarning("Field " + fields[0] + " only has " + fields.Length + " fields!");};
 					if (fields[0] != null) styles[fields[0]] = new GUIContent(fields[1], fields[2]);  
 					
 				}	
@@ -135,6 +150,14 @@ namespace SilentCelShading.Unity
 			EditorGUI.BeginChangeCheck();
 			action();
 			return EditorGUI.EndChangeCheck();
+		}
+
+		public static void WithGUIDisable(bool disable, Action action)
+		{
+			bool prevState = GUI.enabled;
+			GUI.enabled = disable;
+			action();
+			GUI.enabled = prevState;
 		}
 
 		public static Material[] WithMaterialPropertyDropdown(MaterialProperty prop, string[] options, MaterialEditor editor)

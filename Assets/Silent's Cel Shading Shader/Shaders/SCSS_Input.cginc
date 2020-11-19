@@ -27,11 +27,15 @@ UNITY_DECLARE_TEX2D_NOSAMPLER(_EmissionMap); uniform half4 _EmissionMap_ST;
 #if defined(_DETAIL)
 UNITY_DECLARE_TEX2D(_DetailAlbedoMap); uniform half4 _DetailAlbedoMap_ST; uniform half4 _DetailAlbedoMap_TexelSize;
 UNITY_DECLARE_TEX2D_NOSAMPLER(_DetailNormalMap); uniform half4 _DetailNormalMap_ST;
-UNITY_DECLARE_TEX2D_NOSAMPLER(_DetailEmissionMap); uniform half4 _DetailEmissionMap_ST;
 UNITY_DECLARE_TEX2D_NOSAMPLER(_SpecularDetailMask); uniform half4 _SpecularDetailMask_ST;
 uniform float _DetailAlbedoMapScale;
 uniform float _DetailNormalMapScale;
 uniform float _SpecularDetailStrength;
+#endif
+
+#if defined(_EMISSION)
+UNITY_DECLARE_TEX2D_NOSAMPLER(_DetailEmissionMap); uniform half4 _DetailEmissionMap_ST;
+uniform float4 _EmissionDetailParams;
 #endif
 
 #if defined(_SPECULAR)
@@ -82,7 +86,6 @@ uniform float _UVSec;
 uniform float _AlbedoAlphaMode;
 
 uniform float4 _EmissionColor;
-uniform float4 _EmissionDetailParams;
 // For later use
 uniform float _EmissionScrollX;
 uniform float _EmissionScrollY;
@@ -148,6 +151,7 @@ uniform float _LightWrappingCompensationFactor;
 
 uniform float _IndirectShadingType;
 uniform float _CrosstoneToneSeparation;
+uniform float _Crosstone2ndSeparation;
 
 uniform float _UseInteriorOutline;
 uniform float _InteriorOutlineWidth;
@@ -399,23 +403,29 @@ half3 Thickness(float2 uv)
 
 half3 Albedo(float4 texcoords)
 {
-    half3 albedo = UNITY_SAMPLE_TEX2D (_MainTex, texcoords.xy).rgb * LerpWhiteTo(_Color.rgb, ColorMask(texcoords.xy));
+    half3 albedo = UNITY_SAMPLE_TEX2D (_MainTex, texcoords.xy).rgb;
+    return albedo;
+}
+
+SCSS_Input applyDetail(SCSS_Input c, float4 texcoords)
+{
+	c.albedo *= LerpWhiteTo(_Color.rgb, ColorMask(texcoords.xy));
+	c.tone[0].col *= LerpWhiteTo(_Color.rgb, ColorMask(texcoords.xy));
+	c.tone[1].col *= LerpWhiteTo(_Color.rgb, ColorMask(texcoords.xy));
+
 #if _DETAIL
     half mask = DetailMask(texcoords.xy);
     half4 detailAlbedo = UNITY_SAMPLE_TEX2D_SAMPLER (_DetailAlbedoMap, _DetailAlbedoMap, texcoords.zw);
     mask *= detailAlbedo.a;
     mask *= _DetailAlbedoMapScale;
     #if _DETAIL_MULX2
-        albedo *= LerpWhiteTo (detailAlbedo.rgb * unity_ColorSpaceDouble.rgb, mask);
-    #elif _DETAIL_MUL
-        albedo *= LerpWhiteTo (detailAlbedo.rgb, mask);
-    #elif _DETAIL_ADD
-        albedo += detailAlbedo.rgb * mask;
-    #elif _DETAIL_LERP
-        albedo = lerp (albedo, detailAlbedo.rgb, mask);
+        c.albedo *= LerpWhiteTo (detailAlbedo.rgb * unity_ColorSpaceDouble.rgb, mask);
+        c.tone[0].col *= LerpWhiteTo (detailAlbedo.rgb * unity_ColorSpaceDouble.rgb, mask);
+		c.tone[1].col *= LerpWhiteTo (detailAlbedo.rgb * unity_ColorSpaceDouble.rgb, mask);
     #endif
+        // Not implemented: _DETAIL_MUL, _DETAIL_ADD, _DETAIL_LERP
 #endif
-    return albedo;
+    return c;
 }
 
 half Alpha(float2 uv)
@@ -460,13 +470,14 @@ half3 Emission(float2 uv)
 
 half4 EmissionDetail(float2 uv)
 {
-#if _DETAIL 
+#if _EMISSION 
 	uv += _EmissionDetailParams.xy * _Time.y;
-	half4 ed = UNITY_SAMPLE_TEX2D_SAMPLER(_DetailEmissionMap, _DetailAlbedoMap, uv);
-	ed.rgb = 
-	_EmissionDetailParams.z
-	? (sin(ed.rgb * _EmissionDetailParams.w + _Time.y * _EmissionDetailParams.z))+1 
-	: ed.rgb;
+	half4 ed = UNITY_SAMPLE_TEX2D_SAMPLER(_DetailEmissionMap, _MainTex, uv);
+	if (_EmissionDetailParams.z != 0)
+	{
+		float s = (sin(ed.r * _EmissionDetailParams.w + _Time.y * _EmissionDetailParams.z))+1;
+		ed.rgb = s;
+	}
 	return ed;
 #else
 	return 1;
@@ -604,7 +615,8 @@ float adjustShadeMap(float x, float y)
 float ShadingGradeMap (float2 uv)
 {
 	float4 tonemap = UNITY_SAMPLE_TEX2D_SAMPLER(_ShadingGradeMap, _MainTex, uv.xy);
-	return adjustShadeMap(tonemap.g, _Tweak_ShadingGradeMapLevel);
+	// Red to match UCTS
+	return adjustShadeMap(tonemap.r, _Tweak_ShadingGradeMapLevel);
 }
 #endif
 

@@ -1,5 +1,4 @@
 #ifndef SCSS_CORE_INCLUDED
-
 #define SCSS_CORE_INCLUDED
 
 #include "UnityCG.cginc"
@@ -125,6 +124,7 @@ float3 sampleCrossToneLighting(inout float x, SCSS_TonemapInput tone0, SCSS_Tone
 	half factor1 = saturate(simpleSharpen(x, width1, offset1));
 
 	float3 final;
+	tone1.col = _Crosstone2ndSeparation? tone1.col : tone1.col * tone0.col;
 	final = lerp(tone1.col, tone0.col, factor1);
 
 	if (_CrosstoneToneSeparation == 0) 	final = lerp(final, 1.0, factor0) * albedo;
@@ -645,11 +645,13 @@ float3 SCSS_ApplyLighting(SCSS_Input c, VertexOutput i, float4 texcoords)
 	// AmbientAlt
 	if (_UseFresnel == 3 && isOutline <= 0)
 	{
-		float sharpFresnel = sharpenLighting(d.rlPow4.y*c.rim.width, c.rim.power)
-		 * c.rim.alpha;
+		float sharpFresnel = sharpenLighting(d.rlPow4.y*c.rim.width*fresnelLightMask, c.rim.power);
+		sharpFresnel += sharpenLighting(d.rlPow4.y * c.rim.invWidth * fresnelLightMaskInv,
+			c.rim.invPower) * _FresnelLightMask;
 		c.occlusion += saturate(sharpFresnel);
 	}
 
+	// Combination
 	if (_UseFresnel == 4 && isOutline <= 0)
 	{
 		float3 sharpFresnel = sharpenLighting(d.rlPow4.y * c.rim.width * fresnelLightMask, 

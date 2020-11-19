@@ -15,10 +15,6 @@ namespace SilentCelShading.Unity
 {
 	public class Inspector : SCSSShaderGUI
 	{
-		Dictionary<string, MaterialProperty> props = new Dictionary<string, MaterialProperty>();
-		
-		protected Material target;
-		protected MaterialEditor editor;
 
 		public enum ShadowMaskType
 		{
@@ -47,7 +43,18 @@ namespace SilentCelShading.Unity
 			Flatten
 		}
 
-		public static GUIContent gradientEditorButton = new GUIContent("Open Gradient Editor","Opens the gradient editor window with the current material focused. This allows you to create a new lighting ramp and view the results on this material in realtime.");
+		public enum SettingsComplexityMode
+		{
+			Complex,
+			Normal,
+			Simple
+		}
+
+		protected Material target;
+		protected MaterialEditor editor;
+		Dictionary<string, MaterialProperty> props = new Dictionary<string, MaterialProperty>();
+
+    	public int scssSettingsComplexityMode = 0;
 
 		protected bool usingLightramp = true; // Compatibility
 		protected bool usingCrosstone = false;
@@ -66,46 +73,19 @@ namespace SilentCelShading.Unity
 			if (material.shader.name.Contains(hiddenName)) UpgradeVariantCheck(material);
 		}
 
-		public override void OnGUI(MaterialEditor materialEditor, MaterialProperty[] matProps)
-		{ 
-			this.target = materialEditor.target as Material;
-			this.editor = materialEditor;
-			Material material = this.target;
-
-			int propCount = ShaderUtil.GetPropertyCount(material.shader);
-
-			for (int i = 0; i < propCount; i++)
-			{
-				string propName = ShaderUtil.GetPropertyName(material.shader, i);
-				props[propName] = FindProperty(propName, matProps, false);
-			}
-
-			InspectorCommon.LoadInspectorData();
-
-			CheckShaderType(material);
-
-			base.OnGUI(materialEditor, matProps);
-
-			MainOptions();
-			if (usingLightramp) LightrampOptions();
-			if (usingCrosstone) CrosstoneOptions();
-			RenderingOptions();
-			MatcapOptions();
-			SubsurfaceOptions();
-			DetailMapOptions();
-			AnimationOptions();
-			VanishingOptions();
-			OutlineOptions();
-			AdvancedOptions();
-		}
-
 		protected override void FindProperties(MaterialProperty[] matProps)
 		{ 
 			base.FindProperties(matProps);
+			
+			foreach (MaterialProperty prop in matProps)
+			{
+				props[prop.name] = FindProperty(prop.name, matProps, false);
+			}
 		}
 
 		protected override void MaterialChanged(Material material)
 		{
+			InitialiseStyles();
 			// Handle old materials
 			UpgradeMatcaps(material);
 			UpgradeVariantCheck(material);
@@ -151,6 +131,38 @@ namespace SilentCelShading.Unity
 			return editor.TexturePropertySingleLine(new GUIContent(i), props[i], props[i2], props[i3]);
 		}
 
+		protected Rect TextureColorPropertyWithColorReset(string tex, string col)
+		{
+            bool hadTexture = props[tex].textureValue != null;
+			Rect returnRect = TexturePropertySingleLine(tex, col);
+			
+            float brightness = props[col].colorValue.maxColorComponent;
+            if (props[tex].textureValue != null && !hadTexture && brightness <= 0f)
+                props[col].colorValue = Color.white;
+			return returnRect;
+		}
+
+		protected Rect TextureColorPropertyWithColorReset(string tex, string col, string prop)
+		{
+            bool hadTexture = props[tex].textureValue != null;
+			Rect returnRect = TexturePropertySingleLine(tex, col, prop);
+			
+            float brightness = props[col].colorValue.maxColorComponent;
+            if (props[tex].textureValue != null && !hadTexture && brightness <= 0f)
+                props[col].colorValue = Color.white;
+			return returnRect;
+		}
+
+		protected Rect TexturePropertyWithHDRColor(string i, string i2)
+		{
+			GUIContent style;
+			if (styles.TryGetValue(i, out style))
+			{
+				return editor.TexturePropertyWithHDRColor(style, props[i], props[i2], false);
+			} 
+			return editor.TexturePropertyWithHDRColor(new GUIContent(i), props[i], props[i2], false);
+		}
+
 		protected void ShaderProperty(string i)
 		{
 			GUIContent style;
@@ -161,14 +173,158 @@ namespace SilentCelShading.Unity
 				editor.ShaderProperty(props[i], new GUIContent(i));
 			}
 		}
+
+		protected void TogglePropertyHeader(string i, bool display = true)
+		{
+			if (display) ShaderProperty(i);
+			/*
+        	int HEADER_HEIGHT = 22; // Arktoon default
+            Rect r = EditorGUILayout.GetControlRect(true,0,EditorStyles.layerMaskField);
+            r.y -= HEADER_HEIGHT;
+            r.height = MaterialEditor.GetDefaultPropertyHeight(props[i]);
+        	var e = Event.current;
+			
+			Rect rect = r;
+
+			if(e.type == EventType.Repaint) //draw the divider
+			{
+				rect.x -= 0.0f;
+				rect.y += 20.0f;
+				rect.height = 1.0f;
+				rect.width += 0.0f;
+				GUI.depth++;
+				GUI.skin.box.Draw(rect,GUIContent.none,0);
+				GUI.depth--;
+			}
+			*/
+		}
+        public static void Vector2Property(MaterialProperty property, GUIContent name)
+        {
+            EditorGUI.BeginChangeCheck();
+            Vector2 vector2 = EditorGUILayout.Vector2Field(name,new Vector2(property.vectorValue.x, property.vectorValue.y),null);
+            if (EditorGUI.EndChangeCheck())
+                property.vectorValue = new Vector4(vector2.x, vector2.y, property.vectorValue.z, property.vectorValue.w);
+        }
+        public static void Vector2PropertyZW(MaterialProperty property, GUIContent name)
+        {
+            EditorGUI.BeginChangeCheck();
+            Vector2 vector2 = EditorGUILayout.Vector2Field(name,new Vector2(property.vectorValue.z, property.vectorValue.w),null);
+            if (EditorGUI.EndChangeCheck())
+                property.vectorValue = new Vector4(property.vectorValue.x, property.vectorValue.y, vector2.x, vector2.y);
+        }
+
+        protected void DrawShaderPropertySameLine(string i) {
+        	int HEADER_HEIGHT = 22; // Arktoon default
+            Rect r = EditorGUILayout.GetControlRect(true,0,EditorStyles.layerMaskField);
+            r.y -= HEADER_HEIGHT;
+            r.height = MaterialEditor.GetDefaultPropertyHeight(props[i]);
+            editor.ShaderProperty(r, props[i], " ");
+        }
+
+		protected GUIStyle sectionHeader;
+		protected GUIStyle sectionHeaderBox;
+
+		protected void InitialiseStyles()
+		{
+			scmStyle = new GUIStyle("DropDownButton");
+			sectionHeader = new GUIStyle(EditorStyles.miniBoldLabel);
+			sectionHeader.padding.left = 24;
+			sectionHeader.padding.right = -24;
+			sectionHeaderBox = new GUIStyle( GUI.skin.box );
+			sectionHeaderBox.alignment = TextAnchor.MiddleLeft;
+			sectionHeaderBox.padding.left = 5;
+			sectionHeaderBox.padding.top = 0;
+			sectionHeaderBox.padding.bottom = 0;
+		}
+
+		protected Rect DrawSectionHeaderArea(GUIContent content)
+		{
+            Rect r = EditorGUILayout.GetControlRect(true,0,EditorStyles.layerMaskField);
+				r.x -= 2.0f;
+				r.y += 2.0f;
+				r.height = 18.0f;
+				r.width += 0.0f;
+			GUI.Box(r, EditorGUIUtility.IconContent("d_FilterByType"), sectionHeaderBox);
+			EditorGUILayout.LabelField(content, sectionHeader);
+			return r;
+		}
+
+		public override void OnGUI(MaterialEditor materialEditor, MaterialProperty[] matProps)
+		{ 
+			this.target = materialEditor.target as Material;
+			this.editor = materialEditor;
+			Material material = this.target;
+/*
+			int propCount = ShaderUtil.GetPropertyCount(material.shader);
+
+			for (int i = 0; i < propCount; i++)
+			{
+				string propName = ShaderUtil.GetPropertyName(material.shader, i);
+				props[propName] = FindProperty(propName, matProps, false);
+			}
+*/
+			CheckShaderType(material);
+
+			base.OnGUI(materialEditor, matProps);
+
+			SettingsComplexityArea();
+			MainOptions();
+			ShadingOptions();
+			
+			switch ((SettingsComplexityMode)scssSettingsComplexityMode)
+			{
+				case SettingsComplexityMode.Simple:
+					DrawSectionHeaderArea(styles["s_renderingOptions"]);
+					EmissionOptions();
+					OutlineOptions();
+					ManualButtonArea();
+					FooterOptions();
+					break;
+				case SettingsComplexityMode.Normal:
+					RenderingOptions();
+					OutlineOptions();
+					EmissionOptions();
+					ManualButtonArea();
+					AdvancedOptions();
+					FooterOptions();
+					break;
+				default:
+				case SettingsComplexityMode.Complex:
+					RenderingOptions();
+					OutlineOptions();
+					DetailOptions();
+					EmissionOptions();
+					MiscOptions();
+					ManualButtonArea();
+					AdvancedOptions();
+					FooterOptions();
+					break;
+			}
+		}
+
+		protected string[] SettingsComplexityModeOptions = new string[]
+		{
+			"Complex", "Normal", "Simple"
+		};
+
+		GUIStyle scmStyle;
+
+		protected void SettingsComplexityArea()
+		{
+			SettingsComplexityModeOptions[0] = styles["s_fullComplexity"].text;
+			SettingsComplexityModeOptions[1] = styles["s_normalComplexity"].text;
+			SettingsComplexityModeOptions[2] = styles["s_simpleComplexity"].text;
+			EditorGUILayout.Space();
+			scssSettingsComplexityMode = EditorGUILayout.Popup(scssSettingsComplexityMode, SettingsComplexityModeOptions, scmStyle);
+		}
 		
 		protected void MainOptions()
 		{ 
-			EditorGUIUtility.labelWidth = 0f;
 			EditorGUILayout.Space();
 		
-			GUILayout.Label(CommonStyles.mainOptionsTitle, EditorStyles.boldLabel);
+			DrawSectionHeaderArea(styles["s_mainOptions"]);
 
+			EditorGUILayout.Space();
 			TexturePropertySingleLine("_MainTex", "_Color");
 			TexturePropertySingleLine("_BumpMap", "_BumpScale");
 
@@ -197,9 +353,76 @@ namespace SilentCelShading.Unity
 			EditorGUILayout.Space();
 		}
 
+		protected void ShadingOptions()
+		{
+			EditorGUILayout.Space();
+			DrawSectionHeaderArea(styles["s_shadingOptions"]);
+			if (usingLightramp) LightrampOptions();
+			if (usingCrosstone) CrosstoneOptions();
+		}
+
+		protected void RenderingOptions()
+		{ 
+			EditorGUILayout.Space();
+			DrawSectionHeaderArea(styles["s_renderingOptions"]);
+
+			SpecularOptions();
+			RimlightOptions();
+			MatcapOptions();
+		}
+
+		protected void DetailOptions()
+		{
+			EditorGUILayout.Space();
+			DrawSectionHeaderArea(styles["s_detailOptions"]);
+			SubsurfaceOptions();
+			DetailMapOptions();
+		}
+
+		protected void EmissionOptions()
+		{
+			EditorGUILayout.Space();
+
+            bool hadEmissionTexture = props["_EmissionMap"].textureValue != null;
+			TexturePropertyWithHDRColor("_EmissionMap", "_EmissionColor");
+            // If texture was assigned and color was black set color to white
+            float brightness = props["_EmissionColor"].colorValue.maxColorComponent;
+            if (props["_EmissionMap"].textureValue != null && !hadEmissionTexture && brightness <= 0f)
+                 props["_EmissionColor"].colorValue = Color.white;
+			EditorGUILayout.Space();
+
+			ShaderProperty("_UseAdvancedEmission");
+			if (PropertyEnabled(props["_UseAdvancedEmission"]))
+			{
+				target.EnableKeyword("_EMISSION");
+				TexturePropertySingleLine("_DetailEmissionMap");
+				//ShaderProperty("_EmissionDetailParams");
+            	EditorGUI.indentLevel ++;
+				Vector2Property(props["_EmissionDetailParams"], styles["s_EmissionDetailScroll"]);
+				Vector2PropertyZW(props["_EmissionDetailParams"], styles["s_EmissionDetailPhase"]);
+            	EditorGUI.indentLevel --;
+			} else {
+				target.DisableKeyword("_EMISSION");
+			}
+			EditorGUILayout.Space();
+			ShaderProperty("_CustomFresnelColor");
+			// For some reason, this property doesn't have spacing after it
+			EditorGUILayout.Space();
+		}
+
+		protected void MiscOptions()
+		{
+			EditorGUILayout.Space();
+			DrawSectionHeaderArea(styles["s_miscOptions"]);
+			EditorGUILayout.Space();
+			ShaderProperty("_PixelSampleMode");
+			AnimationOptions();
+			VanishingOptions();
+		}
+
         protected void LightrampOptions()
         { 
-			EditorGUILayout.LabelField(CommonStyles.shadingOptionsTitle, EditorStyles.boldLabel);
+			EditorGUILayout.Space();
 			
 			foreach (Material mat in WithMaterialPropertyDropdown(props["_LightRampType"], Enum.GetNames(typeof(LightRampType)), editor))
 			{
@@ -211,7 +434,7 @@ namespace SilentCelShading.Unity
                 WithGroupHorizontal(() => 
 				{
 					TexturePropertySingleLine("_Ramp");
-					if (GUILayout.Button(gradientEditorButton, "button"))
+					if (GUILayout.Button(styles["s_gradientEditorButton"], "button"))
 					{
 						XSGradientEditor.callGradientEditor(target);
 					}
@@ -231,68 +454,37 @@ namespace SilentCelShading.Unity
 
             ShaderProperty("_Shadow");
         }
-
+		
 		protected void CrosstoneOptions()
 		{ 
-			EditorGUILayout.LabelField(CommonStyles.shadingOptionsTitle, EditorStyles.boldLabel);
-
-			ShaderProperty("_CrosstoneToneSeparation"); 
-			TexturePropertySingleLine("_1st_ShadeMap", "_1st_ShadeColor");
+            EditorGUILayout.Space();
+			WithGroupHorizontal(() => {
+				TextureColorPropertyWithColorReset("_1st_ShadeMap", "_1st_ShadeColor");
+				editor.ShaderProperty(props["_CrosstoneToneSeparation"], ""); 
+			});
 			ShaderProperty("_1st_ShadeColor_Step");
 			ShaderProperty("_1st_ShadeColor_Feather");
             EditorGUILayout.Space();
-
-			TexturePropertySingleLine("_2nd_ShadeMap", "_2nd_ShadeColor");
+			
+			WithGroupHorizontal(() => {
+				TextureColorPropertyWithColorReset("_2nd_ShadeMap", "_2nd_ShadeColor");
+				editor.ShaderProperty(props["_Crosstone2ndSeparation"], ""); 
+			});
 			ShaderProperty("_2nd_ShadeColor_Step");
 			ShaderProperty("_2nd_ShadeColor_Feather");
-
             EditorGUILayout.Space();
+
 			TexturePropertySingleLine("_ShadingGradeMap", "_Tweak_ShadingGradeMapLevel");
-		}
-
-		protected void RenderingOptions()
-		{ 
-			EditorGUILayout.Space();
-			EditorGUILayout.LabelField(CommonStyles.renderingOptionsTitle, EditorStyles.boldLabel);
-
-			SpecularOptions();
-			RimlightOptions();
-
-			TexturePropertySingleLine("_EmissionMap", "_EmissionColor");
-			ShaderProperty("_CustomFresnelColor");			
-			EditorGUILayout.Space();
-		}
-
-		protected void AnimationOptions()
-		{ 
-			ShaderProperty("_UseAnimation");
-			if (PropertyEnabled(props["_UseAnimation"]))
-			{
-				ShaderProperty("_AnimationSpeed");
-				ShaderProperty("_TotalFrames");
-				ShaderProperty("_FrameNumber");
-				ShaderProperty("_Columns");
-				ShaderProperty("_Rows");
-			}
-
-		}
-
-		protected void VanishingOptions()
-		{ 
-			ShaderProperty("_UseVanishing");
-			if (PropertyEnabled(props["_UseVanishing"]))
-			{
-				ShaderProperty("_VanishingStart");
-				ShaderProperty("_VanishingEnd");
-			}
 		}
 
 		protected void SpecularOptions()
 		{	
+            EditorGUILayout.Space();
 			foreach (Material mat in WithMaterialPropertyDropdown(props["_SpecularType"], Enum.GetNames(typeof(SpecularType)), editor))
 			{
 				SetupMaterialWithSpecularType(mat, (SpecularType)props["_SpecularType"].floatValue);
 			}
+			TogglePropertyHeader("_SpecularType", false);
 
 			switch ((SpecularType)props["_SpecularType"].floatValue)
 			{
@@ -331,13 +523,12 @@ namespace SilentCelShading.Unity
 				default:
 				break;
 			}	
-
-			EditorGUILayout.Space();
 		}
 
 		protected void RimlightOptions()
 		{	
-			ShaderProperty("_UseFresnel");
+            EditorGUILayout.Space();
+			TogglePropertyHeader("_UseFresnel");
 			bool isTintable = 
 				(AmbientFresnelType)props["_UseFresnel"].floatValue == AmbientFresnelType.Lit
 				|| (AmbientFresnelType)props["_UseFresnel"].floatValue == AmbientFresnelType.Ambient;
@@ -359,37 +550,11 @@ namespace SilentCelShading.Unity
 					EditorGUI.indentLevel -= 2;
 				}
 			}
-			EditorGUILayout.Space();
-		}
-
-		protected void DetailMapOptions()
-		{	  
-			EditorGUILayout.Space();
-
-			ShaderProperty("_UseDetailMaps");
-
-			if (PropertyEnabled(props["_UseDetailMaps"])) 
-			{
-				target.EnableKeyword("_DETAIL_MULX2");
-				TexturePropertySingleLine("_DetailAlbedoMap", "_DetailAlbedoMapScale");
-				TexturePropertySingleLine("_DetailNormalMap", "_DetailNormalMapScale");
-				TexturePropertySingleLine("_SpecularDetailMask", "_SpecularDetailStrength");
-				TexturePropertySingleLine("_DetailEmissionMap");
-				ShaderProperty("_EmissionDetailParams");
-				
-				editor.TextureScaleOffsetProperty(props["_DetailAlbedoMap"]);
-				ShaderProperty("_UVSec");
-			} else {
-				target.DisableKeyword("_DETAIL_MULX2");
-			}
-			EditorGUILayout.Space();
 		}
 
 		protected void MatcapOptions()
 		{ 
 			EditorGUILayout.Space();
-			EditorGUILayout.LabelField(CommonStyles.matcapTitle, EditorStyles.boldLabel);
-
 			var mMode = (MatcapType)props["_UseMatcap"].floatValue;
 			if (WithChangeCheck(() => 
 			{
@@ -399,6 +564,7 @@ namespace SilentCelShading.Unity
 				editor.RegisterPropertyChangeUndo("Matcap Style");
 				props["_UseMatcap"].floatValue = (float)mMode;
 			}
+			TogglePropertyHeader("_UseMatcap", false);
 
 			if (PropertyEnabled(props["_UseMatcap"]))
 			{
@@ -412,10 +578,8 @@ namespace SilentCelShading.Unity
 
 		protected void SubsurfaceOptions()
 		{ 
-			EditorGUILayout.Space();
-			
-			ShaderProperty("_UseSubsurfaceScattering");
-
+            EditorGUILayout.Space();
+			TogglePropertyHeader("_UseSubsurfaceScattering");
 			if (PropertyEnabled(props["_UseSubsurfaceScattering"]))
 			{
 				TexturePropertySingleLine("_ThicknessMap");
@@ -427,17 +591,61 @@ namespace SilentCelShading.Unity
 				ShaderProperty("_SSSDist");
 				ShaderProperty("_SSSAmbient");
 			}
-			
+		}
+
+		protected void DetailMapOptions()
+		{	  
+            EditorGUILayout.Space();
+			TogglePropertyHeader("_UseDetailMaps");
+			if (PropertyEnabled(props["_UseDetailMaps"])) 
+			{
+				target.EnableKeyword("_DETAIL_MULX2");
+				TexturePropertySingleLine("_DetailAlbedoMap", "_DetailAlbedoMapScale");
+				TexturePropertySingleLine("_DetailNormalMap", "_DetailNormalMapScale");
+				TexturePropertySingleLine("_SpecularDetailMask", "_SpecularDetailStrength");
+				
+				editor.TextureScaleOffsetProperty(props["_DetailAlbedoMap"]);
+				ShaderProperty("_UVSec");
+			} else {
+				target.DisableKeyword("_DETAIL_MULX2");
+			}
+		}
+
+		protected void AnimationOptions()
+		{
+            EditorGUILayout.Space();
+			TogglePropertyHeader("_UseAnimation");
+			if (PropertyEnabled(props["_UseAnimation"]))
+			{
+				ShaderProperty("_AnimationSpeed");
+				ShaderProperty("_TotalFrames");
+				ShaderProperty("_FrameNumber");
+				ShaderProperty("_Columns");
+				ShaderProperty("_Rows");
+			}
+
+		}
+
+		protected void VanishingOptions()
+		{ 
+            EditorGUILayout.Space();
+			TogglePropertyHeader("_UseVanishing");
+			if (PropertyEnabled(props["_UseVanishing"]))
+			{
+				ShaderProperty("_VanishingStart");
+				ShaderProperty("_VanishingEnd");
+			}
 		}
 
 		protected void OutlineOptions()
 		{ 
 			EditorGUILayout.Space();
-
+			
 			foreach (Material mat in WithMaterialPropertyDropdown(props["_OutlineMode"], Enum.GetNames(typeof(OutlineMode)), editor))
 			{
 				SetupMaterialWithOutlineMode(mat, (OutlineMode)props["_OutlineMode"].floatValue);
 			}
+			TogglePropertyHeader("_OutlineMode", false);
 
 			switch ((OutlineMode)props["_OutlineMode"].floatValue)
 			{
@@ -453,18 +661,23 @@ namespace SilentCelShading.Unity
 			}	  
 		}
 
-		protected void AdvancedOptions()
+		protected void ManualButtonArea()
 		{
 			EditorGUILayout.Space();
-			if (GUILayout.Button(CommonStyles.manualButton, "button"))
+
+			if (GUILayout.Button(styles["s_manualButton"], "button"))
 			{
 				Application.OpenURL("https://gitlab.com/s-ilent/SCSS/wikis/Manual/Setting-Overview");
 			}
+		}
+
+		protected void AdvancedOptions()
+		{
 			EditorGUILayout.Space();
 
-			GUILayout.Label(CommonStyles.advancedOptionsTitle, EditorStyles.boldLabel);
+			DrawSectionHeaderArea(styles["s_advancedOptions"]);
 
-			ShaderProperty("_PixelSampleMode");
+			EditorGUILayout.Space();
 
 			foreach (Material mat in WithMaterialPropertyDropdown(props["_VertexColorType"], Enum.GetNames(typeof(VertexColorType)), editor))
 			{
@@ -490,17 +703,26 @@ namespace SilentCelShading.Unity
 
 			ShaderProperty("_LightSkew");
 
-			if (WithChangeCheck(() => 
+			if (props["_SpecularType"].floatValue >= 1.0f) 
 			{
-				ShaderProperty("_SpecularHighlights");
-				ShaderProperty("_GlossyReflections");
-			})) {
-				MaterialChanged(target);
-			}
-
-			EditorGUILayout.Space();
+				WithGroupHorizontal(() => 
+				{
+					if (WithChangeCheck(() => 
+					{
+						ShaderProperty("_SpecularHighlights");
+						ShaderProperty("_GlossyReflections");
+					})) {
+						MaterialChanged(target);
+					}
+				});
+			};
 
 			StencilOptions(editor, target);
+		}
+
+		protected void FooterOptions()
+		{
+			EditorGUILayout.Space();
 
 			if (WithChangeCheck(() => 
 			{
@@ -632,13 +854,14 @@ protected Vector4? GetSerializedMaterialVector4(Material material, string propNa
 					&& GetTextureProperty(material, "_DetailEmissionMap")
 					&& GetTextureProperty(material, "_SpecularDetailMask"));
 				*/
-
+/*
 				// A material's GI flag internally keeps track of whether emission is enabled at all, it's enabled but has no effect
 				// or is enabled and may be modified at runtime. This state depends on the values of the current flag and emissive color.
 				// The fixup routine makes sure that the material is in the correct state if/when changes are made to the mode or color.
 					MaterialEditor.FixupEmissiveFlag(material);
 					bool shouldEmissionBeEnabled = (material.globalIlluminationFlags & MaterialGlobalIlluminationFlags.EmissiveIsBlack) == 0;
 					SetKeyword(material, "_EMISSION", shouldEmissionBeEnabled);
+*/
 		}
 
         public override void AssignNewShaderToMaterial(Material material, Shader oldShader, Shader newShader)
@@ -652,6 +875,7 @@ protected Vector4? GetSerializedMaterialVector4(Material material, string propNa
             Color? emissionColor = GetColorProperty(material, "_EmissionColor");
 
  			float? useToneSeparation = GetFloatProperty(material, "_CrosstoneToneSeparation");
+ 			float? use2ndSeparation = GetFloatProperty(material, "_Crosstone2ndSeparation");
 
             //shadeMap1 = GetFloatProperty(material, "_1st_ShadeMap");
             //Color? shadeMap1Color = GetFloatProperty(material, "_1st_ShadeColor");
@@ -701,9 +925,11 @@ protected Vector4? GetSerializedMaterialVector4(Material material, string propNa
                     // _Tweak_ShadingGradeMapLevel is named the same.
 
                     // Tone seperation is based on whether BaseAs1st is set.
-                    // 1stAs2nd is seperate, but supporting it would be overengineering.
+                    // 2nd seperation is based on whether 1stAs2nd is set.
                     useToneSeparation = GetFloatProperty(material, "_Use_BaseAs1st");
                     if (useToneSeparation.HasValue) useToneSeparation = (float)1.0 - useToneSeparation;
+                    use2ndSeparation = GetFloatProperty(material, "_Use_1stAs2nd");
+                    if (use2ndSeparation.HasValue) use2ndSeparation = (float)1.0 - use2ndSeparation;
 
                     // HighColor is only supported in Specular mode
                     specularMap = GetTextureProperty(material, "_HighColor_Tex");
@@ -816,6 +1042,7 @@ protected Vector4? GetSerializedMaterialVector4(Material material, string propNa
             SetFloatProperty(material, "_BumpScale", normalMapScale);
             SetColorProperty(material, "_EmissionColor", emissionColor);
             SetFloatProperty(material, "_CrosstoneToneSeparation", useToneSeparation);
+            SetFloatProperty(material, "_Crosstone2ndSeparation", use2ndSeparation);
             SetFloatProperty(material, "_1st_ShadeColor_Step", shadeMap1Step);
             SetFloatProperty(material, "_1st_ShadeColor_Feather", shadeMap1Feather);
             SetFloatProperty(material, "_2nd_ShadeColor_Step", shadeMap2Step);

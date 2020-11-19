@@ -20,6 +20,14 @@ Material:
   m_SavedProperties:
     serializedVersion: 3
     m_TexEnvs:
+    - _1st_ShadeMap:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _2nd_ShadeMap:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
     - _AdditiveMatcap:
         m_Texture: {fileID: 0}
         m_Scale: {x: 1, y: 1}
@@ -30,6 +38,10 @@ Material:
         m_Offset: {x: 0, y: 0}
     - _BumpMap:
         m_Texture: {fileID: 2800000, guid: 06d8cbe587a3d2c4c967de17cac6c502, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _ClippingMask:
+        m_Texture: {fileID: 2800000, guid: c61dab59da88c87499105c1b046bcf73, type: 3}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _ColorMask:
@@ -100,12 +112,20 @@ Material:
         m_Texture: {fileID: 0}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
+    - _OutlineMask:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
     - _ParallaxMap:
         m_Texture: {fileID: 0}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _Ramp:
         m_Texture: {fileID: 2800000, guid: 8339ae69dbe9dcc439ff088723737cfb, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _ShadingGradeMap:
+        m_Texture: {fileID: 0}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _ShadowMask:
@@ -145,30 +165,48 @@ Material:
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     m_Floats:
+    - _1st_ShadeColor_Feather: 1
+    - _1st_ShadeColor_Step: 1
+    - _2nd_ShadeColor_Feather: 1
+    - _2nd_ShadeColor_Step: 0.496
     - _AdditiveMatcapStrength: 1
     - _AlbedoAlphaMode: 0
     - _AlphaCutoff: 0.5
     - _AlphaSharp: 0
+    - _AnimationSpeed: 10
     - _Anisotropy: 0.8
+    - _AtoCMode: 0
     - _BlendOp: 0
     - _BumpScale: 1
+    - _CelSpecularSoftness: 0
+    - _CelSpecularSteps: 1
     - _ColorWriteMask: 15
+    - _Columns: 2
+    - _CrosstoneToneSeparation: 0
     - _CullMode: 2
     - _CustomMode: 0
     - _Cutoff: 0.5
     - _DetailAlbedoMapScale: 1
     - _DetailNormalMapScale: 1
+    - _DiffuseGeomShadowFactor: 1
     - _DstBlend: 0
     - _EmissionPower: 0
     - _FakeLight: 0
     - _FakeLightAngle: 45
+    - _FrameNumber: 0
+    - _FresnelLightMask: 1
     - _FresnelStrength: 0.5
+    - _FresnelStrengthInv: 0.5
     - _FresnelWidth: 0.5
+    - _FresnelWidthInv: 0.5
     - _GlossMapScale: 1
     - _Glossiness: 0.5
     - _GlossyReflections: 1
     - _IndirectLightingBoost: 0
-    - _LightRampType: 2
+    - _IndirectShadingType: 0
+    - _InteriorOutlineWidth: 0.01
+    - _LightRampType: 0
+    - _LightWrappingCompensationFactor: 0.8
     - _LightingCalculationType: 1
     - _Matcap1Blend: 0
     - _Matcap1Strength: 1
@@ -191,6 +229,7 @@ Material:
     - _ReadMask: 255
     - _RenderQueueOverride: -1
     - _Roughness: 0
+    - _Rows: 2
     - _SSSAmbient: 0
     - _SSSDist: 1
     - _SSSIntensity: 1
@@ -213,16 +252,24 @@ Material:
     - _StencilZFail: 0
     - _ThicknessMapInvert: 0
     - _ThicknessMapPower: 1
+    - _TotalFrames: 4
+    - _Tweak_ShadingGradeMapLevel: 0
     - _UVSec: 0
+    - _UseAnimation: 0
     - _UseDetailMaps: 0
     - _UseDetailNormal: 0
     - _UseEnergyConservation: 1
     - _UseFresnel: 0
+    - _UseFresnelLightMask: 0
+    - _UseInteriorOutline: 0
     - _UseMatcap: 0
     - _UseMetallic: 1
     - _UseSpecularDetailMask: 0
     - _UseSubsurfaceScattering: 0
+    - _UseVanishing: 0
     - _UseVerticalLightramp: 0
+    - _VanishingEnd: 2.23
+    - _VanishingStart: 2.44
     - _VertexColorType: 0
     - _WriteMask: 255
     - _ZTest: 4
@@ -231,13 +278,17 @@ Material:
     - _outline_tint: 0.5
     - _outline_width: 0.1
     m_Colors:
+    - _1st_ShadeColor: {r: 0.7027852, g: 0.6213065, b: 0.735849, a: 1}
+    - _2nd_ShadeColor: {r: 0, g: 0, b: 0, a: 1}
     - _AddAlbedoColor: {r: 0, g: 0, b: 0, a: 0}
     - _Color: {r: 1, g: 1, b: 1, a: 1}
     - _CustomFresnelColor: {r: 0, g: 0, b: 0, a: 1}
     - _EmissionColor: {r: 0, g: 0, b: 0, a: 1}
     - _EmissionDetailParams: {r: 0, g: 0, b: 0, a: 0}
     - _FresnelTint: {r: 1, g: 1, b: 1, a: 1}
+    - _FresnelTintInv: {r: 1, g: 1, b: 1, a: 1}
     - _LightSkew: {r: 1, g: 0.1, b: 1, a: 0}
     - _SSSCol: {r: 1, g: 1, b: 1, a: 1}
     - _ShadowMaskColor: {r: 1, g: 1, b: 1, a: 1}
+    - _SpecColor: {r: 1, g: 1, b: 1, a: 1}
     - _outline_color: {r: 0.5, g: 0.5, b: 0.5, a: 1}
