@@ -102,5 +102,5 @@ s_shadingOptions	Shading Options	Settings that control the main light shading ca
 s_renderingOptions	Rendering Options	Settings that control additional effects rendered after the main shading. These settings are specific to these effects. (Some specular settings will affect the base albedo, which influences how other effects appear.)
 s_detailOptions	Detail Options	Settings that control details added into the basic lighting and shading.
 s_miscOptions	Misc Options	Settings that control specific effects which aren't related to lighting.
-s_advancedOptions	Advanced Options	Settings that control specific system parameters that can have a large effect on how the shading is calculated.
+s_advancedOptions	System Options	Settings that control specific system parameters that can have a large effect on how the shading is calculated.
 		

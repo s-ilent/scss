@@ -123,7 +123,7 @@ Shader "Silent's Cel Shading/Crosstone"
 		[ToggleOff(_GLOSSYREFLECTIONS_OFF)]_GlossyReflections ("Glossy Reflections", Float) = 1.0
 		//[Space]
         // Advanced options.
-		[Header(System Render Flags)]
+		//[Header(System Render Flags)]
         [Enum(RenderingMode)] _Mode("Rendering Mode", Float) = 0                                     // "Opaque"
         [Enum(CustomRenderingMode)] _CustomMode("Mode", Float) = 0                                   // "Opaque"
         [Enum(DepthWrite)] _AtoCMode("Alpha to Mask", Float) = 0                                     // "Off"
@@ -137,7 +137,7 @@ Shader "Silent's Cel Shading/Crosstone"
         _RenderQueueOverride("Render Queue Override", Range(-1.0, 5000)) = -1
 		//[Space]
         // Stencil options.
-		[Header(System Stencil Flags)]
+		//[Header(System Stencil Flags)]
 	    [IntRange] _Stencil ("Stencil ID [0;255]", Range(0,255)) = 0
 	    _ReadMask ("ReadMask [0;255]", Int) = 255
 	    _WriteMask ("WriteMask [0;255]", Int) = 255

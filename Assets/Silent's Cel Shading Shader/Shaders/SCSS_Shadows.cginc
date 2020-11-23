@@ -95,7 +95,10 @@ void applyVanishing (inout float alpha) {
 
 half4 fragShadowCaster(
     #if !defined(V2F_SHADOW_CASTER_NOPOS_IS_EMPTY) || defined(UNITY_STANDARD_USE_SHADOW_UVS)
-        VertexOutputShadowCaster i, UNITY_VPOS_TYPE vpos : VPOS
+        VertexOutputShadowCaster i
+        #if !defined(UNITY_STANDARD_USE_DITHER_MASK)
+            , UNITY_VPOS_TYPE vpos : VPOS
+        #endif
     #endif
     
     #ifdef UNITY_STANDARD_USE_DITHER_MASK

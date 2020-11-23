@@ -54,7 +54,7 @@ namespace SilentCelShading.Unity
 		protected MaterialEditor editor;
 		Dictionary<string, MaterialProperty> props = new Dictionary<string, MaterialProperty>();
 
-    	public int scssSettingsComplexityMode = 0;
+    	public int scssSettingsComplexityMode = 1;
 
 		protected bool usingLightramp = true; // Compatibility
 		protected bool usingCrosstone = false;
@@ -254,15 +254,7 @@ namespace SilentCelShading.Unity
 			this.target = materialEditor.target as Material;
 			this.editor = materialEditor;
 			Material material = this.target;
-/*
-			int propCount = ShaderUtil.GetPropertyCount(material.shader);
 
-			for (int i = 0; i < propCount; i++)
-			{
-				string propName = ShaderUtil.GetPropertyName(material.shader, i);
-				props[propName] = FindProperty(propName, matProps, false);
-			}
-*/
 			CheckShaderType(material);
 
 			base.OnGUI(materialEditor, matProps);

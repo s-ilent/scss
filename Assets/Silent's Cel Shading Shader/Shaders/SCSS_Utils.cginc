@@ -62,7 +62,11 @@ float rDither(float gray, float2 pos) {
 inline void applyAlphaClip(inout float alpha, float cutoff, float2 pos, bool sharpen)
 {
     // Get the amount of MSAA samples present
+    #if (SHADER_TARGET > 40)
     half samplecount = GetRenderTargetSampleCount();
+    #else
+    half samplecount = 1;
+    #endif
 
     pos += _SinTime.x%4;
     #if defined(_ALPHATEST_ON)
