@@ -222,6 +222,7 @@ float4 frag(VertexOutput i, uint facing : SV_IsFrontFace) : SV_Target
 
 	// Disable PBR dielectric setup in cel specular mode.
 	#if defined(_SPECGLOSSMAP)
+	#undef unity_ColorSpaceDielectricSpec
 	#define unity_ColorSpaceDielectricSpec half4(0, 0, 0, 1)
 	#endif 
 
