@@ -3,6 +3,7 @@ using UnityEngine;
 using System;
 using UnityEngine.Rendering;
 using Object = UnityEngine.Object;
+using static SilentCelShading.Unity.InspectorCommon;
 
 // Parts of this file are based on https://github.com/Microsoft/MixedRealityToolkit-Unity/
 // 	 Copyright (c) Microsoft Corporation. All rights reserved.

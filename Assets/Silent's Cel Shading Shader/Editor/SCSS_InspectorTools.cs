@@ -77,12 +77,6 @@ namespace SilentCelShading.Unity
 
 		public static class CommonStyles
 		{
-			public static string mainOptionsTitle = "Main Options";
-			public static string renderingOptionsTitle = "Rendering Options";
-			public static string shadingOptionsTitle = "Shading Options";
-			public static string outlineOptionsTitle = "Outline Options";
-			public static string advancedOptionsTitle = "Advanced Options";
-
 			public static string albedoMapAlphaSmoothnessName = "_SMOOTHNESS_TEXTURE_ALBEDO_CHANNEL_A";
 			public static readonly string[] albedoAlphaModeNames = Enum.GetNames(typeof(AlbedoAlphaMode));
 		}
