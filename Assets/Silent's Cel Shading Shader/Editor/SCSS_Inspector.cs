@@ -86,6 +86,8 @@ namespace SilentCelShading.Unity
 		protected override void MaterialChanged(Material material)
 		{
 			InitialiseStyles();
+			scssSettingsComplexityMode = Convert.ToInt32(EditorUserSettings.GetConfigValue("scss_settings_complexity_mode"));
+
 			// Handle old materials
 			UpgradeMatcaps(material);
 			UpgradeVariantCheck(material);
@@ -307,7 +309,14 @@ namespace SilentCelShading.Unity
 			SettingsComplexityModeOptions[1] = styles["s_normalComplexity"].text;
 			SettingsComplexityModeOptions[2] = styles["s_simpleComplexity"].text;
 			EditorGUILayout.Space();
-			scssSettingsComplexityMode = EditorGUILayout.Popup(scssSettingsComplexityMode, SettingsComplexityModeOptions, scmStyle);
+
+			if (WithChangeCheck(() =>
+			{
+				scssSettingsComplexityMode = EditorGUILayout.Popup(scssSettingsComplexityMode, SettingsComplexityModeOptions, scmStyle);
+			})) 
+			{
+				EditorUserSettings.SetConfigValue("scss_settings_complexity_mode", scssSettingsComplexityMode.ToString());
+			}
 		}
 		
 		protected void MainOptions()
