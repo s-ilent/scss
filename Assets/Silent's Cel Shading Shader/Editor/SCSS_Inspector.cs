@@ -223,6 +223,7 @@ namespace SilentCelShading.Unity
             editor.ShaderProperty(r, props[i], " ");
         }
 
+		protected GUIStyle scmStyle;
 		protected GUIStyle sectionHeader;
 		protected GUIStyle sectionHeaderBox;
 
@@ -235,6 +236,7 @@ namespace SilentCelShading.Unity
 			sectionHeaderBox = new GUIStyle( GUI.skin.box );
 			sectionHeaderBox.alignment = TextAnchor.MiddleLeft;
 			sectionHeaderBox.padding.left = 5;
+			sectionHeaderBox.padding.right = -5;
 			sectionHeaderBox.padding.top = 0;
 			sectionHeaderBox.padding.bottom = 0;
 		}
@@ -245,7 +247,7 @@ namespace SilentCelShading.Unity
 				r.x -= 2.0f;
 				r.y += 2.0f;
 				r.height = 18.0f;
-				r.width += 0.0f;
+				r.width -= 0.0f;
 			GUI.Box(r, EditorGUIUtility.IconContent("d_FilterByType"), sectionHeaderBox);
 			EditorGUILayout.LabelField(content, sectionHeader);
 			return r;
@@ -300,8 +302,6 @@ namespace SilentCelShading.Unity
 		{
 			"Complex", "Normal", "Simple"
 		};
-
-		GUIStyle scmStyle;
 
 		protected void SettingsComplexityArea()
 		{
@@ -461,7 +461,7 @@ namespace SilentCelShading.Unity
             EditorGUILayout.Space();
 			WithGroupHorizontal(() => {
 				TextureColorPropertyWithColorReset("_1st_ShadeMap", "_1st_ShadeColor");
-				editor.ShaderProperty(props["_CrosstoneToneSeparation"], ""); 
+				WithMaterialPropertyDropdownNoLabel(props["_CrosstoneToneSeparation"], Enum.GetNames(typeof(ToneSeparationType)), editor);
 			});
 			ShaderProperty("_1st_ShadeColor_Step");
 			ShaderProperty("_1st_ShadeColor_Feather");
@@ -469,7 +469,7 @@ namespace SilentCelShading.Unity
 			
 			WithGroupHorizontal(() => {
 				TextureColorPropertyWithColorReset("_2nd_ShadeMap", "_2nd_ShadeColor");
-				editor.ShaderProperty(props["_Crosstone2ndSeparation"], ""); 
+				WithMaterialPropertyDropdownNoLabel(props["_Crosstone2ndSeparation"], Enum.GetNames(typeof(ToneSeparationType)), editor);
 			});
 			ShaderProperty("_2nd_ShadeColor_Step");
 			ShaderProperty("_2nd_ShadeColor_Feather");
@@ -559,10 +559,10 @@ namespace SilentCelShading.Unity
 			var mMode = (MatcapType)props["_UseMatcap"].floatValue;
 			if (WithChangeCheck(() => 
 			{
-				mMode = (MatcapType)EditorGUILayout.Popup("Matcap Style", 
+				mMode = (MatcapType)EditorGUILayout.Popup(styles["_UseMatcap"], 
 				(int)mMode, Enum.GetNames(typeof(MatcapType)));
 			})) {
-				editor.RegisterPropertyChangeUndo("Matcap Style");
+				editor.RegisterPropertyChangeUndo(styles["_UseMatcap"].text);
 				props["_UseMatcap"].floatValue = (float)mMode;
 			}
 			TogglePropertyHeader("_UseMatcap", false);
@@ -706,16 +706,13 @@ namespace SilentCelShading.Unity
 
 			if (props["_SpecularType"].floatValue >= 1.0f) 
 			{
-				WithGroupHorizontal(() => 
+				if (WithChangeCheck(() => 
 				{
-					if (WithChangeCheck(() => 
-					{
-						ShaderProperty("_SpecularHighlights");
-						ShaderProperty("_GlossyReflections");
-					})) {
-						MaterialChanged(target);
-					}
-				});
+					ShaderProperty("_SpecularHighlights");
+					ShaderProperty("_GlossyReflections");
+				})) {
+					MaterialChanged(target);
+				}
 			};
 
 			StencilOptions(editor, target);

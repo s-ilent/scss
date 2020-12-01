@@ -132,6 +132,7 @@ namespace SilentCelShading.Unity
             EditorGUILayout.EndVertical();
         }
 
+		// Warning: Do not use BeginHorizontal with ShaderProperty because it causes issues with the layout.
         public static void WithGroupHorizontal(Action action)
         {
             EditorGUILayout.BeginHorizontal();
@@ -159,6 +160,23 @@ namespace SilentCelShading.Unity
 			int selection = (int)prop.floatValue;
 			EditorGUI.BeginChangeCheck();
 			selection = EditorGUILayout.Popup(prop.displayName, (int)selection, options);
+
+			if (EditorGUI.EndChangeCheck())
+			{
+				editor.RegisterPropertyChangeUndo(prop.displayName);
+				prop.floatValue = (float)selection;
+				return Array.ConvertAll(prop.targets, target => (Material)target);
+			}
+
+			return new Material[0];
+
+		}
+		
+		public static Material[] WithMaterialPropertyDropdownNoLabel(MaterialProperty prop, string[] options, MaterialEditor editor)
+		{
+			int selection = (int)prop.floatValue;
+			EditorGUI.BeginChangeCheck();
+			selection = EditorGUILayout.Popup((int)selection, options);
 
 			if (EditorGUI.EndChangeCheck())
 			{
