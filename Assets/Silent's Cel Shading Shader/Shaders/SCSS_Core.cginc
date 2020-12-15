@@ -610,6 +610,14 @@ float3 SCSS_ApplyLighting(SCSS_Input c, VertexOutput i, float4 texcoords)
 	effectLighting += BetterSH9(half4(0.0,  0.0, 0.0, 1.0));
 	#endif
 
+	float3 finalColor = 0; 
+
+	float fresnelLightMaskBase = LerpOneTo((d.NdotH), _UseFresnelLightMask);
+	float fresnelLightMask = 
+		saturate(pow(saturate( fresnelLightMaskBase), _FresnelLightMask));
+	float fresnelLightMaskInv = 
+		saturate(pow(saturate(-fresnelLightMaskBase), _FresnelLightMask));
+
 	// Apply matcap before specular effect.
 	if (_UseMatcap >= 1 && isOutline <= 0) 
 	{
@@ -618,19 +626,11 @@ float3 SCSS_ApplyLighting(SCSS_Input c, VertexOutput i, float4 texcoords)
 		if (_UseMatcap == 2) matcapUV = getMatcapUVsOriented(c.normal, d.viewDir, i.bitangentDir.xyz);
 
 		float4 _MatcapMask_var = MatcapMask(i.uv0.xy);
-		c.albedo = applyMatcap(_Matcap1, matcapUV, c.albedo, 1.0, _Matcap1Blend, _Matcap1Strength * _MatcapMask_var.r);
-		c.albedo = applyMatcap(_Matcap2, matcapUV, c.albedo, 1.0, _Matcap2Blend, _Matcap2Strength * _MatcapMask_var.g);
-		c.albedo = applyMatcap(_Matcap3, matcapUV, c.albedo, 1.0, _Matcap3Blend, _Matcap3Strength * _MatcapMask_var.b);
-		c.albedo = applyMatcap(_Matcap4, matcapUV, c.albedo, 1.0, _Matcap4Blend, _Matcap4Strength * _MatcapMask_var.a);
+		c.albedo = applyMatcap(_Matcap1, matcapUV, c.albedo, _Matcap1Tint, _Matcap1Blend, _Matcap1Strength * _MatcapMask_var.r);
+		c.albedo = applyMatcap(_Matcap2, matcapUV, c.albedo, _Matcap2Tint, _Matcap2Blend, _Matcap2Strength * _MatcapMask_var.g);
+		c.albedo = applyMatcap(_Matcap3, matcapUV, c.albedo, _Matcap3Tint, _Matcap3Blend, _Matcap3Strength * _MatcapMask_var.b);
+		c.albedo = applyMatcap(_Matcap4, matcapUV, c.albedo, _Matcap4Tint, _Matcap4Blend, _Matcap4Strength * _MatcapMask_var.a);
 	}
-
-	float3 finalColor = 0; 
-
-	float fresnelLightMaskBase = LerpOneTo((d.NdotH), _UseFresnelLightMask);
-	float fresnelLightMask = 
-		saturate(pow(saturate( fresnelLightMaskBase), _FresnelLightMask));
-	float fresnelLightMaskInv = 
-		saturate(pow(saturate(-fresnelLightMaskBase), _FresnelLightMask));
 	
 	// Lit
 	if (_UseFresnel == 1 && isOutline <= 0) 

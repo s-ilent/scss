@@ -72,12 +72,6 @@ uniform float _ShadowMaskType;
 uniform float _IndirectLightingBoost;
 #endif
 
-UNITY_DECLARE_TEX2D_NOSAMPLER(_MatcapMask); uniform half4 _MatcapMask_ST; 
-uniform sampler2D _Matcap1; uniform half4 _Matcap1_ST; 
-uniform sampler2D _Matcap2; uniform half4 _Matcap2_ST; 
-uniform sampler2D _Matcap3; uniform half4 _Matcap3_ST; 
-uniform sampler2D _Matcap4; uniform half4 _Matcap4_ST; 
-
 uniform float4 _Color;
 uniform float _BumpScale;
 uniform float _Cutoff;
@@ -110,6 +104,13 @@ uniform float _OutlineMode;
 
 uniform float _LightingCalculationType;
 
+
+UNITY_DECLARE_TEX2D_NOSAMPLER(_MatcapMask); uniform half4 _MatcapMask_ST; 
+uniform sampler2D _Matcap1; uniform half4 _Matcap1_ST; 
+uniform sampler2D _Matcap2; uniform half4 _Matcap2_ST; 
+uniform sampler2D _Matcap3; uniform half4 _Matcap3_ST; 
+uniform sampler2D _Matcap4; uniform half4 _Matcap4_ST; 
+
 uniform float _UseMatcap;
 uniform float _Matcap1Strength;
 uniform float _Matcap2Strength;
@@ -119,6 +120,10 @@ uniform float _Matcap1Blend;
 uniform float _Matcap2Blend;
 uniform float _Matcap3Blend;
 uniform float _Matcap4Blend;
+uniform float4 _Matcap1Tint;
+uniform float4 _Matcap2Tint;
+uniform float4 _Matcap3Tint;
+uniform float4 _Matcap4Tint;
 
 #if defined(_SUBSURFACE)
 UNITY_DECLARE_TEX2D_NOSAMPLER(_ThicknessMap); uniform half4 _ThicknessMap_ST;

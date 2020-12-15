@@ -553,6 +553,19 @@ namespace SilentCelShading.Unity
 			}
 		}
 
+		private void DrawMatcapField(string texture, string blend, string tint, string strength)
+		{
+			//TexturePropertySingleLine(texture);
+			//DrawShaderPropertySameLine(blend);
+			WithGroupHorizontal(() => {
+				TextureColorPropertyWithColorReset(texture, tint);
+				WithMaterialPropertyDropdownNoLabel(props[blend], Enum.GetNames(typeof(MatcapBlendModes)), editor);
+			});
+			EditorGUI.indentLevel+=2;
+			ShaderProperty(strength);
+			EditorGUI.indentLevel-=2;
+		}
+
 		protected void MatcapOptions()
 		{ 
 			EditorGUILayout.Space();
@@ -570,10 +583,10 @@ namespace SilentCelShading.Unity
 			if (PropertyEnabled(props["_UseMatcap"]))
 			{
 				TexturePropertySingleLine("_MatcapMask");
-				TexturePropertySingleLine("_Matcap1", "_Matcap1Strength", "_Matcap1Blend");
-				TexturePropertySingleLine("_Matcap2", "_Matcap2Strength", "_Matcap2Blend");
-				TexturePropertySingleLine("_Matcap3", "_Matcap3Strength", "_Matcap3Blend");
-				TexturePropertySingleLine("_Matcap4", "_Matcap4Strength", "_Matcap4Blend");
+            	DrawMatcapField("_Matcap1", "_Matcap1Blend", "_Matcap1Tint", "_Matcap1Strength");
+            	DrawMatcapField("_Matcap2", "_Matcap2Blend", "_Matcap2Tint", "_Matcap2Strength");
+            	DrawMatcapField("_Matcap3", "_Matcap3Blend", "_Matcap3Tint", "_Matcap3Strength");
+            	DrawMatcapField("_Matcap4", "_Matcap4Blend", "_Matcap4Tint", "_Matcap4Strength");
 			}
 		}
 
