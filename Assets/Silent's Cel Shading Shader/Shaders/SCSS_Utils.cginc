@@ -75,7 +75,7 @@ inline void applyAlphaClip(inout float alpha, float cutoff, float2 pos, bool sha
             alpha = (1+cutoff) * alpha - cutoff;
             float mask = (T(intensity(pos)));
             const float width = 1 / (samplecount*2-1);
-            alpha = alpha - (mask * sqrt(1-(alpha)) * width);
+            alpha = alpha - (mask * (1-(alpha)) * width);
         }
         else {
             alpha = ((alpha - cutoff) / max(fwidth(alpha), 0.0001) + 0.5);
@@ -95,6 +95,18 @@ float2 invlerp(float2 A, float2 B, float2 T){
 
 // Stylish lighting helpers
 
+float smooth_floor(float x, float c) {
+    float a = frac(x);
+    float b = floor(x);
+    return ((pow(a,c)-pow(1.-a,c))/2.)+b;
+}
+
+float smooth_ceil(float x, float c) {
+    float a = frac(x);
+    float b = ceil(x);
+    return ((pow(a,c)-pow(1.-a,c))/2.)+b;
+}
+
 float lerpstep( float a, float b, float t)
 {
     return saturate( ( t - a ) / ( b - a ) );
@@ -112,6 +124,11 @@ float sharpenLighting (float inLight, float softness)
     lightStep = lerp(float2(0.0, 1.0), lightStep, 1-softness);
     inLight = smoothstep(lightStep.x, lightStep.y, inLight);
     return inLight;
+}
+
+float remapCubic(float x)
+{
+    return x = x * x * x * (x * (6 * x - 15) + 10);
 }
 
 // By default, use smootherstep because it has the best visual appearance.
@@ -451,6 +468,12 @@ half3 GetSHLength ()
     return x + x1;
 }
 
+// Get the average (L0) SH contribution
+half3 GetSHAverage ()
+{
+    return float3(unity_SHAr.w, unity_SHAg.w, unity_SHAb.w);
+}
+
 float3 SHEvalLinearL2(float3 n)
 {
     return SHEvalLinearL2(float4(n, 1.0));
@@ -477,18 +500,6 @@ float getGreyscaleSH(float3 normal)
     return dot(normal, ambientLightDirection);
 }
 
-// Used for matcaps
-float3 applyBlendMode(int blendOp, half3 a, half3 b, half t)
-{
-    switch (blendOp) 
-    {
-        default:
-        case 0: return a + b * t;
-        case 1: return a * LerpWhiteTo(b, t);
-        case 2: return a + b * a * t;
-    }
-}
-
 half2 getMatcapUVs(float3 normal, float3 viewDir)
 {
     // Based on Masataka SUMI's implementation
@@ -506,9 +517,21 @@ half2 getMatcapUVsOriented(float3 normal, float3 viewDir, float3 upDir)
     return half2(dot(worldViewRight, normal), dot(worldViewUp, normal)) * 0.5 + 0.5;
 }
 
-float3 applyMatcap(sampler2D src, half2 matcapUV, float3 dst, float3 light, int blendMode, float blendStrength)
+// Used for matcaps
+float3 applyBlendMode(int blendOp, half3 a, half3 b, half t)
 {
-    return applyBlendMode(blendMode, dst, tex2D(src, matcapUV) * light, blendStrength);
+    switch (blendOp) 
+    {
+        default:
+        case 0: return a + b * t;
+        case 1: return a * LerpWhiteTo(b, t);
+        case 2: return a + b * a * t;
+    }
+}
+
+float3 applyMatcap(sampler2D src, half2 matcapUV, float3 dst, float3 tint, int blendMode, float blendStrength)
+{
+    return applyBlendMode(blendMode, dst, tex2D(src, matcapUV) * tint, blendStrength);
 }
 
 #endif // if UNITY_STANDARD_BRDF_INCLUDED

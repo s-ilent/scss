@@ -255,6 +255,7 @@ Material:
     - _TotalFrames: 4
     - _Tweak_ShadingGradeMapLevel: 0
     - _UVSec: 0
+    - _UseAdvancedEmission: 0
     - _UseAnimation: 0
     - _UseDetailMaps: 0
     - _UseDetailNormal: 0

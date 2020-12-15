@@ -58,18 +58,22 @@ Shader "Silent's Cel Shading/Lightramp (Outline)"
 		_Matcap1("Matcap 1", 2D) = "black" {}
 		_Matcap1Strength("Matcap 1 Strength", Range(0, 2)) = 1.0
 		[Enum(MatcapBlendModes)]_Matcap1Blend("Matcap 1 Blend Mode", Float) = 0.0
+		_Matcap1Tint("Matcap 1 Tint", Color) = (1, 1, 1, 1)
 		//[Space]
 		_Matcap2("Matcap 2", 2D) = "black" {}
 		_Matcap2Strength("Matcap 2 Strength", Range(0, 2)) = 1.0
 		[Enum(MatcapBlendModes)]_Matcap2Blend("Matcap 2 Blend Mode", Float) = 0.0
+		_Matcap2Tint("Matcap 2 Tint", Color) = (1, 1, 1, 1)
 		//[Space]
 		_Matcap3("Matcap 3", 2D) = "black" {}
 		_Matcap3Strength("Matcap 3 Strength", Range(0, 2)) = 1.0
 		[Enum(MatcapBlendModes)]_Matcap3Blend("Matcap 3 Blend Mode", Float) = 0.0
+		_Matcap3Tint("Matcap 3 Tint", Color) = (1, 1, 1, 1)
 		//[Space]
 		_Matcap4("Matcap 4", 2D) = "black" {}
 		_Matcap4Strength("Matcap 4 Strength", Range(0, 2)) = 1.0
 		[Enum(MatcapBlendModes)]_Matcap4Blend("Matcap 4 Blend Mode", Float) = 0.0
+		_Matcap4Tint("Matcap 4 Tint", Color) = (1, 1, 1, 1)
 		//[Space]
 		[Toggle(_DETAIL_MULX2)]_UseDetailMaps("Enable Detail Maps", Float ) = 0.0
 		_DetailAlbedoMap ("Detail Albedo Map", 2D) = "gray" {}
