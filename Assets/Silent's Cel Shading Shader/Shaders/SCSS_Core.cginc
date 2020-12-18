@@ -124,11 +124,21 @@ float3 sampleCrossToneLighting(inout float x, SCSS_TonemapInput tone0, SCSS_Tone
 	half factor1 = saturate(simpleSharpen(x, width1, offset1));
 
 	float3 final;
-	tone1.col = _Crosstone2ndSeparation? tone1.col : tone1.col * tone0.col;
+
+	// 2nd separation determines whether 1st and 2nd shading tones are combined.
+
+	tone1.col = _Crosstone2ndSeparation
+	? tone1.col 
+	: tone1.col * tone0.col;
+	
+	// Either way, the result is interpolated against tone 0 by the 2nd factor.
 	final = lerp(tone1.col, tone0.col, factor1);
 
-	if (_CrosstoneToneSeparation == 0) 	final = lerp(final, 1.0, factor0) * albedo;
-	if (_CrosstoneToneSeparation == 1) 	final = lerp(final, albedo, factor0);
+	// Tone separation determines whether albedo and 1st shading tones are combined.
+
+	final = _CrosstoneToneSeparation
+	? lerp(final, 1.0, factor0) * albedo
+	: lerp(final, albedo, factor0);
 	
 	x = factor0;
 	

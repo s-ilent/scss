@@ -234,6 +234,12 @@ float4 frag(VertexOutput i, uint facing : SV_IsFrontFace) : SV_Target
 		c.specColor = specGloss.rgb;
 		c.smoothness = specGloss.a;
 
+		if (_UseMetallic == 1)
+		{
+			// In Metallic mode, ignore the other colour channels. 
+			c.specColor = c.specColor.r;
+		}
+
 		// Because specular behaves poorly on backfaces, disable specular on outlines. 
 		c.specColor  *= outlineDarken;
 		c.smoothness *= outlineDarken;
@@ -252,6 +258,7 @@ float4 frag(VertexOutput i, uint facing : SV_IsFrontFace) : SV_Target
 		{
 			c.albedo.xyz = c.albedo.xyz * (c.oneMinusReflectivity); 
 			if (_CrosstoneToneSeparation) c.tone[0].col = c.tone[0].col * (c.oneMinusReflectivity); 
+			if (_Crosstone2ndSeparation)  c.tone[1].col = c.tone[1].col * (c.oneMinusReflectivity); 
 		}
 
 	    i.tangentDir = ShiftTangent(normalize(i.tangentDir), c.normal, c.smoothness);

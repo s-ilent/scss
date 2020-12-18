@@ -125,6 +125,16 @@ float3 ShadeSH9_wrappedCorrect(float3 normal, float3 conv)
     return x0 + x1 * conv.y + x2 * conv.z;
 }
 
+bool isReflectionProbeActive()
+{
+#ifndef SHADER_TARGET_SURFACE_ANALYSIS // Required to use GetDimensions
+    float height, width;
+    unity_SpecCube0.GetDimensions(width, height);
+    return !(height * width < 32);
+#endif
+    return 1;
+}
+
 inline UnityGI UnityGlobalIllumination_SCSS (UnityGIInput data, half occlusion, half3 normalWorld, Unity_GlossyEnvironmentData glossIn)
 {
     UnityGI o_gi = UnityGI_Base(data, occlusion, normalWorld);
@@ -137,7 +147,9 @@ inline UnityGI UnityGlobalIllumination_SCSS (UnityGIInput data, half occlusion, 
 	    nonLinearSH = max(nonLinearSH, 0);
 	    o_gi.indirect.diffuse += nonLinearSH * occlusion;
     #endif
-    o_gi.indirect.specular = UnityGI_IndirectSpecular(data, occlusion, glossIn);
+    o_gi.indirect.specular = isReflectionProbeActive()
+    ? UnityGI_IndirectSpecular(data, occlusion, glossIn)
+    : o_gi.indirect.diffuse;
     return o_gi;
 }
 
