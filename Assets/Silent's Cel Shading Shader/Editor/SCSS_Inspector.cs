@@ -86,7 +86,11 @@ namespace SilentCelShading.Unity
 		protected override void MaterialChanged(Material material)
 		{
 			InitialiseStyles();
-			scssSettingsComplexityMode = Convert.ToInt32(EditorUserSettings.GetConfigValue("scss_settings_complexity_mode"));
+
+			if (!Int32.TryParse(EditorUserSettings.GetConfigValue("scss_settings_complexity_mode"), out scssSettingsComplexityMode))
+			{
+				scssSettingsComplexityMode = 1;
+			}
 
 			// Handle old materials
 			UpgradeMatcaps(material);
@@ -491,13 +495,13 @@ namespace SilentCelShading.Unity
 			{
 				case SpecularType.Standard:
 				case SpecularType.Cloth:
-				TexturePropertySingleLine("_SpecGlossMap", "_SpecColor");
+				TextureColorPropertyWithColorReset("_SpecGlossMap", "_SpecColor");
 				ShaderProperty("_Smoothness");
 				ShaderProperty("_UseMetallic");
 				ShaderProperty("_UseEnergyConservation");
 				break;
 				case SpecularType.Cel:
-				TexturePropertySingleLine("_SpecGlossMap", "_SpecColor");
+				TextureColorPropertyWithColorReset("_SpecGlossMap", "_SpecColor");
 				ShaderProperty("_Smoothness");
 				ShaderProperty("_CelSpecularSoftness");
 				ShaderProperty("_CelSpecularSteps");
@@ -505,14 +509,14 @@ namespace SilentCelShading.Unity
 				ShaderProperty("_UseEnergyConservation");
 				break;
 				case SpecularType.Anisotropic:
-				TexturePropertySingleLine("_SpecGlossMap", "_SpecColor");
+				TextureColorPropertyWithColorReset("_SpecGlossMap", "_SpecColor");
 				ShaderProperty("_Smoothness");
 				ShaderProperty("_Anisotropy");
 				ShaderProperty("_UseMetallic");
 				ShaderProperty("_UseEnergyConservation");
 				break;
 				case SpecularType.CelStrand:
-				TexturePropertySingleLine("_SpecGlossMap", "_SpecColor");
+				TextureColorPropertyWithColorReset("_SpecGlossMap", "_SpecColor");
 				ShaderProperty("_Smoothness");
 				ShaderProperty("_CelSpecularSoftness");
 				ShaderProperty("_CelSpecularSteps");
@@ -543,20 +547,16 @@ namespace SilentCelShading.Unity
 				ShaderProperty("_UseFresnelLightMask");
 				if (PropertyEnabled(props["_UseFresnelLightMask"]))
 				{
-					EditorGUI.indentLevel += 2;
 					ShaderProperty("_FresnelLightMask");
 					if (isTintable) ShaderProperty("_FresnelTintInv");
 					ShaderProperty("_FresnelWidthInv");
 					ShaderProperty("_FresnelStrengthInv");
-					EditorGUI.indentLevel -= 2;
 				}
 			}
 		}
 
 		private void DrawMatcapField(string texture, string blend, string tint, string strength)
 		{
-			//TexturePropertySingleLine(texture);
-			//DrawShaderPropertySameLine(blend);
 			WithGroupHorizontal(() => {
 				TextureColorPropertyWithColorReset(texture, tint);
 				WithMaterialPropertyDropdownNoLabel(props[blend], Enum.GetNames(typeof(MatcapBlendModes)), editor);
@@ -938,9 +938,9 @@ protected Vector4? GetSerializedMaterialVector4(Material material, string propNa
                     // Tone seperation is based on whether BaseAs1st is set.
                     // 2nd seperation is based on whether 1stAs2nd is set.
                     useToneSeparation = GetFloatProperty(material, "_Use_BaseAs1st");
-                    if (useToneSeparation.HasValue) useToneSeparation = (float)1.0 - useToneSeparation;
+                    if (useToneSeparation.HasValue) useToneSeparation = 1.0f - useToneSeparation;
                     use2ndSeparation = GetFloatProperty(material, "_Use_1stAs2nd");
-                    if (use2ndSeparation.HasValue) use2ndSeparation = (float)1.0 - use2ndSeparation;
+                    if (use2ndSeparation.HasValue) use2ndSeparation = 1.0f - use2ndSeparation;
 
                     // HighColor is only supported in Specular mode
                     specularMap = GetTextureProperty(material, "_HighColor_Tex");
@@ -948,27 +948,27 @@ protected Vector4? GetSerializedMaterialVector4(Material material, string propNa
                     if (specularType.HasValue) specularType = (float)SpecularType.Cel * specularType;
                     specularTint = GetColorProperty(material, "_HighColor");
                     smoothness = GetFloatProperty(material, "_HighColor_Power");
-                    if (smoothness.HasValue) smoothness = (float)1.0 - smoothness;
+                    if (smoothness.HasValue) smoothness = 1.0f - smoothness;
 
                     // Rim lighting works differently here, but there's not much we can do about it. 
                     useFresnel = GetFloatProperty(material, "_RimLight");
-                    if (useFresnel.HasValue) useFresnel = (float)1.0 + useFresnel;
+                    if (useFresnel.HasValue) if (useFresnel > 0.0f) useFresnel = 1.0f + useFresnel;
                     fresnelTint = GetColorProperty(material, "_RimLightColor");
                     fresnelWidth = GetFloatProperty(material, "_RimLight_Power");
                     if (fresnelWidth.HasValue) fresnelWidth = fresnelWidth * 10;
                     fresnelStrength = GetFloatProperty(material, "_RimLight_FeatherOff");
-                    if (fresnelStrength.HasValue) fresnelStrength = (float)1.0 - fresnelStrength;
+                    if (fresnelStrength.HasValue) fresnelStrength = 1.0f - fresnelStrength;
 
                     //GetFloatProperty(material, "_RimLight_FeatherOff");
                     useFresnelLightMask = GetFloatProperty(material, "_LightDirection_MaskOn");
                     fresnelLightMask = GetFloatProperty(material, "_Tweak_LightDirection_MaskLevel");
-                    if (fresnelLightMask.HasValue) fresnelLightMask += (float)1.0;
+                    if (fresnelLightMask.HasValue) fresnelLightMask += 1.0f;
                     //GetFloatProperty(material, "_Add_Antipodean_RimLight");
                     fresnelTintInv = GetColorProperty(material, "_Ap_RimLightColor");
                     fresnelWidthInv = GetFloatProperty(material, "_Ap_RimLight_Power");
                     if (fresnelWidthInv.HasValue) fresnelWidthInv = fresnelWidthInv * 10;
                     fresnelStrengthInv = GetFloatProperty(material, "_Ap_RimLight_FeatherOff");
-                    if (fresnelStrengthInv.HasValue) fresnelStrengthInv = (float)1.0 - fresnelStrengthInv;
+                    if (fresnelStrengthInv.HasValue) fresnelStrengthInv = 1.0f - fresnelStrengthInv;
                     //GetTextureProperty(material, "_Set_RimLightMask");
 
                     // Matcap properties are not fully supported
@@ -978,7 +978,7 @@ protected Vector4? GetSerializedMaterialVector4(Material material, string propNa
                     // _MatCapColor is not yet supported.
                     // _Is_LightColor_MatCap is not supported.
                     matcapBlend = GetFloatProperty(material, "_Is_BlendAddToMatCap");
-                    if (matcapBlend.HasValue) matcapBlend = (float)1.0 - matcapBlend;
+                    if (matcapBlend.HasValue) matcapBlend = 1.0f - matcapBlend;
                     // _Tweak_MatCapUV, _Rotate_MatCapUV are not yet supported.
                     // _Is_NormalMapForMatCap, _NormalMapForMatCap, _BumpScaleMatcap, _Rotate_NormalMapForMatCapUV
                     // are not supported.
@@ -990,13 +990,13 @@ protected Vector4? GetSerializedMaterialVector4(Material material, string propNa
                         shadeMap2Step = GetFloatProperty(material, "_ShadeColor_Step");
                         shadeMap2Feather = GetFloatProperty(material, "_1st2nd_Shades_Feather");
                     }
-                    outlineMode = (float)1.0;
+                    outlineMode = 1.0f;
                     if (oldShader.name.Contains("NoOutline"))
                     {
-                    	outlineMode = (float)0.0;
+                    	outlineMode = 0.0f;
                 	}
                     outlineColor = GetColorProperty(material, "_Outline_Color");
-            		outlineWidth = GetFloatProperty(material, "_Outline_Width") * (float)0.1;
+            		outlineWidth = GetFloatProperty(material, "_Outline_Width") * 0.1f;
             		outlineMask = GetTextureProperty(material, "_Outline_Sampler");
 
                     // Stencil properties

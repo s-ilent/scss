@@ -97,10 +97,10 @@ _2nd_ShadeColor_Feather	2nd Shading Width	Sets the width of the transition betwe
 _ShadingGradeMap	Shading Adjustment	Adds additional shading to darkened regions, and acts as occlusion. The slider modifies the midpoint of the shading adjustment.
 _ShadingGradeMapLevel	Shading Adjustment Level	Modifies the middle point of the shading adjustment.
 _Stencil	Stencil Test	Raising this enables reading or writing a stencil. When set, contains calue to compare against (if Comparison is anything but Always) and/or the value to be written to the buffer (if wither Pass, Fail or ZFail is set to Replace)
-_StencilComp	Stencil Comparison	The function to be used when reading the stencil value.
-_StencilOp	Stencil Operation	The operation to be performed when the stencil test passes.
-_StencilFail	Stencil Fail	The operation to be performed when the stencil test fails.
-_StencilZFail	Stencil ZFail	The operation to be performed when the stencil test passes, but the geometry is occluded.
+_StencilComp	Comparison	The operation to be performed when reading the stencil value.
+_StencilOp	Operation	The operation to be performed when the stencil test passes.
+_StencilFail	Fail	The operation to be performed when the stencil test fails.
+_StencilZFail	ZFail	The operation to be performed when the stencil test passes, but the geometry is occluded.
 s_gradientEditorButton	Open Gradient Editor	Opens the gradient editor window with the current material focused. This allows you to create a new lighting ramp and view the results on this material in realtime.
 s_manualButton	This shader has a manual. Check it out!	For information on new features, old features, and just how to use the shader in general, check out the manual on the shader wiki!
 s_simpleComplexity	Only show main options. (Simple mode)	Only show main options. (Simple mode)
