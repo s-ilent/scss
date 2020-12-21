@@ -30,7 +30,7 @@ Shader "Silent's Cel Shading/Crosstone (Outline)"
         _2nd_ShadeColor_Feather ("2nd_ShadeColor_Feather", Range(0.001, 1)) = 0.01
 		//[Space]
 		[Enum(ToneSeparationType)]_CrosstoneToneSeparation ("Don't combine tone with albedo", Float) = 0
-		[Enum(ToneSeparationType)]_Crosstone2ndSeparation ("Don't combine 1st with 2nd tone", Float) = 1
+		[Enum(ToneSeparationType)]_Crosstone2ndSeparation ("Don't combine 1st with 2nd tone", Float) = 0
 		//[Space]
 		[Enum(OutlineMode)] _OutlineMode("Outline Mode", Float) = 1.0
 		_OutlineMask("Outline Map", 2D) = "white" {}

@@ -952,7 +952,7 @@ protected Vector4? GetSerializedMaterialVector4(Material material, string propNa
 
                     // Rim lighting works differently here, but there's not much we can do about it. 
                     useFresnel = GetFloatProperty(material, "_RimLight");
-                    if (useFresnel.HasValue) if (useFresnel > 0.0f) useFresnel = 1.0f + useFresnel;
+                    if (useFresnel.HasValue) if (useFresnel > 0.0f) useFresnel = (float)AmbientFresnelType.Lit;
                     fresnelTint = GetColorProperty(material, "_RimLightColor");
                     fresnelWidth = GetFloatProperty(material, "_RimLight_Power");
                     if (fresnelWidth.HasValue) fresnelWidth = fresnelWidth * 10;
