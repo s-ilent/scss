@@ -883,6 +883,8 @@ protected Vector4? GetSerializedMaterialVector4(Material material, string propNa
 
             Texture normalMapTexture = GetTextureProperty(material, "_BumpMap");
             float? normalMapScale = GetFloatProperty(material, "_BumpScale");
+
+            Texture emissionTexture = GetTextureProperty(material, "_EmissionMap");
             Color? emissionColor = GetColorProperty(material, "_EmissionColor");
 
  			float? useToneSeparation = GetFloatProperty(material, "_CrosstoneToneSeparation");
@@ -901,6 +903,7 @@ protected Vector4? GetSerializedMaterialVector4(Material material, string propNa
             Texture matcapMask = GetTextureProperty(material, "_MatcapMask");
             Texture matcapTexture = GetTextureProperty(material, "_Matcap1");
             float? matcapBlend = GetFloatProperty(material, "_Matcap1Blend");
+            float? matcapStrength = GetFloatProperty(material, "_Matcap1Strength");
 
             float? specularType = GetFloatProperty(material, "_SpecularType");
             Texture specularMap = GetTextureProperty(material, "_SpecGlossMap");
@@ -942,6 +945,10 @@ protected Vector4? GetSerializedMaterialVector4(Material material, string propNa
                     use2ndSeparation = GetFloatProperty(material, "_Use_1stAs2nd");
                     if (use2ndSeparation.HasValue) use2ndSeparation = 1.0f - use2ndSeparation;
 
+					// Emission properties are not fully supported.
+					emissionTexture = GetTextureProperty(material, "_Emissive_Tex");
+					emissionColor = GetColorProperty(material, "_Emissive_Color");
+
                     // HighColor is only supported in Specular mode
                     specularMap = GetTextureProperty(material, "_HighColor_Tex");
                     specularType = GetFloatProperty(material, "_Is_SpecularToHighColor");
@@ -979,6 +986,8 @@ protected Vector4? GetSerializedMaterialVector4(Material material, string propNa
                     // _Is_LightColor_MatCap is not supported.
                     matcapBlend = GetFloatProperty(material, "_Is_BlendAddToMatCap");
                     if (matcapBlend.HasValue) matcapBlend = 1.0f - matcapBlend;
+					// This seems to be used as a strength setting.
+					matcapStrength = 1.0f - GetFloatProperty(material, "_Tweak_MatcapMaskLevel");
                     // _Tweak_MatCapUV, _Rotate_MatCapUV are not yet supported.
                     // _Is_NormalMapForMatCap, _NormalMapForMatCap, _BumpScaleMatcap, _Rotate_NormalMapForMatCapUV
                     // are not supported.

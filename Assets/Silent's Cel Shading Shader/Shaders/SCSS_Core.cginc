@@ -208,7 +208,8 @@ void getDirectIndirectLighting(float3 normal, out float3 directLighting, out flo
 	switch (_LightingCalculationType)
 	{
 	case 0: // Arktoon
-		directLighting   = GetSHLength();
+		directLighting   = GetSHMaxL1();
+		//indirectLighting = GetSHAverage(); 
 		indirectLighting = BetterSH9(half4(0.0, 0.0, 0.0, 1.0)); 
 	break;
 	case 1: // Standard
@@ -232,6 +233,12 @@ half3 calcDiffuseGI(float3 albedo, SCSS_TonemapInput tone[2], float occlusion, h
 	float3 indirectLighting, float3 directLighting, SCSS_LightParam d)
 {
 	float ambientLight = d.NdotAmb;
+
+	/*
+	Ambient lighting splitting: 
+	Strong shading looks good, but weak shading looks bad. 
+	This system removes shading if it's too weak.
+	*/
 	
 	float3 indirectAverage = 0.5 * (indirectLighting + directLighting);
 
@@ -514,14 +521,14 @@ float3 SCSS_ShadeBase(SCSS_Input c, VertexOutput i, SCSS_Light l, float attenuat
 	// Prepare fake light params for subsurface scattering.
 	SCSS_Light iL = l;
 	SCSS_LightParam iD = d;
-	iL.color = GetSHLength();
+	iL.color = GetSHMaxL1();
 	iL.dir = Unity_SafeNormalize((unity_SHAr.xyz + unity_SHAg.xyz + unity_SHAb.xyz) * _LightSkew.xyz);
 	iD = initialiseLightParam(iL, c.normal, i.posWorld.xyz);
 
 	// Prepare fake light params for spec/fresnel which simulate specular.
 	SCSS_Light fL = l;
 	SCSS_LightParam fD = d;
-	fL.color = attenuation * fL.color + GetSHLength();
+	fL.color = attenuation * fL.color + GetSHMaxL1();
 	fL.dir = Unity_SafeNormalize(fL.dir + (unity_SHAr.xyz + unity_SHAg.xyz + unity_SHAb.xyz) * _LightSkew.xyz);
 	fD = initialiseLightParam(fL, c.normal, i.posWorld.xyz);
 
@@ -613,7 +620,7 @@ float3 SCSS_ApplyLighting(SCSS_Input c, VertexOutput i, float4 texcoords)
 	float3 effectLighting = l.color;
 	#if defined(UNITY_PASS_FORWARDBASE)
 	//effectLighting *= attenuation;
-	effectLighting += BetterSH9(half4(0.0,  0.0, 0.0, 1.0));
+	effectLighting += GetSHAverage();
 	#endif
 
 	float3 finalColor = 0; 

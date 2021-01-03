@@ -5,8 +5,10 @@
 /* http://www.geomerics.com/wp-content/uploads/2015/08/CEDEC_Geomerics_ReconstructingDiffuseLighting1.pdf */
 float shEvaluateDiffuseL1Geomerics_local(float L0, float3 L1, float3 n)
 {
-	// average energy
-	float R0 = L0;
+    // average energy
+    // Add max0 to fix an issue caused by probes having a negative ambient component (???)
+    // I'm not sure how normal that is but this can't handle it
+    float R0 = max(L0, 0);
 
 	// avg direction of incoming light
 	float3 R1 = 0.5f * L1;
@@ -15,8 +17,6 @@ float shEvaluateDiffuseL1Geomerics_local(float L0, float3 L1, float3 n)
 	float lenR1 = length(R1);
 
 	// linear angle between normal and direction 0-1
-	//float q = 0.5f * (1.0f + dot(R1 / lenR1, n));
-	//float q = dot(R1 / lenR1, n) * 0.5 + 0.5;
 	float q = dot(normalize(R1), n) * 0.5 + 0.5;
 	q = saturate(q); // Thanks to ScruffyRuffles for the bug identity.
 
@@ -139,7 +139,8 @@ inline UnityGI UnityGlobalIllumination_SCSS (UnityGIInput data, half occlusion, 
 {
     UnityGI o_gi = UnityGI_Base(data, occlusion, normalWorld);
 	#if defined(SAMPLE_SH_NONLINEAR) 
-	    float3 L0 = float3(unity_SHAr.w, unity_SHAg.w, unity_SHAb.w);
+	    float3 L0 = float3(unity_SHAr.w, unity_SHAg.w, unity_SHAb.w)
+        + float3(unity_SHBr.z, unity_SHBg.z, unity_SHBb.z) / 3.0;
 	    float3 nonLinearSH = float3(0,0,0); 
 	    nonLinearSH.r = shEvaluateDiffuseL1Geomerics_local(L0.r, unity_SHAr.xyz, normalWorld);
 	    nonLinearSH.g = shEvaluateDiffuseL1Geomerics_local(L0.g, unity_SHAg.xyz, normalWorld);
@@ -182,7 +183,8 @@ float3 viewReflectDirection, float attenuation, float occlusion, float roughness
 
 half3 BetterSH9 (half4 normal) {
 	float3 indirect;
-	float3 L0 = float3(unity_SHAr.w, unity_SHAg.w, unity_SHAb.w);
+	float3 L0 = float3(unity_SHAr.w, unity_SHAg.w, unity_SHAb.w)
+     + float3(unity_SHBr.z, unity_SHBg.z, unity_SHBb.z) / 3.0;
 	indirect.r = shEvaluateDiffuseL1Geomerics_local(L0.r, unity_SHAr.xyz, normal);
 	indirect.g = shEvaluateDiffuseL1Geomerics_local(L0.g, unity_SHAg.xyz, normal);
 	indirect.b = shEvaluateDiffuseL1Geomerics_local(L0.b, unity_SHAb.xyz, normal);
