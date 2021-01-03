@@ -453,7 +453,7 @@ half4 SpecularGloss(float4 texcoords, half mask)
 
     sg.a = _AlbedoAlphaMode == 1? UNITY_SAMPLE_TEX2D(_MainTex, texcoords.xy).a : sg.a;
 
-    sg.rgb *= _SpecColor;
+    sg.rgb *= _SpecColor * _SpecColor.a; // Use alpha as an overall multiplier
     sg.a *= _Smoothness; // _GlossMapScale is what Standard uses for this
 #else
     sg = _SpecColor;

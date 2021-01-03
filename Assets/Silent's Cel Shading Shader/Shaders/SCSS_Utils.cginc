@@ -449,14 +449,44 @@ float StrandSpecular(float3 T, float3 H, float exponent, float strength)
 	return dirAtten * pow(sinTH, exponent) * strength;
 }
 
+float3 GetSHDirectionL1()
+{
+    // For efficiency, we only get the direction from L1.
+    // Because getting it from L2 would be too hard!
+    return
+        Unity_SafeNormalize((unity_SHAr.xyz + unity_SHAg.xyz + unity_SHAb.xyz));
+}
+
 float3 SimpleSH9(float3 normal)
 {
     return ShadeSH9(float4(normal, 1));
 }
 
+// Get the average (L0) SH contribution
+// Biased due to a constant factor added for L2
+half3 GetSHAverageFast()
+{
+    return float3(unity_SHAr.w, unity_SHAg.w, unity_SHAb.w);
+}
+
+
+// Get the ambient (L0) SH contribution correctly
+// Provided by Dj Lukis.LT - Unity's SH calculation adds a constant
+// factor which produces a slight bias in the result.
+half3 GetSHAverage ()
+{
+    return float3(unity_SHAr.w, unity_SHAg.w, unity_SHAb.w)
+     + float3(unity_SHBr.z, unity_SHBg.z, unity_SHBb.z) / 3.0;
+}
+
 // Get the maximum SH contribution
 // synqark's Arktoon shader's shading method
-half3 GetSHLength ()
+// This method has some flaws: 
+// - Getting the length of the L1 data is a bit wrong
+//   because .w contains ambient contribution
+// - Getting the length of L2 doesn't correspond with
+//   intensity, because it doesn't store direct vectors
+half3 GetSHLengthOld ()
 {
     half3 x, x1;
     x.r = length(unity_SHAr);
@@ -468,10 +498,12 @@ half3 GetSHLength ()
     return x + x1;
 }
 
-// Get the average (L0) SH contribution
-half3 GetSHAverage ()
+// Returns the value from SH in the lighting direction with the 
+// brightest intensity. 
+half3 GetSHMaxL1()
 {
-    return float3(unity_SHAr.w, unity_SHAg.w, unity_SHAb.w);
+    float4 maxDirection = float4(GetSHDirectionL1(), 1.0);
+    return SHEvalLinearL0L1(maxDirection) + max(SHEvalLinearL2(maxDirection), 0);
 }
 
 float3 SHEvalLinearL2(float3 n)
@@ -492,7 +524,7 @@ float getGreyscaleSH(float3 normal)
     //float3 dd = float3(unity_SHAr.w, unity_SHAg.w, unity_SHAb.w);
     float3 dd = SimpleSH9(-ambientLightDirection);
     float3 ee = SimpleSH9(normal);
-    float3 aa = GetSHLength(); // SHa and SHb
+    float3 aa = SimpleSH9(ambientLightDirection);
 
     ee = saturate( (ee - dd) / (aa - dd));
     return abs(dot(ee, sRGB_Luminance));
