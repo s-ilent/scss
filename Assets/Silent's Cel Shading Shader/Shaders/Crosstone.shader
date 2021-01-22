@@ -149,6 +149,7 @@ Shader "Silent's Cel Shading/Crosstone (Outline)"
 	    [Enum(UnityEngine.Rendering.StencilOp)] _StencilOp ("Stencil Operation", Int) = 0
 	    [Enum(UnityEngine.Rendering.StencilOp)] _StencilFail ("Stencil Fail", Int) = 0
 	    [Enum(UnityEngine.Rendering.StencilOp)] _StencilZFail ("Stencil ZFail", Int) = 0
+	    [HideInInspector]__Baked ("Is this material referencing a baked shader?", Float) = 0
 	}
 
 	SubShader

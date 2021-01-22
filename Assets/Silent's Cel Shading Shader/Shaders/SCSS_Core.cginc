@@ -127,7 +127,7 @@ float3 sampleCrossToneLighting(inout float x, SCSS_TonemapInput tone0, SCSS_Tone
 
 	// 2nd separation determines whether 1st and 2nd shading tones are combined.
 	if (_Crosstone2ndSeparation == 0) 	tone1.col * tone0.col;
-	if (_Crosstone2ndSeparation == 1) 	tone1.col = tone1.col ;
+	if (_Crosstone2ndSeparation == 1) 	tone1.col = tone1.col;
 	
 	// Either way, the result is interpolated against tone 0 by the 2nd factor.
 	final = lerp(tone1.col, tone0.col, factor1);
@@ -475,18 +475,21 @@ half3 calcSpecularCel(float3 specColor, float smoothness, float3 normal, float o
 		return (spec * specColor *  l.color) + (spec * specColor * envLight);
 	}
 	if (_SpecularType == 5) {
-		float3 strandTangent = (_Anisotropy < 0)
+		// It might be better if these are passed in parameters in future
+		float anisotropy = _Anisotropy;
+		float softness = _CelSpecularSoftness;
+		float3 strandTangent = (anisotropy < 0)
 		? i.tangentDir
 		: i.bitangentDir;
-		_Anisotropy = abs(_Anisotropy);
-		strandTangent = lerp(normal, strandTangent, _Anisotropy);
+		anisotropy = abs(anisotropy);
+		strandTangent = lerp(normal, strandTangent, anisotropy);
 		float exponent = smoothness;
 		float spec  = StrandSpecular(strandTangent, d.halfDir, 
 			exponent*80, 1.0 );
 		float spec2 = StrandSpecular(strandTangent, d.halfDir, 
 			exponent*40, 0.5 );
-		spec  = sharpenLighting(frac(spec), _CelSpecularSoftness)+floor(spec);
-		spec2 = sharpenLighting(frac(spec2), _CelSpecularSoftness)+floor(spec2);
+		spec  = sharpenLighting(frac(spec), softness)+floor(spec);
+		spec2 = sharpenLighting(frac(spec2), softness)+floor(spec2);
 		spec += spec2;
 		
     	float3 envLight = UNITY_SAMPLE_TEXCUBE_LOD(unity_SpecCube0, normal, UNITY_SPECCUBE_LOD_STEPS);
