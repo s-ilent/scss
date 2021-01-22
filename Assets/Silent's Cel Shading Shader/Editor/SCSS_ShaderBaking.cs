@@ -629,6 +629,9 @@ namespace SilentCelShading.Unity.Baking
                             return false;
                     }
                 }
+                // Remove unique fallbacks
+                else if (lineParsed.StartsWith("FallBack"))
+                    fileLines[i] = "//" + fileLines[i];
                 // Specifically requires no whitespace between // and KSOEvaluateMacro
                 else if (lineParsed == "//KSOEvaluateMacro")
                 {
