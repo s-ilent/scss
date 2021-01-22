@@ -277,6 +277,7 @@ float GeometricNormalFiltering(float perceptualSmoothness, float3 geometricNorma
 void correctedScreenShadowsForMSAA(float4 _ShadowCoord, inout float shadow)
 {
     #ifdef SHADOWS_SCREEN
+    #ifdef SHADOWMAPSAMPLER_AND_TEXELSIZE_DEFINED
 
     float2 screenUV = _ShadowCoord.xy / _ShadowCoord.w;
     shadow = tex2D(_ShadowMapTexture, screenUV).r;
@@ -322,6 +323,7 @@ void correctedScreenShadowsForMSAA(float4 _ShadowCoord, inout float shadow)
 
         shadow = tex2D(_ShadowMapTexture, screenUV + uvOffsets[lowest]).r;
     }
+    #endif //SHADOWMAPSAMPLER_AND_TEXELSIZE_DEFINED
     #endif //SHADOWS_SCREEN
 }
 

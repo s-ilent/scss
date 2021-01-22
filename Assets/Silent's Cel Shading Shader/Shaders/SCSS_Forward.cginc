@@ -97,6 +97,11 @@ void geom(triangle VertexOutput IN[3], inout TriangleStream<VertexOutput> tristr
 		for (int i = 2; i >= 0; i--)
 		{
 			VertexOutput o = IN[i];
+
+			// Single-pass instancing compatibility
+    		UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(o); 
+		    UNITY_INITIALIZE_VERTEX_OUTPUT_STEREO(o);
+
 			o.pos = UnityObjectToClipPos(o.vertex + normalize(o.normal) * o.extraData.r);
 
 			// Possible future parameter depending on what people need
@@ -185,8 +190,6 @@ float4 frag(VertexOutput i, uint facing : SV_IsFrontFace) : SV_Target
 	c.softness = i.extraData.g;
 
 	c.alpha = Alpha(texcoords.xy);
-
-	c.alpha *= UNITY_SAMPLE_TEX2D_SAMPLER (_ColorMask, _MainTex, texcoords.xy).r;
 
     #if defined(ALPHAFUNCTION)
     alphaFunction(c.alpha);

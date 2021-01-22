@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using UnityEngine.Rendering;
 using Object = UnityEngine.Object;
 using static SilentCelShading.Unity.InspectorCommon;
+using SilentCelShading.Unity.Baking;
 
 // Parts of this file are based on https://github.com/Microsoft/MixedRealityToolkit-Unity/
 //	Copyright (c) Microsoft Corporation. All rights reserved.
@@ -183,27 +184,8 @@ namespace SilentCelShading.Unity
 		protected void TogglePropertyHeader(string i, bool display = true)
 		{
 			if (display) ShaderProperty(i);
-			/*
-        	int HEADER_HEIGHT = 22; // Arktoon default
-            Rect r = EditorGUILayout.GetControlRect(true,0,EditorStyles.layerMaskField);
-            r.y -= HEADER_HEIGHT;
-            r.height = MaterialEditor.GetDefaultPropertyHeight(props[i]);
-        	var e = Event.current;
-			
-			Rect rect = r;
-
-			if(e.type == EventType.Repaint) //draw the divider
-			{
-				rect.x -= 0.0f;
-				rect.y += 20.0f;
-				rect.height = 1.0f;
-				rect.width += 0.0f;
-				GUI.depth++;
-				GUI.skin.box.Draw(rect,GUIContent.none,0);
-				GUI.depth--;
-			}
-			*/
 		}
+		
         public static void Vector2Property(MaterialProperty property, GUIContent name)
         {
             EditorGUI.BeginChangeCheck();
@@ -265,9 +247,21 @@ namespace SilentCelShading.Unity
 
 			CheckShaderType(material);
 
+			ShaderBakeSettings();
+			
+			bool isBaked = false;
+			{
+				MaterialProperty bakedSettings;
+				props.TryGetValue("__Baked", out bakedSettings);
+				isBaked = (bakedSettings != null && bakedSettings.floatValue == 1);
+			}
+
+            if (isBaked) EditorGUI.BeginDisabledGroup(true);
+
 			base.OnGUI(materialEditor, matProps);
 
 			SettingsComplexityArea();
+
 			MainOptions();
 			ShadingOptions();
 			
@@ -278,7 +272,6 @@ namespace SilentCelShading.Unity
 					EmissionOptions();
 					OutlineOptions();
 					ManualButtonArea();
-					FooterOptions();
 					break;
 				case SettingsComplexityMode.Normal:
 					RenderingOptions();
@@ -286,7 +279,6 @@ namespace SilentCelShading.Unity
 					EmissionOptions();
 					ManualButtonArea();
 					AdvancedOptions();
-					FooterOptions();
 					break;
 				default:
 				case SettingsComplexityMode.Complex:
@@ -297,9 +289,11 @@ namespace SilentCelShading.Unity
 					MiscOptions();
 					ManualButtonArea();
 					AdvancedOptions();
-					FooterOptions();
 					break;
 			}
+            if (isBaked) EditorGUI.EndDisabledGroup();
+			
+			FooterOptions();
 		}
 
 		protected string[] SettingsComplexityModeOptions = new string[]
@@ -320,6 +314,78 @@ namespace SilentCelShading.Unity
 			})) 
 			{
 				EditorUserSettings.SetConfigValue("scss_settings_complexity_mode", scssSettingsComplexityMode.ToString());
+			}
+		}
+
+		protected void ShaderBakeSettings()
+		{
+			GUIContent s_bakeButton;
+			MaterialProperty shaderOptimizer;
+			// Create the GUIContent for the button so it can be rendered.
+			if (!props.TryGetValue("__Baked", out shaderOptimizer))
+			{
+				s_bakeButton = new GUIContent ("s_bakeButton");
+			}
+			else
+			{
+				// Determine whether we're baking or unbaking materials. 
+				if (shaderOptimizer.floatValue == 1) 
+				{
+					if (!styles.TryGetValue("s_bakeButtonRevert", out s_bakeButton)) 
+						s_bakeButton = new GUIContent ("s_bakeButtonRevert");
+				} 
+				else
+				{
+					if (editor.targets.Length == 1)
+					{
+						if (!styles.TryGetValue("s_bakeButton", out s_bakeButton)) 
+							s_bakeButton = new GUIContent ("s_bakeButton");
+					} 
+					else 
+					{
+						if (!styles.TryGetValue("s_bakeButtonPlural", out s_bakeButton)) 
+							s_bakeButton = new GUIContent ("s_bakeButtonPlural");
+						s_bakeButton = new GUIContent(s_bakeButton);
+						s_bakeButton.text = String.Format(s_bakeButton.text, "" + editor.targets.Length.ToString());
+					}
+				}
+			}
+			// Draw the button. Because of Unity shenanigans, if we don't always draw the button, 
+			// the layout will explode on the first update of the inspector.
+			if (GUILayout.Button(s_bakeButton))
+			{
+				// If it's a mixed value, then only allow baking. It shouldn't be a mixed value,
+				// but a material might think it's baked when it isn't, which needs to be handled anyway.
+				if (shaderOptimizer.hasMixedValue)
+				{
+					foreach (Material m in editor.targets)
+					{
+						m.SetFloat(shaderOptimizer.name, 1);
+						MaterialProperty[] props = MaterialEditor.GetMaterialProperties(new UnityEngine.Object[] { m });
+						if (!ShaderOptimizer.Lock(m, props)) // Error locking shader, revert property
+							m.SetFloat(shaderOptimizer.name, 0);
+					}	
+
+				}
+				else
+				{
+					shaderOptimizer.floatValue = shaderOptimizer.floatValue == 1 ? 0 : 1;
+					if (shaderOptimizer.floatValue == 1)
+					{
+						foreach (Material m in editor.targets)
+						{
+							MaterialProperty[] props = MaterialEditor.GetMaterialProperties(new UnityEngine.Object[] { m });
+							if (!ShaderOptimizer.Lock(m, props))
+								m.SetFloat(shaderOptimizer.name, 0);
+						}
+					}
+					else
+					{
+						foreach (Material m in editor.targets)
+							if (!ShaderOptimizer.Unlock(m))
+								m.SetFloat(shaderOptimizer.name, 1);
+					}
+				}
 			}
 		}
 		
@@ -348,6 +414,7 @@ namespace SilentCelShading.Unity
 			TexturePropertySingleLine("_ColorMask");
 			EditorGUILayout.Space();
 			
+			// For Standard compatibility, but not sure what the purpose is
 			if (WithChangeCheck(() => 
 			{
 				editor.TextureScaleOffsetProperty(props["_MainTex"]);
@@ -904,6 +971,7 @@ protected Vector4? GetSerializedMaterialVector4(Material material, string propNa
             Texture matcapTexture = GetTextureProperty(material, "_Matcap1");
             float? matcapBlend = GetFloatProperty(material, "_Matcap1Blend");
             float? matcapStrength = GetFloatProperty(material, "_Matcap1Strength");
+            Color? matcapTint = GetColorProperty(material, "_Matcap1Tint");
 
             float? specularType = GetFloatProperty(material, "_SpecularType");
             Texture specularMap = GetTextureProperty(material, "_SpecGlossMap");
@@ -937,6 +1005,9 @@ protected Vector4? GetSerializedMaterialVector4(Material material, string propNa
                 {
                     normalMapTexture = GetTextureProperty(material, "_NormalMap");
                     // _Tweak_ShadingGradeMapLevel is named the same.
+
+					if (GetFloatProperty(material, "_Inverse_Clipping") == 1) Debug.Log("Note: Inverse clipping currently not supported.");
+					if (GetTextureProperty(material, "_ClippingMask")) SetFloatProperty(material, "_AlbedoAlphaMode", (float)AlbedoAlphaMode.ClippingMask);
 
                     // Tone seperation is based on whether BaseAs1st is set.
                     // 2nd seperation is based on whether 1stAs2nd is set.
@@ -988,6 +1059,7 @@ protected Vector4? GetSerializedMaterialVector4(Material material, string propNa
                     if (matcapBlend.HasValue) matcapBlend = 1.0f - matcapBlend;
 					// This seems to be used as a strength setting.
 					matcapStrength = 1.0f - GetFloatProperty(material, "_Tweak_MatcapMaskLevel");
+            		matcapTint = GetColorProperty(material, "_MatCapColor");
                     // _Tweak_MatCapUV, _Rotate_MatCapUV are not yet supported.
                     // _Is_NormalMapForMatCap, _NormalMapForMatCap, _BumpScaleMatcap, _Rotate_NormalMapForMatCapUV
                     // are not supported.
@@ -1069,6 +1141,7 @@ protected Vector4? GetSerializedMaterialVector4(Material material, string propNa
             SetFloatProperty(material, "_2nd_ShadeColor_Feather", shadeMap2Feather);
             SetFloatProperty(material, "_UseMatcap", useMatcap);
             SetFloatProperty(material, "_Matcap1Blend", matcapBlend);
+            SetColorProperty(material, "_Matcap1Tint", matcapTint);
             SetFloatProperty(material, "_SpecularType", specularType);
             SetColorProperty(material, "_SpecColor", specularTint);
             SetFloatProperty(material, "_Smoothness", smoothness);

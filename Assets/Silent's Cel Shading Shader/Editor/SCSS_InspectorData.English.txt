@@ -112,4 +112,6 @@ s_renderingOptions	Rendering Options	Settings that control additional effects re
 s_detailOptions	Detail Options	Settings that control details added into the basic lighting and shading.
 s_miscOptions	Misc Options	Settings that control specific effects which aren't related to lighting.
 s_advancedOptions	System Options	Settings that control specific system parameters that can have a large effect on how the shading is calculated.
-		
+s_bakeButton	Bake material	Creates a copy of the shader with the material properties pre-applied and flattened. This reduces the size of the shader in the final build and can improve performance, but you won't be able to change the shader properties until you un-bake it.
+s_bakeButtonPlural	Bake materials ({0} materials)	Creates a copy of the shader with the material properties pre-applied and flattened for each material. This reduces the size of the shader in the final build and can improve performance, but you won't be able to change the shader properties until you un-bake it.
+s_bakeButtonRevert	Un-bake material	This material is baked, and material properties can't be changed. Selecting this option will undo the baking process and return this material to using the regular version of the shader.
