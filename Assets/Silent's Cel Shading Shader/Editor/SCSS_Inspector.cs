@@ -107,35 +107,73 @@ namespace SilentCelShading.Unity
 
 			base.MaterialChanged(material);
 		}
+		
+		protected MaterialProperty Property(string i)
+		{
+			MaterialProperty prop;
+			if (props.TryGetValue(i, out prop))
+			{
+				return prop;
+			} 
+			return null;
+		}
+
+		protected GUIContent Content(string i)
+		{
+			GUIContent style;
+			if (!styles.TryGetValue(i, out style))
+			{
+				style = new GUIContent(i);
+			}
+			return style;
+		}
+
+		protected Rect DisabledLabel(GUIContent style)
+		{
+			EditorGUI.BeginDisabledGroup(true);
+			Rect rect = EditorGUILayout.GetControlRect();
+			EditorGUI.LabelField(rect, style);
+			EditorGUI.EndDisabledGroup();
+			return rect;
+		}
 
 		protected Rect TexturePropertySingleLine(string i)
 		{
-			GUIContent style;
-			if (styles.TryGetValue(i, out style))
+			MaterialProperty prop = Property(i);
+			GUIContent style = Content(i);
+			if (prop != null) 
 			{
-				return editor.TexturePropertySingleLine(style, props[i]);
-			} 
-			return editor.TexturePropertySingleLine(new GUIContent(i), props[i]);
+				return editor.TexturePropertySingleLine(style, prop);
+			} else {
+				return DisabledLabel(style);
+			}
 		}
 
 		protected Rect TexturePropertySingleLine(string i, string i2)
 		{
-			GUIContent style;
-			if (styles.TryGetValue(i, out style))
+			GUIContent style = Content(i);
+			MaterialProperty prop = Property(i);
+			MaterialProperty prop2 = Property(i2);
+			if (prop != null) 
 			{
-				return editor.TexturePropertySingleLine(style, props[i], props[i2]);
-			} 
-			return editor.TexturePropertySingleLine(new GUIContent(i), props[i], props[i2]);
+				return editor.TexturePropertySingleLine(style, prop, prop2);
+			} else {
+				return DisabledLabel(style);
+			}
 		}
 
 		protected Rect TexturePropertySingleLine(string i, string i2, string i3)
 		{
-			GUIContent style;
-			if (styles.TryGetValue(i, out style))
+			GUIContent style = Content(i);
+			MaterialProperty prop = Property(i);
+			MaterialProperty prop2 = Property(i2);
+			MaterialProperty prop3 = Property(i3);
+			if (prop != null) 
 			{
-				return editor.TexturePropertySingleLine(style, props[i], props[i2], props[i3]);
-			} 
-			return editor.TexturePropertySingleLine(new GUIContent(i), props[i], props[i2], props[i3]);
+				return editor.TexturePropertySingleLine(style, prop, prop2, prop3);
+			} else {
+				return DisabledLabel(style);
+			}
 		}
 
 		protected Rect TextureColorPropertyWithColorReset(string tex, string col)
@@ -162,22 +200,32 @@ namespace SilentCelShading.Unity
 
 		protected Rect TexturePropertyWithHDRColor(string i, string i2)
 		{
-			GUIContent style;
-			if (styles.TryGetValue(i, out style))
+			GUIContent style = Content(i);
+			MaterialProperty prop = Property(i);
+			MaterialProperty prop2 = Property(i2);
+			if (prop != null) 
 			{
-				return editor.TexturePropertyWithHDRColor(style, props[i], props[i2], false);
-			} 
-			return editor.TexturePropertyWithHDRColor(new GUIContent(i), props[i], props[i2], false);
+				return editor.TexturePropertyWithHDRColor(style, prop, prop2, false);
+			} else {
+				return DisabledLabel(style);
+			}
 		}
 
 		protected void ShaderProperty(string i)
 		{
+			MaterialProperty prop;
 			GUIContent style;
-			if (styles.TryGetValue(i, out style))
+
+			if (!styles.TryGetValue(i, out style))
 			{
-				editor.ShaderProperty(props[i], style);
+				style = new GUIContent(i);
+			}
+
+			if (props.TryGetValue(i, out prop))
+			{
+				editor.ShaderProperty(prop, style);
 			} else {
-				editor.ShaderProperty(props[i], new GUIContent(i));
+				DisabledLabel(style);
 			}
 		}
 
@@ -202,11 +250,17 @@ namespace SilentCelShading.Unity
         }
 
         protected void DrawShaderPropertySameLine(string i) {
+			MaterialProperty prop;
+
         	int HEADER_HEIGHT = 22; // Arktoon default
             Rect r = EditorGUILayout.GetControlRect(true,0,EditorStyles.layerMaskField);
             r.y -= HEADER_HEIGHT;
             r.height = MaterialEditor.GetDefaultPropertyHeight(props[i]);
-            editor.ShaderProperty(r, props[i], " ");
+
+			if (props.TryGetValue(i, out prop))
+			{
+				editor.ShaderProperty(r, prop, " ");
+			} 
         }
 
 		protected GUIStyle scmStyle;
@@ -246,8 +300,8 @@ namespace SilentCelShading.Unity
 			Material material = this.target;
 
 			CheckShaderType(material);
-
-			ShaderBakeSettings();
+			
+			ShaderBakeHeader();
 			
 			bool isBaked = false;
 			{
@@ -257,27 +311,30 @@ namespace SilentCelShading.Unity
 			}
 
             if (isBaked) EditorGUI.BeginDisabledGroup(true);
-
 			base.OnGUI(materialEditor, matProps);
-
+            if (isBaked) EditorGUI.EndDisabledGroup();
 			SettingsComplexityArea();
-
+            if (isBaked) EditorGUI.BeginDisabledGroup(true);
 			MainOptions();
 			ShadingOptions();
 			
 			switch ((SettingsComplexityMode)scssSettingsComplexityMode)
 			{
 				case SettingsComplexityMode.Simple:
-					DrawSectionHeaderArea(styles["s_renderingOptions"]);
+					DrawSectionHeaderArea(Content("s_renderingOptions"));
 					EmissionOptions();
 					OutlineOptions();
+            if (isBaked) EditorGUI.EndDisabledGroup();
 					ManualButtonArea();
+            if (isBaked) EditorGUI.BeginDisabledGroup(true);
 					break;
 				case SettingsComplexityMode.Normal:
 					RenderingOptions();
 					OutlineOptions();
 					EmissionOptions();
+            if (isBaked) EditorGUI.EndDisabledGroup();
 					ManualButtonArea();
+            if (isBaked) EditorGUI.BeginDisabledGroup(true);
 					AdvancedOptions();
 					break;
 				default:
@@ -287,7 +344,9 @@ namespace SilentCelShading.Unity
 					DetailOptions();
 					EmissionOptions();
 					MiscOptions();
+            if (isBaked) EditorGUI.EndDisabledGroup();
 					ManualButtonArea();
+            if (isBaked) EditorGUI.BeginDisabledGroup(true);
 					AdvancedOptions();
 					break;
 			}
@@ -303,9 +362,9 @@ namespace SilentCelShading.Unity
 
 		protected void SettingsComplexityArea()
 		{
-			SettingsComplexityModeOptions[0] = styles["s_fullComplexity"].text;
-			SettingsComplexityModeOptions[1] = styles["s_normalComplexity"].text;
-			SettingsComplexityModeOptions[2] = styles["s_simpleComplexity"].text;
+			SettingsComplexityModeOptions[0] = Content("s_fullComplexity").text;
+			SettingsComplexityModeOptions[1] = Content("s_normalComplexity").text;
+			SettingsComplexityModeOptions[2] = Content("s_simpleComplexity").text;
 			EditorGUILayout.Space();
 
 			if (WithChangeCheck(() =>
@@ -317,8 +376,19 @@ namespace SilentCelShading.Unity
 			}
 		}
 
-		protected void ShaderBakeSettings()
+		protected void ShaderBakeHeader()
 		{
+            Rect r = EditorGUILayout.GetControlRect(true,0,EditorStyles.layerMaskField);
+				r.x -= 12.0f;
+				r.y -= 8.0f;
+				r.height = 18.0f;
+				r.width += 4.0f;
+			float maxWidth = 128.0f;
+			Rect r2 = r;
+				r2.x = r.width - maxWidth + 14.0f;
+				r2.width = maxWidth;
+			GUI.Box(r, "", EditorStyles.toolbar);
+
 			GUIContent s_bakeButton;
 			MaterialProperty shaderOptimizer;
 			// Create the GUIContent for the button so it can be rendered.
@@ -352,7 +422,7 @@ namespace SilentCelShading.Unity
 			}
 			// Draw the button. Because of Unity shenanigans, if we don't always draw the button, 
 			// the layout will explode on the first update of the inspector.
-			if (GUILayout.Button(s_bakeButton))
+			if (GUI.Button(r2, s_bakeButton, EditorStyles.toolbarButton))
 			{
 				// If it's a mixed value, then only allow baking. It shouldn't be a mixed value,
 				// but a material might think it's baked when it isn't, which needs to be handled anyway.
@@ -387,13 +457,14 @@ namespace SilentCelShading.Unity
 					}
 				}
 			}
+			EditorGUILayout.LabelField("", EditorStyles.label); // Spacing only
 		}
 		
 		protected void MainOptions()
 		{ 
 			EditorGUILayout.Space();
 		
-			DrawSectionHeaderArea(styles["s_mainOptions"]);
+			DrawSectionHeaderArea(Content("s_mainOptions"));
 
 			EditorGUILayout.Space();
 			TexturePropertySingleLine("_MainTex", "_Color");
@@ -428,7 +499,7 @@ namespace SilentCelShading.Unity
 		protected void ShadingOptions()
 		{
 			EditorGUILayout.Space();
-			DrawSectionHeaderArea(styles["s_shadingOptions"]);
+			DrawSectionHeaderArea(Content("s_shadingOptions"));
 			if (usingLightramp) LightrampOptions();
 			if (usingCrosstone) CrosstoneOptions();
 		}
@@ -436,7 +507,7 @@ namespace SilentCelShading.Unity
 		protected void RenderingOptions()
 		{ 
 			EditorGUILayout.Space();
-			DrawSectionHeaderArea(styles["s_renderingOptions"]);
+			DrawSectionHeaderArea(Content("s_renderingOptions"));
 
 			SpecularOptions();
 			RimlightOptions();
@@ -446,7 +517,7 @@ namespace SilentCelShading.Unity
 		protected void DetailOptions()
 		{
 			EditorGUILayout.Space();
-			DrawSectionHeaderArea(styles["s_detailOptions"]);
+			DrawSectionHeaderArea(Content("s_detailOptions"));
 			SubsurfaceOptions();
 			DetailMapOptions();
 		}
@@ -470,8 +541,12 @@ namespace SilentCelShading.Unity
 				TexturePropertySingleLine("_DetailEmissionMap");
 				//ShaderProperty("_EmissionDetailParams");
             	EditorGUI.indentLevel ++;
-				Vector2Property(props["_EmissionDetailParams"], styles["s_EmissionDetailScroll"]);
-				Vector2PropertyZW(props["_EmissionDetailParams"], styles["s_EmissionDetailPhase"]);
+				Vector2Property(props["_EmissionDetailParams"], Content("s_EmissionDetailScroll"));
+				Vector2PropertyZW(props["_EmissionDetailParams"], Content("s_EmissionDetailPhase"));
+				editor.TextureScaleOffsetProperty(props["_DetailEmissionMap"]);
+				ShaderProperty("_UseEmissiveLightSense");
+				ShaderProperty("_EmissiveLightSenseStart");
+				ShaderProperty("_EmissiveLightSenseEnd");
             	EditorGUI.indentLevel --;
 			} else {
 				target.DisableKeyword("_EMISSION");
@@ -485,7 +560,7 @@ namespace SilentCelShading.Unity
 		protected void MiscOptions()
 		{
 			EditorGUILayout.Space();
-			DrawSectionHeaderArea(styles["s_miscOptions"]);
+			DrawSectionHeaderArea(Content("s_miscOptions"));
 			EditorGUILayout.Space();
 			ShaderProperty("_PixelSampleMode");
 			AnimationOptions();
@@ -506,7 +581,7 @@ namespace SilentCelShading.Unity
                 WithGroupHorizontal(() => 
 				{
 					TexturePropertySingleLine("_Ramp");
-					if (GUILayout.Button(styles["s_gradientEditorButton"], "button"))
+					if (GUILayout.Button(Content("s_gradientEditorButton"), "button"))
 					{
 						XSGradientEditor.callGradientEditor(target);
 					}
@@ -639,10 +714,10 @@ namespace SilentCelShading.Unity
 			var mMode = (MatcapType)props["_UseMatcap"].floatValue;
 			if (WithChangeCheck(() => 
 			{
-				mMode = (MatcapType)EditorGUILayout.Popup(styles["_UseMatcap"], 
+				mMode = (MatcapType)EditorGUILayout.Popup(Content("_UseMatcap"), 
 				(int)mMode, Enum.GetNames(typeof(MatcapType)));
 			})) {
-				editor.RegisterPropertyChangeUndo(styles["_UseMatcap"].text);
+				editor.RegisterPropertyChangeUndo(Content("_UseMatcap").text);
 				props["_UseMatcap"].floatValue = (float)mMode;
 			}
 			TogglePropertyHeader("_UseMatcap", false);
@@ -745,18 +820,27 @@ namespace SilentCelShading.Unity
 		protected void ManualButtonArea()
 		{
 			EditorGUILayout.Space();
+			
+			DrawSectionHeaderArea(Content("Resources"));
 
-			if (GUILayout.Button(styles["s_manualButton"], "button"))
-			{
-				Application.OpenURL("https://gitlab.com/s-ilent/SCSS/wikis/Manual/Setting-Overview");
-			}
+            Rect r = EditorGUILayout.GetControlRect(true,0,EditorStyles.layerMaskField);
+				r.x -= 2.0f;
+				r.y += 2.0f;
+				r.height = 18.0f;
+			Rect r2 = r;
+				r2.width = r.width / 2.0f;
+			//GUI.Box(r, EditorGUIUtility.IconContent("Toolbar"), EditorStyles.toolbar);
+			if (GUI.Button(r2, Content("s_manualButton"), EditorStyles.miniButtonLeft)) Application.OpenURL("https://gitlab.com/s-ilent/SCSS/wikis/Manual/Setting-Overview");
+				r2.x += r2.width;
+			if (GUI.Button(r2, Content("s_socialButton"), EditorStyles.miniButtonRight)) Application.OpenURL("https://discord.gg/uHJx4g629K");
+			EditorGUILayout.LabelField("", EditorStyles.label);
 		}
 
 		protected void AdvancedOptions()
 		{
 			EditorGUILayout.Space();
 
-			DrawSectionHeaderArea(styles["s_advancedOptions"]);
+			DrawSectionHeaderArea(Content("s_advancedOptions"));
 
 			EditorGUILayout.Space();
 
@@ -1165,6 +1249,7 @@ protected Vector4? GetSerializedMaterialVector4(Material material, string propNa
 			SetIntProperty(material, "_StencilFail", stencilFail);
 
             if (outlineMode.HasValue) SetupMaterialWithOutlineMode(material, (OutlineMode)outlineMode);
+			if (specularType.HasValue) SetupMaterialWithSpecularType(material, (SpecularType)specularType);
 
             // Setup the rendering mode based on the old shader.
             if (oldShader == null || !oldShader.name.Contains(LegacyShadersPath))

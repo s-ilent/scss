@@ -74,6 +74,9 @@ _Rows	Rows	Sets the number of frames present in a vertical column.
 _UseVanishing	Vanishing	Enables the vanishing effect, which fades the material out at a set start and end point. Ineffective in opaque blend mode.
 _VanishingStart	Start Vanishing	The inner bound of the vanishing effect. The higher this is, the further out the material will finishing vanishing. If Start is higher than End, the material will be invisible at a distance.
 _VanishingEnd	End Vanishing	The outer bound of the vanishing effect. The higher this is, the further out the material will begin to vanish. If End is higher than Start, the material will be invisible up close.
+_UseEmissiveLightSense	Light Sensitivity	Enables light sensitivity for emission, which will change the intensity of emission depending on the incoming light. This can be used to make emissive patterns that only glow in the dark, or that scale with light intensity.
+_EmissiveLightSenseStart	Glow Start	The threshold at which the glow starts. For example, setting this to 1 will hide the glow when there is 1 or more unit of light hitting the material.
+_EmissiveLightSenseEnd	Glow End	The threshold at which the glow ends.  For example, setting this to 0 will show the glow at full intensity when there is no light, and raising it will allow the maximum glow to be triggered even with light.
 _ManualButton	This shader has a manual. Check it out!	For information on new features, old features, and just how to use the shader in general, check out the manual on the shader wiki!
 _Ramp	Lighting Ramp	Specifies the falloff of the lighting. In other words, it controls how light affects your model and how soft or sharp the transition between light and shadow is. \nNote: If a Lighting Ramp is not set, the material will have no shading.
 _ShadowMask	Shadow Mask	In Occlusion mode, specifies areas of shadow influence. RGB darkens, alpha lightens. In Tone mode, specifies colour of shading to use. RGB tints, alpha darkens.
@@ -102,7 +105,9 @@ _StencilOp	Operation	The operation to be performed when the stencil test passes.
 _StencilFail	Fail	The operation to be performed when the stencil test fails.
 _StencilZFail	ZFail	The operation to be performed when the stencil test passes, but the geometry is occluded.
 s_gradientEditorButton	Open Gradient Editor	Opens the gradient editor window with the current material focused. This allows you to create a new lighting ramp and view the results on this material in realtime.
-s_manualButton	This shader has a manual. Check it out!	For information on new features, old features, and just how to use the shader in general, check out the manual on the shader wiki!
+s_helpArea	Check out our resources!	Hover over the buttons for more info.
+s_manualButton	Manual	For information on new features, old features, and just how to use the shader in general, check out the manual on the shader wiki!
+s_socialButton	Discord	For support, feedback, and updates on new versions, join the Secret Shader Facility Discord!
 s_simpleComplexity	Only show main options. (Simple mode)	Only show main options. (Simple mode)
 s_normalComplexity	Hide niche options. (Normal mode)	Hide niche options. (Normal mode)
 s_fullComplexity	Show all options. (Complex mode)	Show all options. (Complex mode)
