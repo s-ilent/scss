@@ -147,7 +147,6 @@ float4 frag(VertexOutput i, uint facing : SV_IsFrontFace) : SV_Target
 	// Ideally, we should pass all input to lighting functions through the 
 	// material parameter struct. But there are some things that are
 	// optional. Review this at a later date...
-	i.uv0 = texcoords; 
 
 	SCSS_Input c = (SCSS_Input) 0;
 

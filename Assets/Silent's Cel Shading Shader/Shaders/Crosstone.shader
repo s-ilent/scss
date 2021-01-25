@@ -113,6 +113,10 @@ Shader "Silent's Cel Shading/Crosstone (Outline)"
 		_VanishingStart("Vanishing Start", Float) = 0.0
 		_VanishingEnd("Vanishing End", Float) = 0.0
 		//[Space]
+		[ToggleUI]_UseEmissiveLightSense ("Use Light-sensing Emission", Float) = 0.0
+		_EmissiveLightSenseStart("Light Threshold Start", Range(0, 1)) = 1.0
+		_EmissiveLightSenseEnd("Light Threshold End", Range(0, 1)) = 0.0
+		//[Space]
 		[ToggleUI]_AlbedoAlphaMode("Albedo Alpha Mode", Float) = 0.0
 		[HDR]_CustomFresnelColor("Emissive Fresnel Color", Color) = (0,0,0,1)
 		[ToggleUI]_PixelSampleMode("Sharp Sampling Mode", Float) = 0.0

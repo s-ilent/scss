@@ -618,21 +618,19 @@ float3 SCSS_ApplyLighting(SCSS_Input c, VertexOutput i, float4 texcoords)
 	// Disable DisneyDiffuse for cel specular.
 	#endif
 
-	// Generic lighting for matcaps/rimlighting. 
-	// Currently matcaps are applied to albedo, so they don't need lighting. 
+	// Generic lighting for effects.
 	float3 effectLighting = l.color;
 	#if defined(UNITY_PASS_FORWARDBASE)
 	//effectLighting *= attenuation;
 	effectLighting += GetSHAverage();
 	#endif
 
-	float3 finalColor = 0; 
+	float3 effectLightShadow = l.color * max((1+d.NdotL)*attenuation, 0);
+	#if defined(UNITY_PASS_FORWARDBASE)
+	effectLightShadow += GetSHAverage();
+	#endif
 
-	float fresnelLightMaskBase = LerpOneTo((d.NdotH), _UseFresnelLightMask);
-	float fresnelLightMask = 
-		saturate(pow(saturate( fresnelLightMaskBase), _FresnelLightMask));
-	float fresnelLightMaskInv = 
-		saturate(pow(saturate(-fresnelLightMaskBase), _FresnelLightMask));
+	float3 finalColor = 0; 
 
 	// Apply matcap before specular effect.
 	if (_UseMatcap >= 1 && isOutline <= 0) 
@@ -647,36 +645,38 @@ float3 SCSS_ApplyLighting(SCSS_Input c, VertexOutput i, float4 texcoords)
 		c.albedo = applyMatcap(_Matcap3, matcapUV, c.albedo, _Matcap3Tint, _Matcap3Blend, _Matcap3Strength * _MatcapMask_var.b);
 		c.albedo = applyMatcap(_Matcap4, matcapUV, c.albedo, _Matcap4Tint, _Matcap4Blend, _Matcap4Strength * _MatcapMask_var.a);
 	}
-	
-	// Lit
-	if (_UseFresnel == 1 && isOutline <= 0) 
-	{
-		float3 sharpFresnel = sharpenLighting(d.rlPow4.y * c.rim.width * fresnelLightMask, 
-			c.rim.power) * c.rim.tint * c.rim.alpha;
-		sharpFresnel += sharpenLighting(d.rlPow4.y * c.rim.invWidth * fresnelLightMaskInv,
-			c.rim.invPower) * c.rim.invTint * c.rim.invAlpha * _FresnelLightMask;
-		c.albedo += c.albedo * sharpFresnel;
-	}
 
-	// AmbientAlt
-	if (_UseFresnel == 3 && isOutline <= 0)
+
+	float3 finalRimLight = 0;
+	if (_UseFresnel)
 	{
-		float sharpFresnel = sharpenLighting(d.rlPow4.y*c.rim.width*fresnelLightMask, c.rim.power);
-		sharpFresnel += sharpenLighting(d.rlPow4.y * c.rim.invWidth * fresnelLightMaskInv,
+		float fresnelLightMaskBase = LerpOneTo((d.NdotH), _UseFresnelLightMask);
+		float fresnelLightMask = 
+			saturate(pow(saturate( fresnelLightMaskBase), _FresnelLightMask));
+		float fresnelLightMaskInv = 
+			saturate(pow(saturate(-fresnelLightMaskBase), _FresnelLightMask));
+
+		// Refactored to use more ifs because the compiler is smarter than me.
+		float rimBase = sharpenLighting(d.rlPow4.y * c.rim.width * fresnelLightMask, c.rim.power);
+		float3 rimCol = rimBase * c.rim.tint * c.rim.alpha;
+
+		float rimInv = sharpenLighting(d.rlPow4.y * c.rim.invWidth * fresnelLightMaskInv,
 			c.rim.invPower) * _FresnelLightMask;
-		c.occlusion += saturate(sharpFresnel);
-	}
+		float3 rimInvCol = rimInv * c.rim.invTint * c.rim.invAlpha;
 
-	// Combination
-	if (_UseFresnel == 4 && isOutline <= 0)
-	{
-		float3 sharpFresnel = sharpenLighting(d.rlPow4.y * c.rim.width * fresnelLightMask, 
-			c.rim.power);
-		c.occlusion += saturate(sharpFresnel);
-		sharpFresnel *= c.rim.tint * c.rim.alpha;
-		sharpFresnel += sharpenLighting(d.rlPow4.y * c.rim.invWidth * fresnelLightMaskInv,
-			c.rim.invPower) * c.rim.invTint * c.rim.invAlpha * _FresnelLightMask;
-		c.albedo += c.albedo * sharpFresnel;
+		float3 rimFinal = rimCol + rimInvCol;
+
+		float applyToAlbedo = (_UseFresnel == 1) + (_UseFresnel == 4);
+		float applyToFinal = (_UseFresnel == 2);
+		float applyToLightBias = (_UseFresnel == 3) + (_UseFresnel == 4);
+		// Lit
+		if (applyToAlbedo) c.albedo += c.albedo * rimFinal * isOutline;
+		// AmbientAlt
+		if (applyToLightBias) c.occlusion += saturate(rimBase) * isOutline;
+		// Ambient
+		// If applied to the final output, it can only be applied later.
+		if (applyToFinal) finalRimLight = rimFinal;
+
 	}
 
 	#if defined(UNITY_PASS_FORWARDBASE)
@@ -692,14 +692,10 @@ float3 SCSS_ApplyLighting(SCSS_Input c, VertexOutput i, float4 texcoords)
 	finalColor += c.albedo * calcVertexLight(i.vertexLight, c.occlusion, c.tone, c.softness);
 	#endif
 
-	// Ambient
-	if (_UseFresnel == 2 && isOutline <= 0)
+	// Apply Ambient rim lighting
+	if (_UseFresnel == 2)
 	{
-		float3 sharpFresnel = sharpenLighting(d.rlPow4.y * c.rim.width * fresnelLightMask, 
-			c.rim.power) * c.rim.tint * c.rim.alpha;
-		sharpFresnel += sharpenLighting(d.rlPow4.y * c.rim.invWidth * fresnelLightMaskInv,
-			c.rim.invPower) * c.rim.invTint * c.rim.invAlpha * _FresnelLightMask;
-		finalColor += effectLighting*sharpFresnel;
+		finalColor += effectLighting*finalRimLight;
 	}
 
 	//float3 wrappedDiffuse = LightColour * saturate((dot(N, L) + w) / ((1 + w) * (1 + w)));
@@ -729,11 +725,19 @@ float3 SCSS_ApplyLighting(SCSS_Input c, VertexOutput i, float4 texcoords)
 	finalColor *= _LightWrappingCompensationFactor;
 
 	#if defined(UNITY_PASS_FORWARDBASE)
+	// Emission
 	float3 emission;
-	float4 emissionDetail = EmissionDetail(texcoords.zw);
+	float2 emissionDetailUV = EmissionDetailTexCoords(i);
+	float4 emissionDetail = EmissionDetail(emissionDetailUV);
 
 	finalColor = max(0, finalColor - saturate((1-emissionDetail.w)- (1-c.emission)));
 	emission = emissionDetail.rgb * c.emission * _EmissionColor.rgb;
+
+	// Glow in the dark modifier.
+	#if defined(_EMISSION)
+		float glowModifier = smoothstep(_EmissiveLightSenseStart, _EmissiveLightSenseEnd, dot(effectLightShadow, sRGB_Luminance));
+		if (_UseEmissiveLightSense) emission *= glowModifier;
+	#endif
 
 	// Emissive c.rim. To restore masking behaviour, multiply by emissionMask.
 	emission += _CustomFresnelColor.xyz * (pow(d.rlPow4.y, rcp(_CustomFresnelColor.w+0.0001)));

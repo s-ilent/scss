@@ -36,8 +36,11 @@ uniform float _SpecularDetailStrength;
 #endif
 
 #if defined(_EMISSION)
-UNITY_DECLARE_TEX2D_NOSAMPLER(_DetailEmissionMap); uniform half4 _DetailEmissionMap_ST;
+UNITY_DECLARE_TEX2D_NOSAMPLER(_DetailEmissionMap); uniform half4 _DetailEmissionMap_ST; uniform half4 _DetailEmissionMap_TexelSize;
 uniform float4 _EmissionDetailParams;
+uniform float _UseEmissiveLightSense;
+uniform float _EmissiveLightSenseStart;
+uniform float _EmissiveLightSenseEnd;
 #endif
 
 #if defined(_SPECULAR)
@@ -83,11 +86,6 @@ uniform float _UVSec;
 uniform float _AlbedoAlphaMode;
 
 uniform float4 _EmissionColor;
-// For later use
-uniform float _EmissionScrollX;
-uniform float _EmissionScrollY;
-uniform float _EmissionPhaseSpeed;
-uniform float _EmissionPhaseWidth;
 
 uniform float _UseFresnel;
 uniform float _UseFresnelLightMask;
@@ -478,6 +476,19 @@ half4 SpecularGloss(float4 texcoords, half mask)
 half3 Emission(float2 uv)
 {
     return UNITY_SAMPLE_TEX2D_SAMPLER(_EmissionMap, _MainTex, uv).rgb;
+}
+
+float2 EmissionDetailTexCoords(VertexOutput v)
+{
+	float2 texcoord;
+#if defined(_EMISSION) 
+	texcoord.xy = TRANSFORM_TEX(((_UVSec == 0) ? v.uv0 : v.uv1), _DetailEmissionMap);
+	texcoord.xy = _PixelSampleMode? 
+		sharpSample(_DetailEmissionMap_TexelSize * _DetailEmissionMap_ST.xyxy, texcoord.xy) : texcoord.xy;
+#else
+	texcoord.xy = v.uv0; // Default we won't need
+#endif
+    return texcoord;
 }
 
 half4 EmissionDetail(float2 uv)
