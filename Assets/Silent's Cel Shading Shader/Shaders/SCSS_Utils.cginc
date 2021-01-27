@@ -7,8 +7,12 @@
     #endif
 #endif
 
-#if defined (SHADOWS_SCREEN) || ( defined (SHADOWS_DEPTH) && defined (SPOT) ) || defined (SHADOWS_CUBE) || (defined (UNITY_LIGHT_PROBE_PROXY_VOLUME) && UNITY_VERSION<600)
+#if defined (SHADOWS_SHADOWMASK) || defined (SHADOWS_SCREEN) || ( defined (SHADOWS_DEPTH) && defined (SPOT) ) || defined (SHADOWS_CUBE) || (defined (UNITY_LIGHT_PROBE_PROXY_VOLUME) && UNITY_VERSION<600)
     #define USING_SHADOWS_UNITY
+#endif
+
+#ifndef UNITY_POSITION
+    #define UNITY_POSITION(pos) float4 pos : SV_POSITION
 #endif
 
 sampler2D_float _CameraDepthTexture;
