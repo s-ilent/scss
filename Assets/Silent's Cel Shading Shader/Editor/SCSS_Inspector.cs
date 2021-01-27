@@ -422,7 +422,7 @@ namespace SilentCelShading.Unity
 			}
 			// Draw the button. Because of Unity shenanigans, if we don't always draw the button, 
 			// the layout will explode on the first update of the inspector.
-			if (GUI.Button(r2, s_bakeButton, EditorStyles.toolbarButton))
+			if (GUI.Button(r2, s_bakeButton, EditorStyles.miniButtonMid))
 			{
 				// If it's a mixed value, then only allow baking. It shouldn't be a mixed value,
 				// but a material might think it's baked when it isn't, which needs to be handled anyway.
@@ -482,9 +482,7 @@ namespace SilentCelShading.Unity
 				ShaderProperty("_AlphaSharp");
 			}
 			EditorGUI.indentLevel -= 2;
-			TexturePropertySingleLine("_ColorMask");
-			EditorGUILayout.Space();
-			
+			TexturePropertySingleLine("_ColorMask");			
 			// For Standard compatibility, but not sure what the purpose is
 			if (WithChangeCheck(() => 
 			{
@@ -539,11 +537,11 @@ namespace SilentCelShading.Unity
 			{
 				target.EnableKeyword("_EMISSION");
 				TexturePropertySingleLine("_DetailEmissionMap");
+				editor.TextureScaleOffsetProperty(props["_DetailEmissionMap"]);
 				//ShaderProperty("_EmissionDetailParams");
             	EditorGUI.indentLevel ++;
 				Vector2Property(props["_EmissionDetailParams"], Content("s_EmissionDetailScroll"));
 				Vector2PropertyZW(props["_EmissionDetailParams"], Content("s_EmissionDetailPhase"));
-				editor.TextureScaleOffsetProperty(props["_DetailEmissionMap"]);
 				ShaderProperty("_UseEmissiveLightSense");
 				ShaderProperty("_EmissiveLightSenseStart");
 				ShaderProperty("_EmissiveLightSenseEnd");

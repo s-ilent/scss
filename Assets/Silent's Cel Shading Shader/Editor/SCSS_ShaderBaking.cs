@@ -522,16 +522,17 @@ namespace SilentCelShading.Unity.Baking
                 string output = sb.ToString();
 
                 // Write output to file
-                (new FileInfo(newShaderDirectory + psf.filePath)).Directory.Create();
+                string newShaderFilePath = Path.GetFileName(psf.filePath);
+                (new FileInfo(newShaderDirectory + newShaderFilePath)).Directory.Create();
                 try
                 {
-                    StreamWriter sw = new StreamWriter(newShaderDirectory + psf.filePath);
+                    StreamWriter sw = new StreamWriter(newShaderDirectory + newShaderFilePath);
                     sw.Write(output);
                     sw.Close();
                 }
                 catch (IOException e)
                 {
-                    Debug.LogError(LogHeader + "Processed shader file " + newShaderDirectory + psf.filePath + " could not be written.  " + e.ToString());
+                    Debug.LogError(LogHeader + "Processed shader file " + newShaderDirectory + newShaderFilePath + " could not be written.  " + e.ToString());
                     return false;
                 }
             }
