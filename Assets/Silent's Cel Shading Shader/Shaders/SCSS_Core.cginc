@@ -126,8 +126,8 @@ float3 sampleCrossToneLighting(inout float x, SCSS_TonemapInput tone0, SCSS_Tone
 	float3 final;
 
 	// 2nd separation determines whether 1st and 2nd shading tones are combined.
-	if (_Crosstone2ndSeparation == 0) 	tone1.col * tone0.col;
-	if (_Crosstone2ndSeparation == 1) 	tone1.col = tone1.col;
+	if (_Crosstone2ndSeparation == 0) 	tone1.col = tone1.col * tone0.col;
+	// if (_Crosstone2ndSeparation == 1) 	tone1.col = tone1.col; // Just here for completeness
 	
 	// Either way, the result is interpolated against tone 0 by the 2nd factor.
 	final = lerp(tone1.col, tone0.col, factor1);
