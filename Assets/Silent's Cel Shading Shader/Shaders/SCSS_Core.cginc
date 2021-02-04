@@ -207,9 +207,8 @@ void getDirectIndirectLighting(float3 normal, out float3 directLighting, out flo
 	indirectLighting = 0.0;
 	switch (_LightingCalculationType)
 	{
-	case 0: // Arktoon
+	case 0: // Biased
 		directLighting   = GetSHMaxL1();
-		//indirectLighting = GetSHAverage(); 
 		indirectLighting = BetterSH9(half4(0.0, 0.0, 0.0, 1.0)); 
 	break;
 	case 1: // Standard
@@ -224,6 +223,10 @@ void getDirectIndirectLighting(float3 normal, out float3 directLighting, out flo
 		float4 ambientDir = float4(Unity_SafeNormalize(unity_SHAr.xyz + unity_SHAg.xyz + unity_SHAb.xyz), 1.0);
 		directLighting   = BetterSH9(ambientDir);
 		indirectLighting = BetterSH9(-ambientDir); 
+	break;
+	case 4: // Unbiased
+		directLighting   = GetSHMaxL1();
+		indirectLighting = GetSHAverage(); 
 	break;
 	}
 }

@@ -1412,8 +1412,11 @@ protected Vector4? GetSerializedMaterialVector4(Material material, string propNa
         		case LightingCalculationType.Directional:
         		material.SetFloat("_LightingCalculationType", 3);
         		break;
+        		case LightingCalculationType.Unbiased:
+        		material.SetFloat("_LightingCalculationType", 4);
+        		break;
         		default:
-        		case LightingCalculationType.Arktoon:
+        		case LightingCalculationType.Biased:
         		material.SetFloat("_LightingCalculationType", 0);
         		break;
         	}
