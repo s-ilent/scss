@@ -11,6 +11,10 @@
     #define USING_SHADOWS_UNITY
 #endif
 
+#if defined (_ALPHATEST_ON) || defined (_ALPHABLEND_ON) || defined (_ALPHAPREMULTIPLY_ON)
+    #define USING_TRANSPARENCY
+#endif
+
 #ifndef UNITY_POSITION
     #define UNITY_POSITION(pos) float4 pos : SV_POSITION
 #endif
@@ -51,14 +55,12 @@ float intensity(float2 pixel) {
     return frac(a1 * float(pixel.x) + a2 * float(pixel.y));
 }
 
-float rDither(float gray, float2 pos) {
-	#define steps 4
+float rDither(float gray, float2 pos, float steps) {
 	// pos is screen pixel position in 0-res range
     // Calculated noised gray value
     float noised = (2./steps) * T(intensity(float2(pos.xy))) + gray - (1./steps); 
     // Clamp to the number of gray levels we want
     return floor(steps * noised) / (steps-1.);
-    #undef steps
 }
 
 // "R2" dithering -- end
@@ -73,7 +75,7 @@ inline void applyAlphaClip(inout float alpha, float cutoff, float2 pos, bool sha
     #endif
 
     pos += _SinTime.x%4;
-    #if defined(_ALPHATEST_ON)
+    #if defined(USING_TRANSPARENCY)
     // Switch between dithered alpha and sharp-edge alpha.
         if (!sharpen) {
             alpha = (1+cutoff) * alpha - cutoff;
@@ -82,10 +84,18 @@ inline void applyAlphaClip(inout float alpha, float cutoff, float2 pos, bool sha
             alpha = alpha - (mask * (1-(alpha)) * width);
         }
         else {
-            alpha = ((alpha - cutoff) / max(fwidth(alpha), 0.0001) + 0.5);
+            alpha = ((alpha - cutoff) / max(fwidth(alpha), 0.0) + 0.5);
         }
-    // If 0, remove now.
-    clip (alpha);
+
+    #if defined(USING_TRANSPARENCY)
+        #if defined(_ALPHATEST_ON)
+            // If 0, remove now.
+            clip (alpha);
+        #else
+            alpha = saturate(alpha);
+        #endif
+    #endif
+
     #endif
 }
 
@@ -159,7 +169,7 @@ float simpleSharpen (float x, float width, float mid, const float smoothnessMode
 float2 sharpSample( float4 texelSize , float2 p )
 {
 	p = p*texelSize.zw;
-    float2 c = max(0.0001, fwidth(p));
+    float2 c = max(0.0, fwidth(p));
     p = floor(p) + saturate(frac(p) / c);
 	p = (p - 0.5)*texelSize.xy;
 	return p;
