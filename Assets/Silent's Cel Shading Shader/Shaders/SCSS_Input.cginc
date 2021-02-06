@@ -84,6 +84,7 @@ uniform float _Cutoff;
 uniform float _AlphaSharp;
 uniform float _UVSec;
 uniform float _AlbedoAlphaMode;
+uniform float _Tweak_Transparency;
 
 uniform float4 _EmissionColor;
 
@@ -438,13 +439,18 @@ SCSS_Input applyDetail(SCSS_Input c, float4 texcoords)
     return c;
 }
 
+half ClippingMask(float2 uv)
+{
+	return saturate(UNITY_SAMPLE_TEX2D_SAMPLER(_ClippingMask, _MainTex, uv) + _Tweak_Transparency);
+}
+
 half Alpha(float2 uv)
 {
 	half alpha = _Color.a;
 	switch(_AlbedoAlphaMode)
 	{
 		case 0: alpha *= UNITY_SAMPLE_TEX2D(_MainTex, uv).a; break;
-		case 2: alpha *= UNITY_SAMPLE_TEX2D_SAMPLER(_ClippingMask, _MainTex, uv); break;
+		case 2: alpha *= ClippingMask(uv); break;
 	}
 	return alpha;
 }

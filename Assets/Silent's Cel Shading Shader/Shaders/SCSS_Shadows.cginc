@@ -35,6 +35,7 @@ uniform float       _VanishingStart;
 uniform float       _VanishingEnd;
 uniform float       _UseVanishing;
 uniform float       _AlphaSharp;
+uniform float       _Tweak_Transparency;
 
 struct VertexInput
 {
@@ -74,6 +75,10 @@ void vertShadowCaster(VertexInput v,
     #endif
 }
 
+half ClippingMask(float2 uv)
+{
+    return saturate(tex2D(_ClippingMask, uv) + _Tweak_Transparency);
+}
 
 half Alpha(float2 uv)
 {
@@ -81,7 +86,7 @@ half Alpha(float2 uv)
     switch(_AlbedoAlphaMode)
     {
         case 0: alpha *= tex2D(_MainTex, uv).a; break;
-        case 2: alpha *= tex2D(_ClippingMask, uv); break;
+        case 2: alpha *= ClippingMask(uv); break;
     }
     return alpha;
 }

@@ -40,11 +40,11 @@ namespace SilentCelShading.Unity
 
 		public enum LightingCalculationType
 		{
-			Biased,
-			Standard,
-			Cubed,
-			Directional, 
-			Unbiased
+			Unbiased = 0,
+			Standard = 1,
+			Cubed = 2,
+			Directional = 3, 
+			Biased = 4
 		}
 
 		public enum AmbientFresnelType

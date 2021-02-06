@@ -10,6 +10,7 @@ Shader "Silent's Cel Shading/Crosstone (Outline)"
 		//[Space]
 		_ColorMask("Color Mask Map", 2D) = "white" {}
 		_ClippingMask ("Alpha Transparency Map", 2D) = "white" {}
+        _Tweak_Transparency ("Transparency Adjustment", Range(-1, 1)) = 0
 		_BumpMap("Normal Map", 2D) = "bump" {}
 		_BumpScale("Normal Map Scale", Float) = 1.0
 		[Enum(VertexColorType)]_VertexColorType ("Vertex Colour Type", Float) = 2.0

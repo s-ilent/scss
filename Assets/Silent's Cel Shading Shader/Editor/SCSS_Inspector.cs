@@ -472,11 +472,11 @@ namespace SilentCelShading.Unity
 
 			if ((AlbedoAlphaMode)props["_AlbedoAlphaMode"].floatValue == AlbedoAlphaMode.ClippingMask)
 			{
-				TexturePropertySingleLine("_ClippingMask");
+				TexturePropertySingleLine("_ClippingMask", "_Tweak_Transparency");
 			}
 
 			EditorGUI.indentLevel += 2;
-			if ((RenderingMode)props[BaseStyles.renderingModeName].floatValue == RenderingMode.Cutout)
+			if ((RenderingMode)props[BaseStyles.renderingModeName].floatValue > 0)
 			{
 				ShaderProperty("_Cutoff");
 				ShaderProperty("_AlphaSharp");
@@ -1412,11 +1412,11 @@ protected Vector4? GetSerializedMaterialVector4(Material material, string propNa
         		case LightingCalculationType.Directional:
         		material.SetFloat("_LightingCalculationType", 3);
         		break;
-        		case LightingCalculationType.Unbiased:
+        		case LightingCalculationType.Biased:
         		material.SetFloat("_LightingCalculationType", 4);
         		break;
         		default:
-        		case LightingCalculationType.Biased:
+        		case LightingCalculationType.Unbiased:
         		material.SetFloat("_LightingCalculationType", 0);
         		break;
         	}
