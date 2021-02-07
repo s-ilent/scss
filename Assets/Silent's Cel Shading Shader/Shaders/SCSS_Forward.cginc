@@ -21,14 +21,23 @@ VertexOutput vert(appdata_full v) {
 	// Extra data handling
 	// X: Outline width | Y: Ramp softness
 	// Z: Outline Z offset | 
-	if (_VertexColorType == 2) 
+	switch (_VertexColorType) 
 	{
+		case 2: // Additional data
 		o.color = 1.0; // Reset
 		o.extraData = v.color;
-	} else {
+		break;
+
+		case 3: // None
+		o.color = 1.0; 
+		o.extraData = float4(1.0, 0.0, 1.0, 1.0); 
+		break;
+
+		default:
 		o.color = v.color;
 		o.extraData = float4(0.0, 0.0, 1.0, 1.0); 
 		o.extraData.x = v.color.a;
+		break;
 	}
 
 	#if defined(SCSS_USE_OUTLINE_TEXTURE)
@@ -214,7 +223,8 @@ float4 frag(VertexOutput i, uint facing : SV_IsFrontFace) : SV_Target
 
     // Rim lighting parameters. 
 	c.rim = initialiseRimParam();
-	c.rim.power *= RimMask(texcoords.xy);
+	c.rim.alpha *= RimMask(texcoords.xy);
+	c.rim.invAlpha *= RimMask(texcoords.xy);
 	c.rim.tint *= outlineDarken;
 
 	// Scattering parameters

@@ -1394,6 +1394,9 @@ protected Vector4? GetSerializedMaterialVector4(Material material, string propNa
         		case VertexColorType.AdditionalData:
         		material.SetFloat("_VertexColorType", 2);
         		break;
+        		case VertexColorType.Ignore:
+        		material.SetFloat("_VertexColorType", 3);
+        		break;
         		default:
         		break;
         	}
