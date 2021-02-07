@@ -673,9 +673,9 @@ float3 SCSS_ApplyLighting(SCSS_Input c, VertexOutput i, float4 texcoords)
 		float applyToFinal = (_UseFresnel == 2);
 		float applyToLightBias = (_UseFresnel == 3) + (_UseFresnel == 4);
 		// Lit
-		if (applyToAlbedo) c.albedo += c.albedo * rimFinal * isOutline;
+		if (applyToAlbedo) c.albedo += c.albedo * rimFinal * (1-isOutline);
 		// AmbientAlt
-		if (applyToLightBias) c.occlusion += saturate(rimBase) * isOutline;
+		if (applyToLightBias) c.occlusion += saturate(rimBase) * (1-isOutline);
 		// Ambient
 		// If applied to the final output, it can only be applied later.
 		if (applyToFinal) finalRimLight = rimFinal;
