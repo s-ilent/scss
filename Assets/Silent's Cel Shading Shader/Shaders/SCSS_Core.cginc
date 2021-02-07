@@ -660,12 +660,12 @@ float3 SCSS_ApplyLighting(SCSS_Input c, VertexOutput i, float4 texcoords)
 			saturate(pow(saturate(-fresnelLightMaskBase), _FresnelLightMask));
 
 		// Refactored to use more ifs because the compiler is smarter than me.
-		float rimBase = sharpenLighting(d.rlPow4.y * c.rim.width * fresnelLightMask, c.rim.power);
-		float3 rimCol = rimBase * c.rim.tint * c.rim.alpha;
+		float rimBase = sharpenLighting(d.rlPow4.y * c.rim.width * fresnelLightMask, c.rim.power) * c.rim.alpha;
+		float3 rimCol = rimBase * c.rim.tint;
 
 		float rimInv = sharpenLighting(d.rlPow4.y * c.rim.invWidth * fresnelLightMaskInv,
-			c.rim.invPower) * _FresnelLightMask;
-		float3 rimInvCol = rimInv * c.rim.invTint * c.rim.invAlpha;
+			c.rim.invPower) * _FresnelLightMask * c.rim.invAlpha;
+		float3 rimInvCol = rimInv * c.rim.invTint;
 
 		float3 rimFinal = rimCol + rimInvCol;
 

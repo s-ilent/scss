@@ -73,7 +73,8 @@ namespace SilentCelShading.Unity
 		{
 			Color = 0,
 			OutlineColor = 1,
-			AdditionalData = 2
+			AdditionalData = 2,
+			Ignore = 3
 		}
 
 		public static class CommonStyles
