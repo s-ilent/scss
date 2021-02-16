@@ -1250,6 +1250,10 @@ protected Vector4? GetSerializedMaterialVector4(Material material, string propNa
             {
                 material.SetTexture("_OutlineMask", outlineMask);
             }
+            if (emissionTexture)
+            {
+                material.SetTexture("_EmissionMap", emissionTexture);
+            }
 
             SetFloatProperty(material, "_BumpScale", normalMapScale);
             SetColorProperty(material, "_EmissionColor", emissionColor);
