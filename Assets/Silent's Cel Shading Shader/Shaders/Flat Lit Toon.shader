@@ -182,6 +182,8 @@ Shader "Silent's Cel Shading/Lightramp (Outline)"
 		#pragma target 4.5
 		#pragma shader_feature _ _ALPHATEST_ON _ALPHABLEND_ON _ALPHAPREMULTIPLY_ON
 		#pragma multi_compile _ UNITY_HDR_ON
+		
+		#define SCSS_OUTLINE
 		#define SCSS_USE_OUTLINE_TEXTURE
         ENDCG
 

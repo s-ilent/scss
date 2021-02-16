@@ -22,9 +22,15 @@
 
 UNITY_DECLARE_TEX2D(_MainTex); uniform half4 _MainTex_ST; uniform half4 _MainTex_TexelSize;
 UNITY_DECLARE_TEX2D_NOSAMPLER(_ColorMask); uniform half4 _ColorMask_ST;
-UNITY_DECLARE_TEX2D_NOSAMPLER(_ClippingMask); uniform half4 _ClippingMask_ST;
 UNITY_DECLARE_TEX2D_NOSAMPLER(_BumpMap); uniform half4 _BumpMap_ST;
 UNITY_DECLARE_TEX2D_NOSAMPLER(_EmissionMap); uniform half4 _EmissionMap_ST;
+
+// Workaround for shadow compiler error. 
+#if defined(SHADOWS_INCLUDED)
+UNITY_DECLARE_TEX2D(_ClippingMask); uniform half4 _ClippingMask_ST;
+#else
+UNITY_DECLARE_TEX2D_NOSAMPLER(_ClippingMask); uniform half4 _ClippingMask_ST;
+#endif
 
 #if defined(_DETAIL)
 UNITY_DECLARE_TEX2D(_DetailAlbedoMap); uniform half4 _DetailAlbedoMap_ST; uniform half4 _DetailAlbedoMap_TexelSize;
@@ -66,9 +72,6 @@ UNITY_DECLARE_TEX2D_NOSAMPLER(_2nd_ShadeMap);
 UNITY_DECLARE_TEX2D_NOSAMPLER(_ShadingGradeMap);
 #endif
 
-uniform float _Shadow;
-uniform float _ShadowLift;
-
 #if !defined(SCSS_CROSSTONE)
 UNITY_DECLARE_TEX2D_NOSAMPLER(_ShadowMask); uniform half4 _ShadowMask_ST;
 uniform sampler2D _Ramp; uniform half4 _Ramp_ST;
@@ -76,6 +79,8 @@ uniform float _LightRampType;
 uniform float4 _ShadowMaskColor;
 uniform float _ShadowMaskType;
 uniform float _IndirectLightingBoost;
+uniform float _Shadow;
+uniform float _ShadowLift;
 #endif
 
 uniform float4 _Color;
@@ -100,9 +105,11 @@ uniform float _FresnelStrengthInv;
 
 uniform float4 _CustomFresnelColor;
 
+#if defined(SCSS_OUTLINE)
 uniform float _outline_width;
 uniform float4 _outline_color;
 uniform float _OutlineMode;
+#endif
 
 uniform float _LightingCalculationType;
 
@@ -331,7 +338,7 @@ float2 AnimateTexcoords(float2 texcoord)
 	{
 		float currentFrame = _FrameNumber + frac(_Time[0] * _AnimationSpeed) * _TotalFrames;
 
-		float frame = clamp(currentFrame, 0, _TotalFrames);
+		float frame = floor(clamp(currentFrame, 0, _TotalFrames));
 
 		float2 offPerFrame = float2((1 / (float)_Columns), (1 / (float)_Rows));
 
@@ -418,6 +425,46 @@ half3 Albedo(float4 texcoords)
     return albedo;
 }
 
+half3 Emission(float2 uv)
+{
+    return UNITY_SAMPLE_TEX2D_SAMPLER(_EmissionMap, _MainTex, uv).rgb;
+}
+
+half ClippingMask(float2 uv)
+{
+	// Workaround for shadow compiler error. 
+	#if defined(SHADOWS_INCLUDED)
+	float alpha = UNITY_SAMPLE_TEX2D(_ClippingMask, uv);
+	#else
+	float alpha = UNITY_SAMPLE_TEX2D_SAMPLER(_ClippingMask, _MainTex, uv);
+	#endif 
+	return saturate(alpha + _Tweak_Transparency);
+}
+
+half Alpha(float2 uv)
+{
+	half alpha = _Color.a;
+	switch(_AlbedoAlphaMode)
+	{
+		case 0: alpha *= UNITY_SAMPLE_TEX2D(_MainTex, uv).a; break;
+		case 2: alpha *= ClippingMask(uv); break;
+	}
+	return alpha;
+}
+
+void applyVanishing (inout float alpha) {
+    const fixed3 baseWorldPos = unity_ObjectToWorld._m03_m13_m23;
+    float closeDist = distance(_WorldSpaceCameraPos, baseWorldPos);
+    float vanishing = saturate(lerpstep(_VanishingStart, _VanishingEnd, closeDist));
+    alpha = lerp(alpha, alpha * vanishing, _UseVanishing);
+}
+
+//-----------------------------------------------------------------------------
+// These functions use data or functions not available in the shadow pass
+//-----------------------------------------------------------------------------
+
+#if defined(UNITY_STANDARD_BRDF_INCLUDED)
+
 SCSS_Input applyDetail(SCSS_Input c, float4 texcoords)
 {
 	c.albedo *= LerpWhiteTo(_Color.rgb, ColorMask(texcoords.xy));
@@ -438,23 +485,6 @@ SCSS_Input applyDetail(SCSS_Input c, float4 texcoords)
 #endif
     return c;
 }
-
-half ClippingMask(float2 uv)
-{
-	return saturate(UNITY_SAMPLE_TEX2D_SAMPLER(_ClippingMask, _MainTex, uv) + _Tweak_Transparency);
-}
-
-half Alpha(float2 uv)
-{
-	half alpha = _Color.a;
-	switch(_AlbedoAlphaMode)
-	{
-		case 0: alpha *= UNITY_SAMPLE_TEX2D(_MainTex, uv).a; break;
-		case 2: alpha *= ClippingMask(uv); break;
-	}
-	return alpha;
-}
-
 
 half4 SpecularGloss(float4 texcoords, half mask)
 {
@@ -477,11 +507,6 @@ half4 SpecularGloss(float4 texcoords, half mask)
 #endif
 
     return sg;
-}
-
-half3 Emission(float2 uv)
-{
-    return UNITY_SAMPLE_TEX2D_SAMPLER(_EmissionMap, _MainTex, uv).rgb;
 }
 
 float2 EmissionDetailTexCoords(VertexOutput v)
@@ -532,22 +557,6 @@ half3 NormalInTangentSpace(float4 texcoords, half mask)
 #endif
 
     return normalTangent;
-}
-
-// This is based on a typical calculation for tonemapping
-// scenes to screens, but in this case we want to flatten
-// and shift the image colours.
-// Lavender's the most aesthetic colour for this.
-float3 AutoToneMapping(float3 color)
-{
-  	const float A = 0.7;
-  	const float3 B = float3(.74, 0.6, .74); 
-  	const float C = 0;
-  	const float D = 1.59;
-  	const float E = 0.451;
-	color = max((0.0), color - (0.004));
-	color = (color * (A * color + B)) / (color * (C * color + D) + E);
-	return color;
 }
 
 #if !defined(SCSS_CROSSTONE)
@@ -638,7 +647,6 @@ float adjustShadeMap(float x, float y)
 {
 	// Might be changed later.
 	return (x * (1+y));
-
 }
 
 float ShadingGradeMap (float2 uv)
@@ -661,17 +669,20 @@ float innerOutline (VertexOutput i)
 
 float3 applyOutline(float3 col, float is_outline)
 {    
+	#if defined(SCSS_OUTLINE)
 	col = lerp(col, col * _outline_color.rgb, is_outline);
     if (_OutlineMode == 2) 
     {
         col = lerp(col, _outline_color.rgb, is_outline);
     }
     return col;
+    #else
+    return col;
+	#endif
 }
 
 SCSS_Input applyOutline(SCSS_Input c, float is_outline)
 {
-
 	c.albedo = applyOutline(c.albedo, is_outline);
     if (_CrosstoneToneSeparation) c.tone[0].col = applyOutline(c.tone[0].col, is_outline);
 	if (_Crosstone2ndSeparation)  c.tone[1].col = applyOutline(c.tone[1].col, is_outline);
@@ -679,11 +690,6 @@ SCSS_Input applyOutline(SCSS_Input c, float is_outline)
     return c;
 }
 
-void applyVanishing (inout float alpha) {
-    const fixed3 baseWorldPos = unity_ObjectToWorld._m03_m13_m23;
-    float closeDist = distance(_WorldSpaceCameraPos, baseWorldPos);
-    float vanishing = saturate(lerpstep(_VanishingStart, _VanishingEnd, closeDist));
-    alpha = lerp(alpha, alpha * vanishing, _UseVanishing);
-}
+#endif // if UNITY_STANDARD_BRDF_INCLUDED
 
 #endif // SCSS_INPUT_INCLUDED

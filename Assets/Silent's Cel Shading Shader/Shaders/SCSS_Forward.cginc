@@ -40,6 +40,7 @@ VertexOutput vert(appdata_full v) {
 		break;
 	}
 
+	#if defined(SCSS_OUTLINE)
 	#if defined(SCSS_USE_OUTLINE_TEXTURE)
 	o.extraData.x *= OutlineMask(v.texcoord.xy);
 	#endif
@@ -50,6 +51,10 @@ VertexOutput vert(appdata_full v) {
 	// they can have holes, being shells. This is also why it is clamped to not make them bigger.
 	// That looks good at a distance, but not perfect. 
 	o.extraData.x *= min(distance(o.posWorld,_WorldSpaceCameraPos)*4, 1); 
+	#else
+	// Remove outline data when no outline present.
+	o.extraData.xz = 0.0;
+	#endif
 
 #if (UNITY_VERSION<600)
 	TRANSFER_SHADOW(o);
