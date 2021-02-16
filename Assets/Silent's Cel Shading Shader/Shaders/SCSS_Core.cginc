@@ -141,6 +141,7 @@ float3 sampleCrossToneLighting(inout float x, SCSS_TonemapInput tone0, SCSS_Tone
 	return final;
 }
 
+#if !defined(SCSS_CROSSTONE)
 float applyShadowLift(float baseLight, float occlusion)
 {
 	baseLight *= occlusion;
@@ -154,6 +155,7 @@ float applyShadowLift(float4 baseLight, float occlusion)
 	baseLight = _ShadowLift + baseLight * (1-_ShadowLift);
 	return baseLight;
 }
+#endif
 
 float getRemappedLight(half perceptualRoughness, SCSS_LightParam d)
 {
@@ -678,7 +680,7 @@ float3 SCSS_ApplyLighting(SCSS_Input c, VertexOutput i, float4 texcoords)
 		if (applyToLightBias) c.occlusion += saturate(rimBase) * (1-isOutline);
 		// Ambient
 		// If applied to the final output, it can only be applied later.
-		if (applyToFinal) finalRimLight = rimFinal;
+		if (applyToFinal) finalRimLight = rimFinal * (1-isOutline);
 
 	}
 

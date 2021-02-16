@@ -188,6 +188,7 @@ Shader "Silent's Cel Shading/Crosstone (Outline)"
 		#pragma multi_compile _ UNITY_HDR_ON
 
 		#define SCSS_CROSSTONE
+		#define SCSS_OUTLINE
 		#define SCSS_USE_OUTLINE_TEXTURE
         ENDCG
 

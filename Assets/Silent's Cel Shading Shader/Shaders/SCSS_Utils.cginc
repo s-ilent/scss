@@ -191,6 +191,10 @@ bool backfaceInMirror()
 	#endif
 }
 
+//-----------------------------------------------------------------------------
+// These functions rely on data or functions not available in the shadow pass
+//-----------------------------------------------------------------------------
+
 #if defined(UNITY_STANDARD_BRDF_INCLUDED)
 
 struct SCSS_Light
@@ -580,6 +584,40 @@ float3 applyBlendMode(int blendOp, half3 a, half3 b, half t)
 float3 applyMatcap(sampler2D src, half2 matcapUV, float3 dst, float3 tint, int blendMode, float blendStrength)
 {
     return applyBlendMode(blendMode, dst, tex2D(src, matcapUV) * tint, blendStrength);
+}
+
+// Source: https://qiita.com/Santarh/items/428d2e0f33852e6f37b5
+static float getScreenAspectRatio()
+{
+    // Take the position of the top-right vertice of the near plane in projection space,
+    // and convert it back to view space.
+
+    // Upper right corner, so (x, y) = (1, 1)
+    // Since we want the near plane, z is dependant on API (0: DirectX, -1: OpenGL)
+    // And w is the near clip plane itself. 
+    float4 projectionSpaceUpperRight = float4(1, 1, UNITY_NEAR_CLIP_VALUE, _ProjectionParams.y);
+
+    // Apply the inverse projection matrix...
+    float4 viewSpaceUpperRight = mul(unity_CameraInvProjection, projectionSpaceUpperRight);
+
+    // ...and the aspect ratio is width / height. 
+    return viewSpaceUpperRight.x / viewSpaceUpperRight.y;
+}
+
+// This is based on a typical calculation for tonemapping
+// scenes to screens, but in this case we want to flatten
+// and shift the image colours.
+// Lavender's the most aesthetic colour for this.
+float3 AutoToneMapping(float3 color)
+{
+    const float A = 0.7;
+    const float3 B = float3(.74, 0.6, .74); 
+    const float C = 0;
+    const float D = 1.59;
+    const float E = 0.451;
+    color = max((0.0), color - (0.004));
+    color = (color * (A * color + B)) / (color * (C * color + D) + E);
+    return color;
 }
 
 #endif // if UNITY_STANDARD_BRDF_INCLUDED

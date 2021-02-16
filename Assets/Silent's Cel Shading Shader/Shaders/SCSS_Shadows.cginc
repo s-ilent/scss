@@ -4,6 +4,7 @@
 #include "UnityCG.cginc"
 #include "UnityShaderVariables.cginc"
 #include "SCSS_Utils.cginc"
+#include "SCSS_Input.cginc"
 
 #pragma multi_compile_shadowcaster
 #pragma fragmentoption ARB_precision_hint_fastest
@@ -21,21 +22,21 @@
     #define UNITY_STANDARD_USE_SHADOW_UVS 1
 #endif
 
-uniform float4      _Color;
-uniform float       _Cutoff;
-uniform sampler2D   _MainTex;
-uniform sampler2D   _ClippingMask;
-uniform float4      _MainTex_ST;
+//uniform float4      _Color;
+//uniform float       _Cutoff;
+//uniform sampler2D   _MainTex;
+//uniform sampler2D   _ClippingMask;
+//uniform float4      _MainTex_ST;
 #ifdef UNITY_STANDARD_USE_DITHER_MASK
     uniform sampler3D   _DitherMaskLOD;
 #endif
 
-uniform float       _AlbedoAlphaMode;
-uniform float       _VanishingStart;
-uniform float       _VanishingEnd;
-uniform float       _UseVanishing;
-uniform float       _AlphaSharp;
-uniform float       _Tweak_Transparency;
+//uniform float       _AlbedoAlphaMode;
+//uniform float       _VanishingStart;
+//uniform float       _VanishingEnd;
+//uniform float       _UseVanishing;
+//uniform float       _AlphaSharp;
+//uniform float       _Tweak_Transparency;
 
 struct VertexInput
 {
@@ -55,6 +56,16 @@ struct VertexOutputShadowCaster
         float2 tex : TEXCOORD1;
     #endif
 };
+
+float4 TexCoordsShadowCaster(VertexOutputShadowCaster v)
+{
+    float4 texcoord;
+    texcoord.xy = TRANSFORM_TEX(v.tex, _MainTex);// Always source from uv0
+    texcoord.xy = _PixelSampleMode? 
+        sharpSample(_MainTex_TexelSize * _MainTex_ST.xyxy, texcoord.xy) : texcoord.xy;
+
+    return texcoord;
+}
 #endif
 
 // We have to do these dances of outputting SV_POSITION separately from the vertex shader,
@@ -71,31 +82,8 @@ void vertShadowCaster(VertexInput v,
     //TRANSFER_SHADOW_CASTER_NOPOS_LEGACY (o, opos)
 
     #if defined(UNITY_STANDARD_USE_SHADOW_UVS)
-        o.tex = TRANSFORM_TEX(v.uv0, _MainTex);
+        o.tex = AnimateTexcoords(v.uv0);;
     #endif
-}
-
-half ClippingMask(float2 uv)
-{
-    return saturate(tex2D(_ClippingMask, uv) + _Tweak_Transparency);
-}
-
-half Alpha(float2 uv)
-{
-    half alpha = _Color.a;
-    switch(_AlbedoAlphaMode)
-    {
-        case 0: alpha *= tex2D(_MainTex, uv).a; break;
-        case 2: alpha *= ClippingMask(uv); break;
-    }
-    return alpha;
-}
-
-void applyVanishing (inout float alpha) {
-    const fixed3 baseWorldPos = unity_ObjectToWorld._m03_m13_m23;
-    float closeDist = distance(_WorldSpaceCameraPos, baseWorldPos);
-    float vanishing = saturate(lerpstep(_VanishingStart, _VanishingEnd, closeDist));
-    alpha = lerp(alpha, alpha * vanishing, _UseVanishing);
 }
 
 half4 fragShadowCaster(
@@ -113,7 +101,9 @@ half4 fragShadowCaster(
 ) : SV_Target
 {
     #if defined(UNITY_STANDARD_USE_SHADOW_UVS)
-        half alpha = Alpha(i.tex);
+        float4 texcoords = TexCoordsShadowCaster(i);
+        fixed3 albedo = Albedo(texcoords);
+        half alpha = Alpha(texcoords);
 
         #if defined(ALPHAFUNCTION)
         alphaFunction(alpha);
