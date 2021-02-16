@@ -15,6 +15,8 @@ Material:
   m_DoubleSidedGI: 0
   m_CustomRenderQueue: 2000
   stringTagMap:
+    BakedShaderFolder: Sample_SCSS-01c4a736
+    OriginalShader: Silent's Cel Shading/Lightramp (Outline)
     RenderType: Opaque
   disabledShaderPasses: []
   m_SavedProperties:
@@ -191,6 +193,8 @@ Material:
     - _DiffuseGeomShadowFactor: 1
     - _DstBlend: 0
     - _EmissionPower: 0
+    - _EmissiveLightSenseEnd: 0
+    - _EmissiveLightSenseStart: 1
     - _FakeLight: 0
     - _FakeLightAngle: 45
     - _FrameNumber: 0
@@ -254,11 +258,13 @@ Material:
     - _ThicknessMapPower: 1
     - _TotalFrames: 4
     - _Tweak_ShadingGradeMapLevel: 0
+    - _Tweak_Transparency: 0
     - _UVSec: 0
     - _UseAdvancedEmission: 0
     - _UseAnimation: 0
     - _UseDetailMaps: 0
     - _UseDetailNormal: 0
+    - _UseEmissiveLightSense: 0
     - _UseEnergyConservation: 1
     - _UseFresnel: 0
     - _UseFresnelLightMask: 0
@@ -275,6 +281,7 @@ Material:
     - _WriteMask: 255
     - _ZTest: 4
     - _ZWrite: 1
+    - __Baked: 0
     - __dirty: 0
     - _outline_tint: 0.5
     - _outline_width: 0.1
@@ -289,6 +296,10 @@ Material:
     - _FresnelTint: {r: 1, g: 1, b: 1, a: 1}
     - _FresnelTintInv: {r: 1, g: 1, b: 1, a: 1}
     - _LightSkew: {r: 1, g: 0.1, b: 1, a: 0}
+    - _Matcap1Tint: {r: 1, g: 1, b: 1, a: 1}
+    - _Matcap2Tint: {r: 1, g: 1, b: 1, a: 1}
+    - _Matcap3Tint: {r: 1, g: 1, b: 1, a: 1}
+    - _Matcap4Tint: {r: 1, g: 1, b: 1, a: 1}
     - _SSSCol: {r: 1, g: 1, b: 1, a: 1}
     - _ShadowMaskColor: {r: 1, g: 1, b: 1, a: 1}
     - _SpecColor: {r: 1, g: 1, b: 1, a: 1}
