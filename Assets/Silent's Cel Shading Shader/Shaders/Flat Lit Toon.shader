@@ -6,7 +6,7 @@ Shader "Silent's Cel Shading/Lightramp (Outline)"
 		_MainTex("Main Texture", 2D) = "white" {}
 		_Color("Tint", Color) = (1,1,1,1)
 		_Cutoff("Alpha Cutoff", Range(0,1)) = 0.5
-		[ToggleUI]_AlphaSharp("Disable Dithering for Cutout", Float) = 0.0
+		[Enum(TransparencyMode)]_AlphaSharp("Transparency Mode", Float) = 0.0
 		//[Space]
 		_ColorMask("Color Mask Map", 2D) = "white" {}
 		_ClippingMask ("Alpha Transparency Map", 2D) = "white" {}

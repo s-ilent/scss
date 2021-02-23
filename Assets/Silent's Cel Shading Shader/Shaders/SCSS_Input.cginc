@@ -5,8 +5,7 @@
 
 // Keyword squeezing. 
 
-// Not implemented: _DETAIL_MUL, _DETAIL_ADD, _DETAIL_LERP
-#if (defined(_DETAIL_MULX2))
+#if (defined(_DETAIL_MULX2) || defined(_DETAIL_MUL) || defined(_DETAIL_ADD) || defined(_DETAIL_LERP))
     #define _DETAIL
 #endif
 
@@ -432,6 +431,7 @@ half3 Emission(float2 uv)
 
 half ClippingMask(float2 uv)
 {
+	uv = TRANSFORM_TEX(uv, _ClippingMask);
 	// Workaround for shadow compiler error. 
 	#if defined(SHADOWS_INCLUDED)
 	float alpha = UNITY_SAMPLE_TEX2D(_ClippingMask, uv);
@@ -465,23 +465,36 @@ void applyVanishing (inout float alpha) {
 
 #if defined(UNITY_STANDARD_BRDF_INCLUDED)
 
+float3 applyDetailToAlbedo(float3 albedo, float3 detail, float mask)
+{
+    #if defined(_DETAIL_MULX2)
+    	albedo *= LerpWhiteTo (detail.rgb * unity_ColorSpaceDouble.rgb, mask);
+    #elif defined(_DETAIL_MUL)
+        albedo *= LerpWhiteTo (detail.rgb, mask);
+    #elif defined(_DETAIL_ADD)
+        albedo += detail.rgb * mask;
+    #elif defined(_DETAIL_LERP)
+        albedo = lerp (albedo, detail.rgb, mask);
+    #endif
+    // Don't allow more than 1.0 albedo
+    return saturate(albedo);
+}
+
 SCSS_Input applyDetail(SCSS_Input c, float4 texcoords)
 {
 	c.albedo *= LerpWhiteTo(_Color.rgb, ColorMask(texcoords.xy));
-	c.tone[0].col *= LerpWhiteTo(_Color.rgb, ColorMask(texcoords.xy));
-	c.tone[1].col *= LerpWhiteTo(_Color.rgb, ColorMask(texcoords.xy));
+	if (_CrosstoneToneSeparation) c.tone[0].col *= LerpWhiteTo(_Color.rgb, ColorMask(texcoords.xy));
+	if (_Crosstone2ndSeparation) c.tone[1].col *= LerpWhiteTo(_Color.rgb, ColorMask(texcoords.xy));
 
 #if defined(_DETAIL)
     half mask = DetailMask(texcoords.xy);
     half4 detailAlbedo = UNITY_SAMPLE_TEX2D_SAMPLER (_DetailAlbedoMap, _DetailAlbedoMap, texcoords.zw);
     mask *= detailAlbedo.a;
     mask *= _DetailAlbedoMapScale;
-    #if defined(_DETAIL_MULX2)
-        c.albedo *= LerpWhiteTo (detailAlbedo.rgb * unity_ColorSpaceDouble.rgb, mask);
-        c.tone[0].col *= LerpWhiteTo (detailAlbedo.rgb * unity_ColorSpaceDouble.rgb, mask);
-		c.tone[1].col *= LerpWhiteTo (detailAlbedo.rgb * unity_ColorSpaceDouble.rgb, mask);
-    #endif
-        // Not implemented: _DETAIL_MUL, _DETAIL_ADD, _DETAIL_LERP
+
+	c.albedo = applyDetailToAlbedo(c.albedo, detailAlbedo, mask);
+    if (_CrosstoneToneSeparation) c.tone[0].col = applyDetailToAlbedo(c.tone[0].col, detailAlbedo, mask);
+	if (_Crosstone2ndSeparation)  c.tone[1].col = applyDetailToAlbedo(c.tone[1].col, detailAlbedo, mask);
 #endif
     return c;
 }
