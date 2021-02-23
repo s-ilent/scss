@@ -51,6 +51,12 @@ namespace SilentCelShading.Unity
 			Simple
 		}
 
+		public enum TransparencyMode
+		{
+			Soft,
+			Sharp
+		}
+
 		protected Material target;
 		protected MaterialEditor editor;
 		Dictionary<string, MaterialProperty> props = new Dictionary<string, MaterialProperty>();
@@ -485,21 +491,11 @@ namespace SilentCelShading.Unity
 
 			EditorGUILayout.Space();
 			TexturePropertySingleLine("_MainTex", "_Color");
+
 			TexturePropertySingleLine("_BumpMap", "_BumpScale");
 
-			if ((AlbedoAlphaMode)props["_AlbedoAlphaMode"].floatValue == AlbedoAlphaMode.ClippingMask)
-			{
-				TexturePropertySingleLine("_ClippingMask", "_Tweak_Transparency");
-			}
+			TexturePropertySingleLine("_ColorMask");
 
-			EditorGUI.indentLevel += 2;
-			if ((RenderingMode)props[BaseStyles.renderingModeName].floatValue > 0)
-			{
-				ShaderProperty("_Cutoff");
-				ShaderProperty("_AlphaSharp");
-			}
-			EditorGUI.indentLevel -= 2;
-			TexturePropertySingleLine("_ColorMask");			
 			// For Standard compatibility, but not sure what the purpose is
 			if (WithChangeCheck(() => 
 			{
@@ -508,7 +504,23 @@ namespace SilentCelShading.Unity
 			{
 				props["_EmissionMap"].textureScaleAndOffset = props["_MainTex"].textureScaleAndOffset;		
 			}
+
+			if ((AlbedoAlphaMode)props["_AlbedoAlphaMode"].floatValue == AlbedoAlphaMode.ClippingMask)
+			{
+				EditorGUILayout.Space();
+				TexturePropertySingleLine("_ClippingMask", "_Tweak_Transparency");
+				editor.TextureScaleOffsetProperty(props["_ClippingMask"]);
+			}
 			EditorGUILayout.Space();
+
+			if ((RenderingMode)props[BaseStyles.renderingModeName].floatValue > 0)
+			{
+				foreach (Material mat in WithMaterialPropertyDropdown(props["_AlphaSharp"], Enum.GetNames(typeof(TransparencyMode)), editor))
+				{
+					SetupMaterialWithTransparencyMode(mat, (TransparencyMode)props["_AlphaSharp"].floatValue);
+				}
+				ShaderProperty("_Cutoff");
+			}
 		}
 
 		protected void ShadingOptions()
@@ -939,6 +951,20 @@ namespace SilentCelShading.Unity
 			}
 
 			editor.EnableInstancingField();
+		}
+
+		public static void SetupMaterialWithTransparencyMode(Material material, TransparencyMode shadowMaskType)
+		{
+			switch ((TransparencyMode)material.GetFloat("_AlphaSharp"))
+			{
+				case TransparencyMode.Sharp:
+				material.SetFloat("_AlphaSharp", 1);
+				break;
+				default:
+				case TransparencyMode.Soft:
+				material.SetFloat("_AlphaSharp", 0);
+				break;
+			}
 		}
 
 		public static void SetupMaterialWithShadowMaskType(Material material, ShadowMaskType shadowMaskType)
