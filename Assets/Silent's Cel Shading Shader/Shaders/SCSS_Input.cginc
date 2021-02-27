@@ -476,8 +476,8 @@ float3 applyDetailToAlbedo(float3 albedo, float3 detail, float mask)
     #elif defined(_DETAIL_LERP)
         albedo = lerp (albedo, detail.rgb, mask);
     #endif
-    // Don't allow more than 1.0 albedo
-    return saturate(albedo);
+    // Standard doesn't saturate albedo, but it can't go negative.
+    return max(albedo, 0);
 }
 
 SCSS_Input applyDetail(SCSS_Input c, float4 texcoords)
