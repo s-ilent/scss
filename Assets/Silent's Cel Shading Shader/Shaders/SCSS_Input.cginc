@@ -25,7 +25,7 @@ UNITY_DECLARE_TEX2D_NOSAMPLER(_BumpMap); uniform half4 _BumpMap_ST;
 UNITY_DECLARE_TEX2D_NOSAMPLER(_EmissionMap); uniform half4 _EmissionMap_ST;
 
 // Workaround for shadow compiler error. 
-#if defined(SHADOWS_INCLUDED)
+#if defined(SCSS_SHADOWS_INCLUDED)
 UNITY_DECLARE_TEX2D(_ClippingMask); uniform half4 _ClippingMask_ST;
 #else
 UNITY_DECLARE_TEX2D_NOSAMPLER(_ClippingMask); uniform half4 _ClippingMask_ST;
@@ -210,7 +210,8 @@ struct VertexOutput
 	half4 extraData : EXTRA_DATA;
 
 	// Pass-through the shadow coordinates if this pass has shadows.
-	#if defined(USING_SHADOWS_UNITY)
+	// Note the workaround for UNITY_SHADOW_COORDS issue. 
+	#if defined(USING_SHADOWS_UNITY) && defined(UNITY_SHADOW_COORDS)
 	UNITY_SHADOW_COORDS(8)
 	#endif
 
@@ -433,7 +434,7 @@ half ClippingMask(float2 uv)
 {
 	uv = TRANSFORM_TEX(uv, _ClippingMask);
 	// Workaround for shadow compiler error. 
-	#if defined(SHADOWS_INCLUDED)
+	#if defined(SCSS_SHADOWS_INCLUDED)
 	float alpha = UNITY_SAMPLE_TEX2D(_ClippingMask, uv);
 	#else
 	float alpha = UNITY_SAMPLE_TEX2D_SAMPLER(_ClippingMask, _MainTex, uv);

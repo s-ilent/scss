@@ -5,23 +5,7 @@
 #include "AutoLight.cginc"
 #include "Lighting.cginc"
 
-// Perform full-quality light calculations on unimportant lights.
-// Considering our target GPUs, this is a big visual improvement
-// for a small performance penalty.
-#define SCSS_UNIMPORTANT_LIGHTS_FRAGMENT 1
-
-// When rendered by a non-HDR camera, clamp incoming lighting.
-// This works around issues where scenes are set up incorrectly
-// for non-HDR.
-#define SCSS_CLAMP_IN_NON_HDR 1
-
-// When screen-space shadows are used in the scene, performs a
-// search to find the best sampling point for the shadow
-// using the camera's depth buffer. This filters away many aliasing
-// artifacts caused by limitations in the screen shadow technique
-// used by directional lights.
-#define SCSS_SCREEN_SHADOW_FILTER 1
-
+#include "SCSS_Config.cginc"
 #include "SCSS_UnityGI.cginc"
 #include "SCSS_Utils.cginc"
 #include "SCSS_Input.cginc"
