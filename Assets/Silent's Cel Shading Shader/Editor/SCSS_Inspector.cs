@@ -59,7 +59,7 @@ namespace SilentCelShading.Unity
 
 		protected Material target;
 		protected MaterialEditor editor;
-		Dictionary<string, MaterialProperty> props = new Dictionary<string, MaterialProperty>();
+		protected Dictionary<string, MaterialProperty> props = new Dictionary<string, MaterialProperty>();
 
     	public int scssSettingsComplexityMode = 1;
 
@@ -254,14 +254,14 @@ namespace SilentCelShading.Unity
 			return false;
 		}
 		
-        public static void Vector2Property(MaterialProperty property, GUIContent name)
+        protected static void Vector2Property(MaterialProperty property, GUIContent name)
         {
             EditorGUI.BeginChangeCheck();
             Vector2 vector2 = EditorGUILayout.Vector2Field(name,new Vector2(property.vectorValue.x, property.vectorValue.y),null);
             if (EditorGUI.EndChangeCheck())
                 property.vectorValue = new Vector4(vector2.x, vector2.y, property.vectorValue.z, property.vectorValue.w);
         }
-        public static void Vector2PropertyZW(MaterialProperty property, GUIContent name)
+        protected static void Vector2PropertyZW(MaterialProperty property, GUIContent name)
         {
             EditorGUI.BeginChangeCheck();
             Vector2 vector2 = EditorGUILayout.Vector2Field(name,new Vector2(property.vectorValue.z, property.vectorValue.w),null);
@@ -953,7 +953,7 @@ namespace SilentCelShading.Unity
 			editor.EnableInstancingField();
 		}
 
-		public static void SetupMaterialWithTransparencyMode(Material material, TransparencyMode shadowMaskType)
+		protected static void SetupMaterialWithTransparencyMode(Material material, TransparencyMode shadowMaskType)
 		{
 			switch ((TransparencyMode)material.GetFloat("_AlphaSharp"))
 			{
@@ -967,7 +967,7 @@ namespace SilentCelShading.Unity
 			}
 		}
 
-		public static void SetupMaterialWithShadowMaskType(Material material, ShadowMaskType shadowMaskType)
+		protected static void SetupMaterialWithShadowMaskType(Material material, ShadowMaskType shadowMaskType)
 		{
 			switch ((ShadowMaskType)material.GetFloat("_ShadowMaskType"))
 			{
@@ -985,7 +985,7 @@ namespace SilentCelShading.Unity
 			}
 		}
 
-		public static void SetupMaterialWithLightRampType(Material material, LightRampType lightRampType)
+		protected static void SetupMaterialWithLightRampType(Material material, LightRampType lightRampType)
 		{
 			switch ((LightRampType)material.GetFloat("_LightRampType"))
 			{
@@ -1121,8 +1121,10 @@ protected Vector4? GetSerializedMaterialVector4(Material material, string propNa
 
             float? specularType = GetFloatProperty(material, "_SpecularType");
             Texture specularMap = GetTextureProperty(material, "_SpecGlossMap");
+            Texture specularDetailMask = GetTextureProperty(material, "_SpecularDetailMask");
             Color? specularTint = GetColorProperty(material, "_SpecColor");
             float? smoothness = GetFloatProperty(material, "_Smoothness");
+            float? celSpecularSoftness = GetFloatProperty(material, "_CelSpecularSoftness");
 
             float? useFresnel = GetFloatProperty(material, "_UseFresnel");
             float? fresnelWidth = GetFloatProperty(material, "_FresnelWidth");
@@ -1168,11 +1170,21 @@ protected Vector4? GetSerializedMaterialVector4(Material material, string propNa
 
                     // HighColor is only supported in Specular mode
                     specularMap = GetTextureProperty(material, "_HighColor_Tex");
+					if (specularMap) { specularDetailMask = GetTextureProperty(material, "_Set_HighColorMask"); }
+					else { specularMap = GetTextureProperty(material, "_Set_HighColorMask"); };
                     specularType = GetFloatProperty(material, "_Is_SpecularToHighColor");
+					//if (specularDetailMask.HasValue) 
                     if (specularType.HasValue) specularType = (float)SpecularType.Cel * specularType;
                     specularTint = GetColorProperty(material, "_HighColor");
+					{
+						Color specularTint_var = (specularTint.HasValue)? (specularTint.Value) : (Color.white);
+						specularTint_var.a *= 0.1f;
+						specularTint = specularTint_var;
+					}
+
                     smoothness = GetFloatProperty(material, "_HighColor_Power");
                     if (smoothness.HasValue) smoothness = 1.0f - smoothness;
+					celSpecularSoftness = GetFloatProperty(material, "_Is_SpecularToHighColor");
 
                     // Rim lighting works differently here, but there's not much we can do about it. 
                     useFresnel = GetFloatProperty(material, "_RimLight");
@@ -1295,6 +1307,7 @@ protected Vector4? GetSerializedMaterialVector4(Material material, string propNa
             SetFloatProperty(material, "_SpecularType", specularType);
             SetColorProperty(material, "_SpecColor", specularTint);
             SetFloatProperty(material, "_Smoothness", smoothness);
+            SetFloatProperty(material, "_CelSpecularSoftness", celSpecularSoftness);
             SetFloatProperty(material, "_UseFresnel", useFresnel);
             SetFloatProperty(material, "_FresnelWidth", fresnelWidth);
             SetFloatProperty(material, "_FresnelStrength", fresnelStrength);
@@ -1343,6 +1356,10 @@ protected Vector4? GetSerializedMaterialVector4(Material material, string propNa
 	                }
 	            	if (oldShader.name.Contains("TransClipping"))
 	                {
+	                    mode = RenderingMode.Cutout;
+	                }
+	            	if (oldShader.name.Contains("Transparent"))
+	                {
 	                    mode = RenderingMode.Fade;
 	                }
 	            }
@@ -1353,7 +1370,7 @@ protected Vector4? GetSerializedMaterialVector4(Material material, string propNa
             }
         }
 
-		public static void SetupMaterialWithAlbedo(Material material, MaterialProperty albedoMap, MaterialProperty albedoAlphaMode)
+		protected static void SetupMaterialWithAlbedo(Material material, MaterialProperty albedoMap, MaterialProperty albedoAlphaMode)
 		{
 			switch ((AlbedoAlphaMode)albedoAlphaMode.floatValue)
 			{
@@ -1371,7 +1388,7 @@ protected Vector4? GetSerializedMaterialVector4(Material material, string propNa
 			}
 		}
 
-		public static void SetupMaterialWithOutlineMode(Material material, OutlineMode outlineMode)
+		protected static void SetupMaterialWithOutlineMode(Material material, OutlineMode outlineMode)
 		{
 			string[] oldShaderName = material.shader.name.Split('/');
             const string outlineName = " (Outline)"; //
@@ -1406,7 +1423,7 @@ protected Vector4? GetSerializedMaterialVector4(Material material, string propNa
             }
         }
 
-        public static void SetupMaterialWithSpecularType(Material material, SpecularType specularType)
+        protected static void SetupMaterialWithSpecularType(Material material, SpecularType specularType)
         {
             // Note: _METALLICGLOSSMAP is used to avoid keyword problems with VRchat.
             // It's only a coincidence that the metallic map needs to be present.
@@ -1449,7 +1466,7 @@ protected Vector4? GetSerializedMaterialVector4(Material material, string propNa
         	}
         }
 
-        public static void SetupMaterialWithVertexColorType(Material material, VertexColorType vertexColorType)
+        protected static void SetupMaterialWithVertexColorType(Material material, VertexColorType vertexColorType)
         {
         	switch ((VertexColorType)material.GetFloat("_VertexColorType"))
         	{
@@ -1470,7 +1487,7 @@ protected Vector4? GetSerializedMaterialVector4(Material material, string propNa
         	}
         }
         
-        public static void SetupMaterialWithLightingCalculationType(Material material, LightingCalculationType LightingCalculationType)
+        protected static void SetupMaterialWithLightingCalculationType(Material material, LightingCalculationType LightingCalculationType)
         {
         	switch ((LightingCalculationType)material.GetFloat("_LightingCalculationType"))
         	{   
@@ -1493,7 +1510,7 @@ protected Vector4? GetSerializedMaterialVector4(Material material, string propNa
         	}
         }
 
-	    public static void UpgradeVariantCheck(Material material)
+	    protected static void UpgradeVariantCheck(Material material)
 	    {
 	        const string oldNoOutlineName = "☓ No Outline";
 	        string newShaderName = "Silent's Cel Shading/Lightramp";

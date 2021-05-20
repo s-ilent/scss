@@ -8,7 +8,7 @@ Material:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_Name: Sample_SCSS
-  m_Shader: {fileID: 4800000, guid: a883b384ca4bc054aa10b5f554ae85a3, type: 3}
+  m_Shader: {fileID: 4800000, guid: 932c3f8bb2ba7d04480beb8e4c98b2a8, type: 3}
   m_ShaderKeywords: _METALLICGLOSSMAP
   m_LightmapFlags: 4
   m_EnableInstancingVariants: 1
@@ -170,7 +170,7 @@ Material:
     - _1st_ShadeColor_Feather: 1
     - _1st_ShadeColor_Step: 1
     - _2nd_ShadeColor_Feather: 1
-    - _2nd_ShadeColor_Step: 0.496
+    - _2nd_ShadeColor_Step: 0.5
     - _AdditiveMatcapStrength: 1
     - _AlbedoAlphaMode: 0
     - _AlphaCutoff: 0.5
@@ -184,6 +184,7 @@ Material:
     - _CelSpecularSteps: 1
     - _ColorWriteMask: 15
     - _Columns: 2
+    - _Crosstone2ndSeparation: 0
     - _CrosstoneToneSeparation: 0
     - _CullMode: 2
     - _CustomMode: 0
@@ -287,7 +288,7 @@ Material:
     - _outline_width: 0.1
     m_Colors:
     - _1st_ShadeColor: {r: 0.7027852, g: 0.6213065, b: 0.735849, a: 1}
-    - _2nd_ShadeColor: {r: 0, g: 0, b: 0, a: 1}
+    - _2nd_ShadeColor: {r: 0.18431373, g: 0.18431373, b: 0.18431373, a: 1}
     - _AddAlbedoColor: {r: 0, g: 0, b: 0, a: 0}
     - _Color: {r: 1, g: 1, b: 1, a: 1}
     - _CustomFresnelColor: {r: 0, g: 0, b: 0, a: 1}

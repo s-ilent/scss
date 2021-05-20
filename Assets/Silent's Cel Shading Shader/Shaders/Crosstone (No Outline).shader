@@ -267,12 +267,8 @@ Shader "Silent's Cel Shading/Crosstone"
 			Name "SHADOW_CASTER"
 			Tags{ "LightMode" = "ShadowCaster" }
 
-            Blend[_SrcBlend][_DstBlend]
-            BlendOp[_BlendOp]
-            ZTest[_ZTest]
-            ZWrite[_ZWrite]
+            ZWrite On ZTest LEqual
             Cull[_CullMode]
-            ColorMask[_ColorWriteMask]
 
 			AlphaToMask Off
 

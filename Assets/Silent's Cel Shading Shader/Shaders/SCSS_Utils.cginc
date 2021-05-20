@@ -65,37 +65,40 @@ float rDither(float gray, float2 pos, float steps) {
 
 // "R2" dithering -- end
 
+#define ALPHA_SHOULD_DITHER_CLIP (defined(_ALPHATEST_ON) || defined(UNITY_PASS_SHADOWCASTER))
+
 inline void applyAlphaClip(inout float alpha, float cutoff, float2 pos, bool sharpen)
 {
+    // If this material isn't transparent, do nothing.
+    #if defined(USING_TRANSPARENCY)
+
     // Get the amount of MSAA samples present
     #if (SHADER_TARGET > 40)
     half samplecount = GetRenderTargetSampleCount();
     #else
-    half samplecount = 1;
+    half samplecount = 1; 
     #endif
 
     pos += _SinTime.x%4;
-    #if defined(USING_TRANSPARENCY)
     // Switch between dithered alpha and sharp-edge alpha.
         if (!sharpen) {
+            // If using true alpha blending, don't dither.
+            #if ALPHA_SHOULD_DITHER_CLIP
             alpha = (1+cutoff) * alpha - cutoff;
             float mask = (T(intensity(pos)));
             const float width = 1 / (samplecount*2-1);
             alpha = alpha - (mask * (1-(alpha)) * width);
+            #endif
         }
         else {
             alpha = ((alpha - cutoff) / max(fwidth(alpha), 0.0) + 0.5);
         }
 
-    #if defined(USING_TRANSPARENCY)
-        #if defined(_ALPHATEST_ON)
-            // If 0, remove now.
-            clip (alpha);
-        #else
-            alpha = saturate(alpha);
-        #endif
-    #endif
-
+        clip (alpha);
+        // If 0, remove now.
+        alpha = saturate(alpha);
+    #else
+    alpha = 1.0;
     #endif
 }
 
