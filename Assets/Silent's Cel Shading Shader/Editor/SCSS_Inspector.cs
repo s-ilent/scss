@@ -577,6 +577,9 @@ namespace SilentCelShading.Unity
 				TexturePropertySingleLine("_DetailEmissionMap");
 				editor.TextureScaleOffsetProperty(props["_DetailEmissionMap"]);
 				ShaderProperty("_DetailEmissionUVSec");
+				EditorGUI.indentLevel ++;
+				
+				WithMaterialPropertyDropdown(props["_EmissionDetailType"], Enum.GetNames(typeof(DetailEmissionMode)), editor);
 				MaterialProperty deProp;
 				if (props.TryGetValue("_EmissionDetailType", out deProp))
 				{
@@ -589,20 +592,18 @@ namespace SilentCelShading.Unity
 						break;
 						case DetailEmissionMode.AudioLink:
 						// AudioLink
-			WithGroupHorizontal(() => {
-			});
 						ShaderProperty("_alColorR");
 						ShaderProperty("_alColorG");
 						ShaderProperty("_alColorB");
 						ShaderProperty("_alColorA");
+						ShaderProperty("_alBandR");
+						ShaderProperty("_alBandG");
+						ShaderProperty("_alBandB");
+						ShaderProperty("_alBandA");
 						ShaderProperty("_alModeR");
 						ShaderProperty("_alModeG");
 						ShaderProperty("_alModeB");
 						ShaderProperty("_alModeA");
-						ShaderProperty("_alBandA");
-						ShaderProperty("_alBandR");
-						ShaderProperty("_alBandG");
-						ShaderProperty("_alBandB");
 						ShaderProperty("_alTimeRange");
 						ShaderProperty("_alUseFallback");
 						ShaderProperty("_alFallbackBPM");
@@ -614,6 +615,7 @@ namespace SilentCelShading.Unity
 						break;
 					}
 				}
+            	EditorGUI.indentLevel --;
 			} else {
 				target.DisableKeyword("_EMISSION");
 			}
