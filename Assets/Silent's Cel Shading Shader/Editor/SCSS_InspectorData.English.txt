@@ -8,6 +8,7 @@ _BumpMap	Normal Map	Normal map (RGB), which adjusts the direction of the surface
 _EmissionMap	Emission Map	Emission map (RGB), which controls emitted light that isn't affected by lighting.
 _UseAdvancedEmission	Advanced Emission	Applies additional effects to the emission map.
 _DetailEmissionMap	Emission Detail Mask	An additional texture multiplied against the main emission map. This allows adding additional detail patterns to the emissive texture.
+_DetailEmissionUVSec	UV Source	Selects which UV channel to use for detail emission.
 _EmissionDetailParams	Emission Detail Parameters	XY: Scrolling speed, ZW: Phase
 s_EmissionDetailScroll	Scroll	Sets the scrolling speed for the emission detail texture.
 s_EmissionDetailPhase	Phase/Pulse	Sets the phase of the emission detail texture. X controls the pulsing speed, and Y controls the phase. The higher the phase, the shorter the interval between repetitions.
@@ -77,6 +78,21 @@ _VanishingEnd	End Vanishing	The outer bound of the vanishing effect. The higher 
 _UseEmissiveLightSense	Light Sensitivity	Enables light sensitivity for emission, which will change the intensity of emission depending on the incoming light. This can be used to make emissive patterns that only glow in the dark, or that scale with light intensity.
 _EmissiveLightSenseStart	Glow Start	The threshold at which the glow starts. For example, setting this to 1 will hide the glow when there is 1 or more unit of light hitting the material.
 _EmissiveLightSenseEnd	Glow End	The threshold at which the glow ends.  For example, setting this to 0 will show the glow at full intensity when there is no light, and raising it will allow the maximum glow to be triggered even with light.
+_alColorR	Colour (R)	The colour of the effect applied to the first channel of the AudioLink pulse. Controlled by the Detail Emission Mask's R channel.
+_alColorG	Colour (G)	The colour of the effect applied to the second channel of the AudioLink pulse. Controlled by the Detail Emission Mask's G channel.
+_alColorB	Colour (B)	The colour of the effect applied to the third channel of the AudioLink pulse. Controlled by the Detail Emission Mask's B channel.
+_alColorA	Colour (A)	The colour of the effect applied to the fourth channel of the AudioLink pulse. Controlled by the Detail Emission Mask's A channel.
+_alModeR	Mode (R)	The type of effect created by the first channel of the AudioLink pulse.
+_alModeG	Mode (G)	The type of effect created by the second channel of the AudioLink pulse.
+_alModeB	Mode (B)	The type of effect created by the third channel of the AudioLink pulse.
+_alModeA	Mode (A)	The type of effect created by the fourth channel of the AudioLink pulse.
+_alBandR	Band (R)	Specifies the AudioLink band with which the first channel effect is applied.
+_alBandG	Band (G)	Specifies the AudioLink band with which the second channel effect is applied.
+_alBandB	Band (B)	Specifies the AudioLink band with which the third channel effect is applied.
+_alBandA	Band (A)	Specifies the AudioLink band with which the fourth channel effect is applied.
+_alTimeRange	Time Range	The size of the AudioLink pulse. The audio link is applied across the gradient of the texture. At 0, the pulse will appeas as a single flash. At 1, the pulse will show the entire AudioLink history across it.
+_alUseFallback	Enable Fallback	When a world does not have AudioLink, will display a constant pulse effect.
+_alFallbackBPM	Fallback BPM	The BPM to use for the fallback pulse.
 _ManualButton	This shader has a manual. Check it out!	For information on new features, old features, and just how to use the shader in general, check out the manual on the shader wiki!
 _Ramp	Lighting Ramp	Specifies the falloff of the lighting. In other words, it controls how light affects your model and how soft or sharp the transition between light and shadow is. \nNote: If a Lighting Ramp is not set, the material will have no shading.
 _ShadowMask	Shadow Mask	In Occlusion mode, specifies areas of shadow influence. RGB darkens, alpha lightens. In Tone mode, specifies colour of shading to use. RGB tints, alpha darkens.

@@ -57,6 +57,12 @@ namespace SilentCelShading.Unity
 			Sharp
 		}
 
+		public enum DetailEmissionMode
+		{
+			Phase,
+			AudioLink
+		}
+
 		protected Material target;
 		protected MaterialEditor editor;
 		protected Dictionary<string, MaterialProperty> props = new Dictionary<string, MaterialProperty>();
@@ -570,14 +576,44 @@ namespace SilentCelShading.Unity
 				target.EnableKeyword("_EMISSION");
 				TexturePropertySingleLine("_DetailEmissionMap");
 				editor.TextureScaleOffsetProperty(props["_DetailEmissionMap"]);
-				//ShaderProperty("_EmissionDetailParams");
-            	EditorGUI.indentLevel ++;
-				Vector2Property(props["_EmissionDetailParams"], Content("s_EmissionDetailScroll"));
-				Vector2PropertyZW(props["_EmissionDetailParams"], Content("s_EmissionDetailPhase"));
-				ShaderProperty("_UseEmissiveLightSense");
-				ShaderProperty("_EmissiveLightSenseStart");
-				ShaderProperty("_EmissiveLightSenseEnd");
-            	EditorGUI.indentLevel --;
+				ShaderProperty("_DetailEmissionUVSec");
+				MaterialProperty deProp;
+				if (props.TryGetValue("_EmissionDetailType", out deProp))
+				{
+					switch ((DetailEmissionMode)deProp.floatValue)
+					{
+						case DetailEmissionMode.Phase:
+						//ShaderProperty("_EmissionDetailParams");
+						Vector2Property(props["_EmissionDetailParams"], Content("s_EmissionDetailScroll"));
+						Vector2PropertyZW(props["_EmissionDetailParams"], Content("s_EmissionDetailPhase"));
+						break;
+						case DetailEmissionMode.AudioLink:
+						// AudioLink
+			WithGroupHorizontal(() => {
+			});
+						ShaderProperty("_alColorR");
+						ShaderProperty("_alColorG");
+						ShaderProperty("_alColorB");
+						ShaderProperty("_alColorA");
+						ShaderProperty("_alModeR");
+						ShaderProperty("_alModeG");
+						ShaderProperty("_alModeB");
+						ShaderProperty("_alModeA");
+						ShaderProperty("_alBandA");
+						ShaderProperty("_alBandR");
+						ShaderProperty("_alBandG");
+						ShaderProperty("_alBandB");
+						ShaderProperty("_alTimeRange");
+						ShaderProperty("_alUseFallback");
+						ShaderProperty("_alFallbackBPM");
+						ShaderProperty("_UseEmissiveLightSense");
+						ShaderProperty("_EmissiveLightSenseStart");
+						ShaderProperty("_EmissiveLightSenseEnd");
+						break;
+						default:
+						break;
+					}
+				}
 			} else {
 				target.DisableKeyword("_EMISSION");
 			}
