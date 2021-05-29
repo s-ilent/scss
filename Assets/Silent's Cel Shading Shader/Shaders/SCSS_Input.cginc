@@ -19,6 +19,10 @@
 
 //---------------------------------------
 
+#if defined(_EMISSION)
+#include "SCSS_AudioLink.cginc"
+#endif
+
 UNITY_DECLARE_TEX2D(_MainTex); uniform half4 _MainTex_ST; uniform half4 _MainTex_TexelSize;
 UNITY_DECLARE_TEX2D_NOSAMPLER(_ColorMask); uniform half4 _ColorMask_ST;
 UNITY_DECLARE_TEX2D_NOSAMPLER(_BumpMap); uniform half4 _BumpMap_ST;
@@ -41,7 +45,9 @@ uniform float _SpecularDetailStrength;
 #endif
 
 #if defined(_EMISSION)
-UNITY_DECLARE_TEX2D_NOSAMPLER(_DetailEmissionMap); uniform half4 _DetailEmissionMap_ST; uniform half4 _DetailEmissionMap_TexelSize;
+uniform float _EmissionDetailType;
+uniform float _DetailEmissionUVSec;
+UNITY_DECLARE_TEX2D(_DetailEmissionMap); uniform half4 _DetailEmissionMap_ST; uniform half4 _DetailEmissionMap_TexelSize;
 uniform float4 _EmissionDetailParams;
 uniform float _UseEmissiveLightSense;
 uniform float _EmissiveLightSenseStart;
@@ -527,7 +533,7 @@ float2 EmissionDetailTexCoords(VertexOutput v)
 {
 	float2 texcoord;
 #if defined(_EMISSION) 
-	texcoord.xy = TRANSFORM_TEX(((_UVSec == 0) ? v.uv0 : v.uv1), _DetailEmissionMap);
+	texcoord.xy = TRANSFORM_TEX(((_DetailEmissionUVSec == 0) ? v.uv0 : v.uv1), _DetailEmissionMap);
 	texcoord.xy = _PixelSampleMode? 
 		sharpSample(_DetailEmissionMap_TexelSize * _DetailEmissionMap_ST.xyxy, texcoord.xy) : texcoord.xy;
 #else
@@ -539,17 +545,35 @@ float2 EmissionDetailTexCoords(VertexOutput v)
 half4 EmissionDetail(float2 uv)
 {
 #if defined(_EMISSION) 
-	uv += _EmissionDetailParams.xy * _Time.y;
-	half4 ed = UNITY_SAMPLE_TEX2D_SAMPLER(_DetailEmissionMap, _MainTex, uv);
-	if (_EmissionDetailParams.z != 0)
+	if (_EmissionDetailType == 0) // Pulse
 	{
-		float s = (sin(ed.r * _EmissionDetailParams.w + _Time.y * _EmissionDetailParams.z))+1;
-		ed.rgb = s;
+		uv += _EmissionDetailParams.xy * _Time.y;
+		half4 ed = UNITY_SAMPLE_TEX2D_SAMPLER(_DetailEmissionMap, _DetailEmissionMap, uv);
+		if (_EmissionDetailParams.z != 0)
+		{
+			float s = (sin(ed.r * _EmissionDetailParams.w + _Time.y * _EmissionDetailParams.z))+1;
+			ed.rgb = s;
+		}
+		return ed;
 	}
-	return ed;
-#else
-	return 1;
+	if (_EmissionDetailType == 1) // AudioLink
+	{
+		// Load weights texture
+		half4 weights = UNITY_SAMPLE_TEX2D_SAMPLER(_DetailEmissionMap, _DetailEmissionMap, uv);
+		// Apply a small epsilon to the weights to avoid artifacts.
+	    const float epsilon = (1.0/255.0);
+	    weights = saturate(weights-epsilon);
+	    // sample the texture
+	    float4 col = 0;
+	    col.rgb += (_alBandR >= 1) ? audioLinkGetLayer(weights.r, _alBandR, _alModeR) * _alColorR : 0;
+	    col.rgb += (_alBandG >= 1) ? audioLinkGetLayer(weights.g, _alBandG, _alModeG) * _alColorG : 0;
+	    col.rgb += (_alBandB >= 1) ? audioLinkGetLayer(weights.b, _alBandB, _alModeB) * _alColorB : 0;
+	    col.rgb += (_alBandA >= 1) ? audioLinkGetLayer(weights.a, _alBandA, _alModeA) * _alColorA : 0;
+	    col.a = 1.0;
+	    return col;
+	}
 #endif
+	return 1;
 }
 
 half3 NormalInTangentSpace(float4 texcoords, half mask)

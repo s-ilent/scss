@@ -89,8 +89,26 @@ Shader "Silent's Cel Shading/Crosstone"
 		_SpecularDetailMask ("Specular Detail Mask", 2D) = "white" {}
 		_SpecularDetailStrength ("Specular Detail Strength", Range(0, 1)) = 1.0
 		[Toggle(_EMISSION)]_UseAdvancedEmission("Enable Advanced Emission", Float ) = 0.0
+        [Enum(UV0, 0, UV1, 1)]_DetailEmissionUVSec("Detail Emission UV Source", Float) = 0
+		_EmissionDetailType("Emission Detail Type", Float) = 0
 		_DetailEmissionMap("Detail Emission Map", 2D) = "white" {}
 		[HDR]_EmissionDetailParams("Emission Detail Params", Vector) = (0,0,0,0)
+		//[Space]
+        _alColorR("Red Channel Tint", Color)   = (1, 0.333, 0, 0)
+        _alColorG("Green Channel Tint", Color) = (0, 1, 0.333, 0)
+        _alColorB("Blue Channel Tint", Color)  = (0.33, 0, 1, 0)
+        _alColorA("Alpha Channel Tint", Color) = (0.333, 0.333, 0.333, 0)
+        [IntRange]_alBandR("Red Channel Band", Range(0, 4)) = 1
+        [IntRange]_alBandG("Green Channel Band", Range(0, 4)) = 2
+        [IntRange]_alBandB("Blue Channel Band", Range(0, 4)) = 3
+        [IntRange]_alBandA("Alpha Channel Band", Range(0, 4)) = 0
+        [Enum(Pulse, 0, VU, 1)]_alModeR("AudioLink Mode", Float) = 0
+        [Enum(Pulse, 0, VU, 1)]_alModeG("AudioLink Mode", Float) = 0
+        [Enum(Pulse, 0, VU, 1)]_alModeB("AudioLink Mode", Float) = 0
+        [Enum(Pulse, 0, VU, 1)]_alModeA("AudioLink Mode", Float) = 0
+        [Gamma]_alTimeRange("Audio Link Time Range", Range(0, 1)) = 1.0
+        [ToggleUI]_alUseFallback("Enable fallback", Float) = 1
+        _alFallbackBPM("Fallback BPM", Float) = 160
 		[Enum(UV0,0,UV1,1)]_UVSec ("UV Set Secondary", Float) = 0
 		//[Space]
 		[Toggle(_SUNDISK_NONE)]_UseSubsurfaceScattering ("Use Subsurface Scattering", Float) = 0.0
