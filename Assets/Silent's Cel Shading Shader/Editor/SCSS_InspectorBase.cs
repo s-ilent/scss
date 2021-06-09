@@ -301,8 +301,8 @@ namespace SilentCelShading.Unity
                         material.SetInt(BaseStyles.alphaToMaskName, (int)DepthWrite.Off);
                         material.SetInt(BaseStyles.colorWriteMaskName, (int)ColorWriteMask.All);
                         material.DisableKeyword(BaseStyles.alphaTestOnName);
-                        material.EnableKeyword(BaseStyles.alphaBlendOnName);
-                        material.DisableKeyword(BaseStyles.alphaPremultiplyOnName);
+                        material.DisableKeyword(BaseStyles.alphaBlendOnName);
+                        material.EnableKeyword(BaseStyles.alphaPremultiplyOnName);
                         material.renderQueue = (renderQueueOverride >= 0) ? renderQueueOverride : (int)RenderQueue.Transparent;
                     }
                     break;
