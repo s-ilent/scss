@@ -70,7 +70,7 @@ float al_parabola( float x, float k )
 }
 
 // Samples the AudioLink texture. 
-float sampleAudioTexture(float band, float delay)
+float sampleAudioTexture(float band, float delay, float range)
 {
     // Initialisation. 
     float2 audioLinkRes = 0;
@@ -81,7 +81,7 @@ float sampleAudioTexture(float band, float delay)
         float2 params = float2(delay, band / 4.0);
         // We only want the bottom 4 bands.
         // When reading the texture, we want the bands to be thickly seperated.
-        float2 alUV = params*float2(_alTimeRange,0.0625);
+        float2 alUV = params*float2(range,0.0625);
         alUV = audioLinkModifyTexcoord(float4(1.0/audioLinkRes, audioLinkRes), alUV);
         // sample the texture
         #ifdef AUDIOLINK_COMPILE_COMPATIBILITY
@@ -94,7 +94,7 @@ float sampleAudioTexture(float band, float delay)
         float beat = _alFallbackBPM / 60;
         float rowTiming = (4-band)/4.0;
         beat = (delay-_Time.y)*rowTiming*beat;
-        beat = frac(-beat);
+        beat = frac(-beat)*range;
         beat = al_expImpulse(beat, 8.0);
         float s; float c;
         sincos(beat, s, c);
@@ -108,8 +108,8 @@ float sampleAudioTexture(float band, float delay)
 
 float audioLinkGetLayer(float weight, const float band, const float mode)
 {
-    if (mode == 0) return weight * sampleAudioTexture(band-1, 1-weight ) * 2.0;
-    if (mode == 1) return audioLinkRenderBar(weight, 1-sampleAudioTexture(band-1, 1-weight ));
+    if (mode == 0) return weight * pow(sampleAudioTexture(band-1, 1-weight, _alTimeRange ), 2.0) * 2.0;
+    if (mode == 1) return audioLinkRenderBar(weight, 1-sampleAudioTexture(band-1, 1-weight, _alTimeRange ));
     return 0;
 }
 

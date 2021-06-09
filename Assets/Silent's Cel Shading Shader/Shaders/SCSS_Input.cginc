@@ -433,7 +433,7 @@ half3 Albedo(float4 texcoords)
 
 half3 Emission(float2 uv)
 {
-    return UNITY_SAMPLE_TEX2D_SAMPLER(_EmissionMap, _MainTex, uv).rgb;
+    return UNITY_SAMPLE_TEX2D_SAMPLER(_EmissionMap, _MainTex, uv*_EmissionMap_ST.xy+_EmissionMap_ST.zw).rgb;
 }
 
 half ClippingMask(float2 uv)

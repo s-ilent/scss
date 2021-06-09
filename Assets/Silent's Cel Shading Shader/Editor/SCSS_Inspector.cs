@@ -568,6 +568,7 @@ namespace SilentCelShading.Unity
 				float brightness = props["_EmissionColor"].colorValue.maxColorComponent;
 				if (emissionMapProp.textureValue != null && !hadEmissionTexture && brightness <= 0f)
 					props["_EmissionColor"].colorValue = Color.white;
+				editor.TextureScaleOffsetProperty(props["_EmissionMap"]);
 				EditorGUILayout.Space();
 			}
 
