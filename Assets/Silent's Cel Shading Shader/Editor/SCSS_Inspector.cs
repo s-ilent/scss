@@ -605,7 +605,10 @@ namespace SilentCelShading.Unity
 						ShaderProperty("_alModeG");
 						ShaderProperty("_alModeB");
 						ShaderProperty("_alModeA");
-						ShaderProperty("_alTimeRange");
+						ShaderProperty("_alTimeRangeR");
+						ShaderProperty("_alTimeRangeG");
+						ShaderProperty("_alTimeRangeB");
+						ShaderProperty("_alTimeRangeA");
 						ShaderProperty("_alUseFallback");
 						ShaderProperty("_alFallbackBPM");
 						ShaderProperty("_UseEmissiveLightSense");

@@ -565,10 +565,10 @@ half4 EmissionDetail(float2 uv)
 	    weights = saturate(weights-epsilon);
 	    // sample the texture
 	    float4 col = 0;
-	    col.rgb += (_alBandR >= 1) ? audioLinkGetLayer(weights.r, _alBandR, _alModeR) * _alColorR : 0;
-	    col.rgb += (_alBandG >= 1) ? audioLinkGetLayer(weights.g, _alBandG, _alModeG) * _alColorG : 0;
-	    col.rgb += (_alBandB >= 1) ? audioLinkGetLayer(weights.b, _alBandB, _alModeB) * _alColorB : 0;
-	    col.rgb += (_alBandA >= 1) ? audioLinkGetLayer(weights.a, _alBandA, _alModeA) * _alColorA : 0;
+	    col.rgb += (_alBandR >= 1) ? audioLinkGetLayer(weights.r, _alTimeRangeR, _alBandR, _alModeR) * _alColorR : 0;
+	    col.rgb += (_alBandG >= 1) ? audioLinkGetLayer(weights.g, _alTimeRangeG, _alBandG, _alModeG) * _alColorG : 0;
+	    col.rgb += (_alBandB >= 1) ? audioLinkGetLayer(weights.b, _alTimeRangeB, _alBandB, _alModeB) * _alColorB : 0;
+	    col.rgb += (_alBandA >= 1) ? audioLinkGetLayer(weights.a, _alTimeRangeA, _alBandA, _alModeA) * _alColorA : 0;
 	    col.a = 1.0;
 	    return col;
 	}

@@ -30,7 +30,11 @@ uniform half4 _alColorG;
 uniform half4 _alColorB;
 uniform half4 _alColorA;
 
-uniform float _alTimeRange;
+uniform float _alTimeRangeR;
+uniform float _alTimeRangeG;
+uniform float _alTimeRangeB;
+uniform float _alTimeRangeA;
+
 uniform float _alUseFallback;
 uniform float _alFallbackBPM;
 
@@ -76,7 +80,7 @@ float sampleAudioTexture(float band, float delay, float range)
     float2 audioLinkRes = 0;
     _AudioTexture.GetDimensions(audioLinkRes.x, audioLinkRes.y);
 
-    if (audioLinkRes.x >= 128.0 && _alUseFallback == 0)
+    if (audioLinkRes.x >= 128.0 && _alUseFallback != 2)
     {
         float2 params = float2(delay, band / 4.0);
         // We only want the bottom 4 bands.
@@ -89,27 +93,31 @@ float sampleAudioTexture(float band, float delay, float range)
         #else
         return _AudioTexture.SampleLevel(sampler_AudioGraph_Linear_Clamp, alUV, 0);
         #endif
-    } else {    
+    } else {
+        if (_alUseFallback != 0) 
+        {
         // If not available, fake one.
         float beat = _alFallbackBPM / 60;
         float rowTiming = (4-band)/4.0;
+        delay *= range;
         beat = (delay-_Time.y)*rowTiming*beat;
-        beat = frac(-beat)*range;
+        beat = frac(-beat);
         beat = al_expImpulse(beat, 8.0);
         float s; float c;
         sincos(beat, s, c);
         float final = saturate(s+(0.5+c));
         // 
         return final*beat;
+        }
     }
 
     return 0;
 }
 
-float audioLinkGetLayer(float weight, const float band, const float mode)
+float audioLinkGetLayer(float weight, const float range, const float band, const float mode)
 {
-    if (mode == 0) return weight * pow(sampleAudioTexture(band-1, 1-weight, _alTimeRange ), 2.0) * 2.0;
-    if (mode == 1) return audioLinkRenderBar(weight, 1-sampleAudioTexture(band-1, 1-weight, _alTimeRange ));
+    if (mode == 0) return weight * pow(sampleAudioTexture(band-1, 1-weight, range ), 2.0) * 2.0;
+    if (mode == 1) return audioLinkRenderBar(weight, 1-sampleAudioTexture(band-1, 1-weight, range ));
     return 0;
 }
 

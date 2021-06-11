@@ -90,7 +90,10 @@ _alBandR	Band (R)	Specifies the AudioLink band with which the first channel effe
 _alBandG	Band (G)	Specifies the AudioLink band with which the second channel effect is applied.
 _alBandB	Band (B)	Specifies the AudioLink band with which the third channel effect is applied.
 _alBandA	Band (A)	Specifies the AudioLink band with which the fourth channel effect is applied.
-_alTimeRange	Time Range	The size of the AudioLink pulse. The audio link is applied across the gradient of the texture. At 0, the pulse will appeas as a single flash. At 1, the pulse will show the entire AudioLink history across it.
+_alTimeRangeR	Time Range (R)	The size of the AudioLink pulse. The audio link is applied across the gradient of the texture. At 0, the pulse will appeas as a single flash. At 1, the pulse will show the entire AudioLink history across it.
+_alTimeRangeG	Time Range (G)	The size of the AudioLink pulse. The audio link is applied across the gradient of the texture. At 0, the pulse will appeas as a single flash. At 1, the pulse will show the entire AudioLink history across it.
+_alTimeRangeB	Time Range (B)	The size of the AudioLink pulse. The audio link is applied across the gradient of the texture. At 0, the pulse will appeas as a single flash. At 1, the pulse will show the entire AudioLink history across it.
+_alTimeRangeA	Time Range (A)	The size of the AudioLink pulse. The audio link is applied across the gradient of the texture. At 0, the pulse will appeas as a single flash. At 1, the pulse will show the entire AudioLink history across it.
 _alUseFallback	Enable Fallback	When a world does not have AudioLink, will display a constant pulse effect.
 _alFallbackBPM	Fallback BPM	The BPM to use for the fallback pulse.
 _ManualButton	This shader has a manual. Check it out!	For information on new features, old features, and just how to use the shader in general, check out the manual on the shader wiki!
