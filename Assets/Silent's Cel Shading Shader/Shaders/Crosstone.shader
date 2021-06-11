@@ -110,7 +110,7 @@ Shader "Silent's Cel Shading/Crosstone (Outline)"
         [Gamma]_alTimeRangeG("Audio Link Time Range", Range(0, 1)) = 1.0
         [Gamma]_alTimeRangeB("Audio Link Time Range", Range(0, 1)) = 1.0
         [Gamma]_alTimeRangeA("Audio Link Time Range", Range(0, 1)) = 1.0
-        [Enum(Disable, 0, Enable, 1, Force on, 2)]_alUseFallback("Enable fallback", Float) = 0
+        [Enum(Disable, 0, Enable, 1, Force on, 2)]_alUseFallback("Enable fallback", Float) = 1
         _alFallbackBPM("Fallback BPM", Float) = 160
 		[Enum(UV0,0,UV1,1)]_UVSec ("UV Set Secondary", Float) = 0
 		//[Space]
