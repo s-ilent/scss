@@ -101,8 +101,11 @@ Shader "Silent's Cel Shading/Lightramp (Outline)"
         [Enum(Pulse, 0, VU, 1)]_alModeG("AudioLink Mode", Float) = 0
         [Enum(Pulse, 0, VU, 1)]_alModeB("AudioLink Mode", Float) = 0
         [Enum(Pulse, 0, VU, 1)]_alModeA("AudioLink Mode", Float) = 0
-        [Gamma]_alTimeRange("Audio Link Time Range", Range(0, 1)) = 1.0
-        [ToggleUI]_alUseFallback("Enable fallback", Float) = 1
+        [Gamma]_alTimeRangeR("Audio Link Time Range", Range(0, 1)) = 1.0
+        [Gamma]_alTimeRangeG("Audio Link Time Range", Range(0, 1)) = 1.0
+        [Gamma]_alTimeRangeB("Audio Link Time Range", Range(0, 1)) = 1.0
+        [Gamma]_alTimeRangeA("Audio Link Time Range", Range(0, 1)) = 1.0
+        [Enum(Disable, 0, Enable, 1, Force on, 2)]_alUseFallback("Enable fallback", Float) = 0
         _alFallbackBPM("Fallback BPM", Float) = 160
 		[Enum(UV0,0,UV1,1)]_UVSec ("UV Set Secondary", Float) = 0
 		//[Space]
