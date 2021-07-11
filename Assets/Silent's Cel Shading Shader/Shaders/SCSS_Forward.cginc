@@ -1,3 +1,8 @@
+#ifndef SCSS_FORWARD_INCLUDED
+#define SCSS_FORWARD_INCLUDED
+
+#include "SCSS_Attributes.cginc"
+
 VertexOutput vert(appdata_full v) {
 	VertexOutput o = (VertexOutput)0;
 
@@ -5,6 +10,9 @@ VertexOutput vert(appdata_full v) {
     UNITY_INITIALIZE_OUTPUT(VertexOutput, o);
     UNITY_TRANSFER_INSTANCE_ID(v, o);
     UNITY_INITIALIZE_VERTEX_OUTPUT_STEREO(o);
+
+    // Simple inventory
+    float inventoryMask = getInventoryMask(v.texcoord);
 
 	o.pos = UnityObjectToClipPos(v.vertex);
 	o.uv0 = AnimateTexcoords(v.texcoord);
@@ -56,6 +64,20 @@ VertexOutput vert(appdata_full v) {
 	o.extraData.xz = 0.0;
 	#endif
 
+	// Apply the inventory mask.
+    // Set the output variables based on the mask to completely remove it.
+    // - Set the clip-space position to one that won't be rendered
+    // - Set the vertex alpha to zero
+    // - Disable outlines
+    if (_UseInventory)
+    {
+		o.pos.z =     inventoryMask ? o.pos.z : 1e+9;
+		o.posWorld =  inventoryMask ? o.posWorld : 0;
+		o.vertex =    inventoryMask ? o.vertex : 1e+9;
+		o.color.a =   inventoryMask ? 1 : 0;
+		o.extraData.xz = inventoryMask ? o.extraData.xz : 0;
+    }
+
 #if (UNITY_VERSION<600)
 	TRANSFER_SHADOW(o);
 #else
@@ -91,47 +113,87 @@ void geom(triangle VertexOutput IN[3], inout TriangleStream<VertexOutput> tristr
         const float far_clip_value_raw = 1.0;
     #endif
 
-	// Generate base vertex
-	[unroll]
-	for (int ii = 0; ii < 3; ii++)
+	if ((IN[0].color.a + IN[1].color.a + IN[2].color.a) >= 1.e-9)
 	{
-		VertexOutput o = IN[ii];
-		o.extraData.x = false;
-
-		tristream.Append(o);
-	}
-
-	tristream.RestartStrip();
-
-	// Generate outline vertex
-	// If the outline triangle is too small, don't emit it.
-	if ((IN[0].extraData.r + IN[1].extraData.r + IN[2].extraData.r) >= 1.e-9)
-	{
+		// Generate base vertex
 		[unroll]
-		for (int i = 2; i >= 0; i--)
+		for (int ii = 0; ii < 3; ii++)
 		{
-			VertexOutput o = IN[i];
-
-			// Single-pass instancing compatibility
-    		UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(o); 
-		    UNITY_INITIALIZE_VERTEX_OUTPUT_STEREO(o);
-
-			o.pos = UnityObjectToClipPos(o.vertex + normalize(o.normal) * o.extraData.r);
-
-			// Possible future parameter depending on what people need
-			float zPushLimit = lerp(far_clip_value_raw, o.pos.z, 0.9);
-			o.pos.z = lerp(zPushLimit, o.pos.z, o.extraData.z);
-
-			o.extraData.x = true;
+			VertexOutput o = IN[ii];
+			o.extraData.x = false;
 
 			tristream.Append(o);
 		}
 
 		tristream.RestartStrip();
+
+		// Generate outline vertex
+		// If the outline triangle is too small, don't emit it.
+		if ((IN[0].extraData.r + IN[1].extraData.r + IN[2].extraData.r) >= 1.e-9)
+		{
+			[unroll]
+			for (int i = 2; i >= 0; i--)
+			{
+				VertexOutput o = IN[i];
+
+				// Single-pass instancing compatibility
+	    		UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(o); 
+			    UNITY_INITIALIZE_VERTEX_OUTPUT_STEREO(o);
+
+				o.pos = UnityObjectToClipPos(o.vertex + normalize(o.normal) * o.extraData.r);
+				//o.pos = CalculateOutlineVertexClipPosition(o);
+
+				// Possible future parameter depending on what people need
+				float zPushLimit = lerp(far_clip_value_raw, o.pos.z, 0.9);
+				o.pos.z = lerp(zPushLimit, o.pos.z, o.extraData.z);
+
+				o.extraData.x = true;
+
+				tristream.Append(o);
+			}
+
+			tristream.RestartStrip();
+		}
 	}
 }
+/*
+void computeShadingParamsForward(inout ShadingParams shading, VertexOutput i)
+{
+    float3x3 tangentToWorld;
+    tangentToWorld[0] = i.tangentToWorldAndPackedData[0].xyz;
+    tangentToWorld[1] = i.tangentToWorldAndPackedData[1].xyz;
+    tangentToWorld[2] = i.tangentToWorldAndPackedData[2].xyz;
+    shading.tangentToWorld = transpose(tangentToWorld);
+    shading.geometricNormal = normalize(i.tangentToWorldAndPackedData[2].xyz);
 
-float4 frag(VertexOutput i, uint facing : SV_IsFrontFace) : SV_Target
+    shading.normalizedViewportCoord = i.pos.xy * (0.5 / i.pos.w) + 0.5;
+
+    shading.normal = (shading.geometricNormal);
+    shading.position = IN_WORLDPOS(i);
+    shading.view = -NormalizePerPixelNormal(i.eyeVec);
+
+    UNITY_LIGHT_ATTENUATION(atten, i, shading.position)
+    shading.attenuation = atten;
+
+    #if defined(LIGHTMAP_ON) || defined(DYNAMICLIGHTMAP_ON)
+    GetBakedAttenuation(atten, i.ambientOrLightmapUV.xy, shading.position);
+    #endif
+
+    #if defined(LIGHTMAP_ON) || defined(DYNAMICLIGHTMAP_ON)
+        shading.ambient = 0;
+        shading.lightmapUV = i.ambientOrLightmapUV;
+    #else
+        shading.ambient = i.ambientOrLightmapUV.rgb;
+        shading.lightmapUV = 0;
+    #endif
+}
+*/
+
+float4 frag(VertexOutput i, uint facing : SV_IsFrontFace
+    #if defined(USING_COVERAGE_OUTPUT)
+	, out uint cov : SV_Coverage
+	#endif
+	) : SV_Target
 {
 	float isOutline = i.extraData.x;
 	if (isOutline && !facing) discard;
@@ -149,14 +211,9 @@ float4 frag(VertexOutput i, uint facing : SV_IsFrontFace) : SV_Target
 		i.bitangentDir *= -1;
 	}
 
-	if (_UseInteriorOutline)
-	{
-	    isOutline = max(isOutline, 1-innerOutline(i));
-	}
-	
     float outlineDarken = 1-isOutline;
 
-	float4 texcoords = TexCoords(i);
+	float4 texcoords = TexCoords(i.uv0, i.uv1);
 
 	// Ideally, we should pass all input to lighting functions through the 
 	// material parameter struct. But there are some things that are
@@ -300,7 +357,23 @@ float4 frag(VertexOutput i, uint facing : SV_IsFrontFace) : SV_Target
 		lightmap = DecodeLightmap(UNITY_SAMPLE_TEX2D(unity_Lightmap, i.uv1 * unity_LightmapST.xy + unity_LightmapST.zw));
 	#endif
 
+    #if defined(USING_COVERAGE_OUTPUT)
+    // Get the amount of MSAA samples enabled
+    uint samplecount = GetRenderTargetSampleCount();
+
+    // center out the steps
+    outputAlpha = saturate(outputAlpha) * samplecount + 0.5;
+
+    // Shift and subtract to get the needed amount of positive bits
+    cov = (1u << (uint)(outputAlpha)) - 1u;
+
+    // Output 1 as alpha, otherwise result would be a^2
+	outputAlpha = 1;
+	#endif
+
 	fixed4 finalRGBA = fixed4(finalColor * lightmap, outputAlpha);
 	UNITY_APPLY_FOG(i.fogCoord, finalRGBA);
 	return finalRGBA;
 }
+
+#endif // SCSS_FORWARD_INCLUDED

@@ -190,42 +190,32 @@ uniform float _UseVanishing;
 uniform float _VanishingStart;
 uniform float _VanishingEnd;
 
+// Inventory 
+uniform fixed _UseInventory;
+uniform float _InventoryStride;
+uniform fixed _InventoryItem01Animated;
+uniform fixed _InventoryItem02Animated;
+uniform fixed _InventoryItem03Animated;
+uniform fixed _InventoryItem04Animated;
+uniform fixed _InventoryItem05Animated;
+uniform fixed _InventoryItem06Animated;
+uniform fixed _InventoryItem07Animated;
+uniform fixed _InventoryItem08Animated;
+uniform fixed _InventoryItem09Animated;
+uniform fixed _InventoryItem10Animated;
+uniform fixed _InventoryItem11Animated;
+uniform fixed _InventoryItem12Animated;
+uniform fixed _InventoryItem13Animated;
+uniform fixed _InventoryItem14Animated;
+uniform fixed _InventoryItem15Animated;
+uniform fixed _InventoryItem16Animated;
+
+// Light adjustment
+uniform float _LightMultiplyAnimated;
+uniform float _LightClampAnimated;
+
 //-------------------------------------------------------------------------------------
 // Input functions
-
-struct VertexOutput
-{
-    UNITY_VERTEX_INPUT_INSTANCE_ID
-    UNITY_VERTEX_OUTPUT_STEREO
-
-	UNITY_POSITION(pos);
-	float3 normal : NORMAL;
-	fixed4 color : COLOR0_centroid;
-	float2 uv0 : TEXCOORD0;
-	float2 uv1 : TEXCOORD1;
-	float4 posWorld : TEXCOORD2;
-	float3 normalDir : TEXCOORD3;
-	float3 tangentDir : TEXCOORD4;
-	float3 bitangentDir : TEXCOORD5;
-	float4 vertex : VERTEX;
-
-	#if defined(VERTEXLIGHT_ON)
-	half4 vertexLight : TEXCOORD6;
-	#endif
-
-	half4 extraData : EXTRA_DATA;
-
-	// Pass-through the shadow coordinates if this pass has shadows.
-	// Note the workaround for UNITY_SHADOW_COORDS issue. 
-	#if defined(USING_SHADOWS_UNITY) && defined(UNITY_SHADOW_COORDS)
-	UNITY_SHADOW_COORDS(8)
-	#endif
-
-	// Pass-through the fog coordinates if this pass has fog.
-	#if defined(FOG_LINEAR) || defined(FOG_EXP) || defined(FOG_EXP2)
-	UNITY_FOG_COORDS(9)
-	#endif
-};
 
 struct SCSS_RimLightInput
 {
@@ -275,6 +265,63 @@ struct SCSS_LightParam
 };
 
 #if defined(UNITY_STANDARD_BRDF_INCLUDED)
+bool inMirror()
+{
+	return unity_CameraProjection[2][0] != 0.f || unity_CameraProjection[2][1] != 0.f;
+}
+
+// Only needed in Unity versions before Unity 2017.4.28 or so.
+// However, 2017.4.15 is a higher UNITY_VERSION.
+bool backfaceInMirror()
+{
+	#if ( (UNITY_VERSION <= 201711) || (UNITY_VERSION == 201755) )
+	return inMirror();
+	#else
+	return false;
+	#endif
+}
+
+bool getLightClampActive()
+{
+	#if !UNITY_HDR_ON && SCSS_CLAMP_IN_NON_HDR
+	return true;
+	#endif
+	#if SCSS_NO_CLAMPING
+	return false;
+	#endif
+	return (_LightClampAnimated == 1.0);
+}
+
+struct SCSS_Light
+{
+    half3 color;
+    half3 dir;
+    half  intensity; 
+};
+
+
+SCSS_Light MainLight()
+{
+    SCSS_Light l;
+
+    l.color = _LightColor0.rgb;
+    l.intensity = _LightColor0.w;
+    l.dir = Unity_SafeNormalize(_WorldSpaceLightPos0.xyz); 
+
+    // Workaround for scenes with HDR off blowing out in VRchat.
+    if (getLightClampActive())
+        l.color = saturate(l.color);
+
+    return l;
+}
+
+SCSS_Light MainLight(float3 worldPos)
+{
+    SCSS_Light l = MainLight();
+    l.dir = Unity_SafeNormalize(UnityWorldSpaceLightDir(worldPos)); 
+    return l;
+}
+
 float getAmbientLight (float3 normal)
 {
 	float3 ambientLightDirection = Unity_SafeNormalize((unity_SHAr.xyz + unity_SHAg.xyz + unity_SHAb.xyz) * _LightSkew.xyz);
@@ -364,19 +411,32 @@ float2 AnimateTexcoords(float2 texcoord)
 
 }
 
-float4 TexCoords(VertexOutput v)
+float4 TexCoords(float2 uv0, float2 uv1)
 {
     float4 texcoord;
-	texcoord.xy = TRANSFORM_TEX(v.uv0, _MainTex);// Always source from uv0
+	texcoord.xy = TRANSFORM_TEX(uv0, _MainTex);// Always source from uv0
 	texcoord.xy = _PixelSampleMode? 
 		sharpSample(_MainTex_TexelSize * _MainTex_ST.xyxy, texcoord.xy) : texcoord.xy;
 
 #if defined(_DETAIL) 
-	texcoord.zw = TRANSFORM_TEX(((_UVSec == 0) ? v.uv0 : v.uv1), _DetailAlbedoMap);
+	texcoord.zw = TRANSFORM_TEX(((_UVSec == 0) ? uv0 : uv1), _DetailAlbedoMap);
 	texcoord.zw = _PixelSampleMode? 
 		sharpSample(_DetailAlbedoMap_TexelSize * _DetailAlbedoMap_ST.xyxy, texcoord.zw) : texcoord.zw;
 #else
 	texcoord.zw = texcoord.xy;
+#endif
+    return texcoord;
+}
+
+float2 EmissionDetailTexCoords(float2 uv0, float2 uv1)
+{
+	float2 texcoord;
+#if defined(_EMISSION) 
+	texcoord.xy = TRANSFORM_TEX(((_DetailEmissionUVSec == 0) ? uv0 : uv1), _DetailEmissionMap);
+	texcoord.xy = _PixelSampleMode? 
+		sharpSample(_DetailEmissionMap_TexelSize * _DetailEmissionMap_ST.xyxy, texcoord.xy) : texcoord.xy;
+#else
+	texcoord.xy = uv0; // Default we won't need
 #endif
     return texcoord;
 }
@@ -466,6 +526,40 @@ void applyVanishing (inout float alpha) {
     alpha = lerp(alpha, alpha * vanishing, _UseVanishing);
 }
 
+inline float getInventoryMask(float2 in_texcoord)
+{
+    // Initialise mask. This will cut things out.
+    float inventoryMask = 0.0;
+    // Which UV section are we in?
+    // UV sections are centred, so UV -1 and 1 are both in item 0.
+    uint itemID = floor((in_texcoord.x+0.5) / _InventoryStride);
+    // If the item ID is zero, always render.
+    // But if it's higher, check against toggles.
+
+    inventoryMask += (itemID == 0);
+    inventoryMask += (itemID == 1) * _InventoryItem01Animated;
+    inventoryMask += (itemID == 2) * _InventoryItem02Animated;
+    inventoryMask += (itemID == 3) * _InventoryItem03Animated;
+    inventoryMask += (itemID == 4) * _InventoryItem04Animated;
+    inventoryMask += (itemID == 5) * _InventoryItem05Animated;
+    inventoryMask += (itemID == 6) * _InventoryItem06Animated;
+    inventoryMask += (itemID == 7) * _InventoryItem07Animated;
+    inventoryMask += (itemID == 8) * _InventoryItem08Animated;
+    inventoryMask += (itemID == 9) * _InventoryItem09Animated;
+    inventoryMask += (itemID == 10) * _InventoryItem10Animated;
+    inventoryMask += (itemID == 11) * _InventoryItem11Animated;
+    inventoryMask += (itemID == 12) * _InventoryItem12Animated;
+    inventoryMask += (itemID == 13) * _InventoryItem13Animated;
+    inventoryMask += (itemID == 14) * _InventoryItem14Animated;
+    inventoryMask += (itemID == 15) * _InventoryItem15Animated;
+    inventoryMask += (itemID == 16) * _InventoryItem16Animated;
+    
+    // Higher than 17? Enabled by default
+    inventoryMask += (itemID >= 17);
+
+    return inventoryMask;
+}
+
 //-----------------------------------------------------------------------------
 // These functions use data or functions not available in the shadow pass
 //-----------------------------------------------------------------------------
@@ -527,19 +621,6 @@ half4 SpecularGloss(float4 texcoords, half mask)
 #endif
 
     return sg;
-}
-
-float2 EmissionDetailTexCoords(VertexOutput v)
-{
-	float2 texcoord;
-#if defined(_EMISSION) 
-	texcoord.xy = TRANSFORM_TEX(((_DetailEmissionUVSec == 0) ? v.uv0 : v.uv1), _DetailEmissionMap);
-	texcoord.xy = _PixelSampleMode? 
-		sharpSample(_DetailEmissionMap_TexelSize * _DetailEmissionMap_ST.xyxy, texcoord.xy) : texcoord.xy;
-#else
-	texcoord.xy = v.uv0; // Default we won't need
-#endif
-    return texcoord;
 }
 
 half4 EmissionDetail(float2 uv)
@@ -695,6 +776,7 @@ float ShadingGradeMap (float2 uv)
 }
 #endif
 
+/*
 float innerOutline (VertexOutput i)
 {
 	// The compiler should merge this with the later calls.
@@ -704,6 +786,7 @@ float innerOutline (VertexOutput i)
 	baseRim = simpleSharpen(baseRim, 0, _InteriorOutlineWidth * OutlineMask(i.uv0.xy));
 	return baseRim;
 }
+*/
 
 float3 applyOutline(float3 col, float is_outline)
 {    

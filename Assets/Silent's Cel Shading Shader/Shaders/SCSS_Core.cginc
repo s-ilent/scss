@@ -9,6 +9,8 @@
 #include "SCSS_UnityGI.cginc"
 #include "SCSS_Utils.cginc"
 #include "SCSS_Input.cginc"
+#include "SCSS_Attributes.cginc"
+
 
 // Shade4PointLights from UnityCG.cginc but only returns their attenuation.
 float4 Shade4PointLightsAtten (
@@ -215,6 +217,12 @@ void getDirectIndirectLighting(float3 normal, out float3 directLighting, out flo
 		indirectLighting = BetterSH9(half4(0.0, 0.0, 0.0, 1.0)); 
 	break;
 	}
+    // Workaround for scenes with HDR off blowing out in VRchat.
+    if (getLightClampActive())
+    {
+        directLighting = saturate(directLighting);
+        indirectLighting = saturate(indirectLighting);
+    }
 }
 
 // For baked lighting.
@@ -350,18 +358,7 @@ void getSpecularVD(float roughness, SCSS_LightParam d, SCSS_Light l, VertexOutpu
 	    float at = max(roughness * (1.0 + anisotropy), 0.002);
 	    float ab = max(roughness * (1.0 - anisotropy), 0.002);
 
-		#if 0
-	    float TdotL = dot(i.tangentDir, l.dir);
-	    float BdotL = dot(i.bitangentDir, l.dir);
-	    float TdotV = dot(i.tangentDir, viewDir);
-	    float BdotV = dot(i.bitangentDir, l.dir);
-
-	    // Accurate but probably expensive
-		V = V_SmithGGXCorrelated_Anisotropic (at, ab, TdotV, BdotV, TdotL, BdotL, d.NdotV, d.NdotL);
-		#else
 		V = SmithJointGGXVisibilityTerm (d.NdotL, d.NdotV, roughness);
-		#endif
-		// Temporary
 	    D = D_GGX_Anisotropic(d.NdotH, d.halfDir, i.tangentDir, i.bitangentDir, at, ab);
 	    break;
 	}
@@ -576,6 +573,26 @@ float3 SCSS_ShadeLight(SCSS_Input c, VertexOutput i, SCSS_Light l, half attenuat
 }
 
 
+void addEmissive(const SCSS_Input c, const VertexOutput i, float3 effectLighting, inout float3 color)
+{
+	float isOutline = i.extraData.x;
+	float3 emission;
+	float2 emissionDetailUV = EmissionDetailTexCoords(i.uv0, i.uv1);
+	float4 emissionDetail = EmissionDetail(emissionDetailUV);
+
+	color = max(0, color - saturate((1-emissionDetail.w)- (1-c.emission)));
+	emission = emissionDetail.rgb * c.emission * _EmissionColor.rgb;
+
+	// Glow in the dark modifier.
+	#if defined(_EMISSION)
+		float glowModifier = smoothstep(_EmissiveLightSenseStart, _EmissiveLightSenseEnd, dot(effectLighting, sRGB_Luminance));
+		if (_UseEmissiveLightSense) emission *= glowModifier;
+	#endif
+
+	emission *= (1-isOutline);
+	color += emission;
+}
+
 float3 SCSS_ApplyLighting(SCSS_Input c, VertexOutput i, float4 texcoords)
 {
 	UNITY_LIGHT_ATTENUATION(attenuation, i, i.posWorld.xyz);
@@ -583,7 +600,6 @@ float3 SCSS_ApplyLighting(SCSS_Input c, VertexOutput i, float4 texcoords)
 	#if defined(SCSS_SCREEN_SHADOW_FILTER) && defined(USING_SHADOWS_UNITY)
 	correctedScreenShadowsForMSAA(i._ShadowCoord, attenuation);
 	#endif
-
 
 	float isOutline = i.extraData.x;
 
@@ -610,14 +626,25 @@ float3 SCSS_ApplyLighting(SCSS_Input c, VertexOutput i, float4 texcoords)
 	// Generic lighting for effects.
 	float3 effectLighting = l.color;
 	#if defined(UNITY_PASS_FORWARDBASE)
-	//effectLighting *= attenuation;
 	effectLighting += GetSHAverage();
 	#endif
 
+	// Generic lighting for effects with shadow applied.
 	float3 effectLightShadow = l.color * max((1+d.NdotL)*attenuation, 0);
 	#if defined(UNITY_PASS_FORWARDBASE)
 	effectLightShadow += GetSHAverage();
 	#endif
+
+    // Workaround for scenes with HDR off blowing out in VRchat.
+    if (getLightClampActive())
+    {
+	    // Colour-preserving clamp.
+	    // This light value is used later to flatten the overall output intensity. 
+	    float maxEffectLight = max3(effectLighting);
+	    float modLight = min(maxEffectLight, 1.25);
+	    effectLighting = (effectLighting/maxEffectLight)*modLight;
+	}
+    
 
 	float3 finalColor = 0; 
 
@@ -668,6 +695,9 @@ float3 SCSS_ApplyLighting(SCSS_Input c, VertexOutput i, float4 texcoords)
 
 	}
 
+    // Workaround for scenes with HDR off blowing out in VRchat.
+    if (getLightClampActive()) l.color = saturate(l.color);
+
 	#if defined(UNITY_PASS_FORWARDBASE)
 	finalColor = SCSS_ShadeBase(c, i, l, attenuation);
 	#endif
@@ -687,13 +717,6 @@ float3 SCSS_ApplyLighting(SCSS_Input c, VertexOutput i, float4 texcoords)
 		finalColor += effectLighting*finalRimLight;
 	}
 
-	//float3 wrappedDiffuse = LightColour * saturate((dot(N, L) + w) / ((1 + w) * (1 + w)));
-
-    // Workaround for scenes with HDR off blowing out in VRchat.
-    #if !UNITY_HDR_ON && SCSS_CLAMP_IN_NON_HDR
-        l.color = saturate(l.color);
-    #endif
-
     // Apply full lighting to unimportant lights. This is cheaper than you might expect.
 	#if defined(UNITY_PASS_FORWARDBASE) && defined(VERTEXLIGHT_ON) && defined(SCSS_UNIMPORTANT_LIGHTS_FRAGMENT)
     for (int num = 0; num < 4; num++) {
@@ -712,27 +735,13 @@ float3 SCSS_ApplyLighting(SCSS_Input c, VertexOutput i, float4 texcoords)
 	#endif
 
 	finalColor *= _LightWrappingCompensationFactor;
+	finalColor *= _LightMultiplyAnimated;
+
+    // Workaround for scenes with HDR off blowing out in VRchat.
+   	if (getLightClampActive()) finalColor = finalColor / max3(effectLighting);
 
 	#if defined(UNITY_PASS_FORWARDBASE)
-	// Emission
-	float3 emission;
-	float2 emissionDetailUV = EmissionDetailTexCoords(i);
-	float4 emissionDetail = EmissionDetail(emissionDetailUV);
-
-	finalColor = max(0, finalColor - saturate((1-emissionDetail.w)- (1-c.emission)));
-	emission = emissionDetail.rgb * c.emission * _EmissionColor.rgb;
-
-	// Glow in the dark modifier.
-	#if defined(_EMISSION)
-		float glowModifier = smoothstep(_EmissiveLightSenseStart, _EmissiveLightSenseEnd, dot(effectLightShadow, sRGB_Luminance));
-		if (_UseEmissiveLightSense) emission *= glowModifier;
-	#endif
-
-	// Emissive c.rim. To restore masking behaviour, multiply by emissionMask.
-	emission += _CustomFresnelColor.xyz * (pow(d.rlPow4.y, rcp(_CustomFresnelColor.w+0.0001)));
-
-	emission *= (1-isOutline);
-	finalColor += emission;
+	addEmissive(c, i, effectLightShadow, finalColor);
 	#endif
 
 	return finalColor;
