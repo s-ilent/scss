@@ -15,7 +15,7 @@
     #define USING_TRANSPARENCY
 #endif
 
-#if defined (SCSS_COVERAGE_OUTPUT) && defined(_ALPHATEST_ON)
+#if defined (SCSS_COVERAGE_OUTPUT) && defined (_ALPHATEST_ON)
     #define USING_COVERAGE_OUTPUT
 #endif
 
