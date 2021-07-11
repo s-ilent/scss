@@ -134,6 +134,28 @@ Shader "Silent's Cel Shading/Lightramp (Outline)"
 		_EmissiveLightSenseStart("Light Threshold Start", Range(0, 1)) = 1.0
 		_EmissiveLightSenseEnd("Light Threshold End", Range(0, 1)) = 0.0
 		//[Space]
+		[ToggleUI]_UseInventory("Use Inventory", Float) = 0.0
+		_InventoryStride("Inventory Stride", Float) = 10.0
+		[ToggleUI]_InventoryItem01Animated("Toggle Item 1", Float) = 1.0
+		[ToggleUI]_InventoryItem02Animated("Toggle Item 2", Float) = 1.0
+		[ToggleUI]_InventoryItem03Animated("Toggle Item 3", Float) = 1.0
+		[ToggleUI]_InventoryItem04Animated("Toggle Item 4", Float) = 1.0
+		[ToggleUI]_InventoryItem05Animated("Toggle Item 5", Float) = 1.0
+		[ToggleUI]_InventoryItem06Animated("Toggle Item 6", Float) = 1.0
+		[ToggleUI]_InventoryItem07Animated("Toggle Item 7", Float) = 1.0
+		[ToggleUI]_InventoryItem08Animated("Toggle Item 8", Float) = 1.0
+		[ToggleUI]_InventoryItem09Animated("Toggle Item 9", Float) = 1.0
+		[ToggleUI]_InventoryItem10Animated("Toggle Item 10", Float) = 1.0
+		[ToggleUI]_InventoryItem11Animated("Toggle Item 11", Float) = 1.0
+		[ToggleUI]_InventoryItem12Animated("Toggle Item 12", Float) = 1.0
+		[ToggleUI]_InventoryItem13Animated("Toggle Item 13", Float) = 1.0
+		[ToggleUI]_InventoryItem14Animated("Toggle Item 14", Float) = 1.0
+		[ToggleUI]_InventoryItem15Animated("Toggle Item 15", Float) = 1.0
+		[ToggleUI]_InventoryItem16Animated("Toggle Item 16", Float) = 1.0
+		//[Space]
+		_LightMultiplyAnimated("Modulate outgoing light", Range(0, 1)) = 1.0
+		[ToggleUI]_LightClampAnimated("Reduce outgoing light", Range(0, 1)) = 0.0
+		//[Space]
 		[ToggleUI]_AlbedoAlphaMode("Albedo Alpha Mode", Float) = 0.0
 		[HDR]_CustomFresnelColor("Emissive Fresnel Color", Color) = (0,0,0,1)
 		[ToggleUI]_PixelSampleMode("Sharp Sampling Mode", Float) = 0.0
@@ -186,7 +208,7 @@ Shader "Silent's Cel Shading/Lightramp (Outline)"
         ZWrite[_ZWrite]
         Cull[_CullMode]
         ColorMask[_ColorWriteMask]
-		AlphaToMask [_AtoCMode]
+		// AlphaToMask [_AtoCMode]
 
         Stencil
         {
@@ -200,12 +222,13 @@ Shader "Silent's Cel Shading/Lightramp (Outline)"
         }
 
         CGINCLUDE
-		#pragma target 4.5
+		#pragma target 5.0
 		#pragma shader_feature _ _ALPHATEST_ON _ALPHABLEND_ON _ALPHAPREMULTIPLY_ON
 		#pragma multi_compile _ UNITY_HDR_ON
 		
 		#define SCSS_OUTLINE
 		#define SCSS_USE_OUTLINE_TEXTURE
+		#define SCSS_COVERAGE_OUTPUT
         ENDCG
 
 		Pass

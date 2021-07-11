@@ -15,6 +15,10 @@
     #define USING_TRANSPARENCY
 #endif
 
+#if defined (SCSS_COVERAGE_OUTPUT) && defined(_ALPHATEST_ON)
+    #define USING_COVERAGE_OUTPUT
+#endif
+
 #ifndef UNITY_POSITION
     #define UNITY_POSITION(pos) float4 pos : SV_POSITION
 #endif
@@ -86,8 +90,9 @@ inline void applyAlphaClip(inout float alpha, float cutoff, float2 pos, bool sha
             #if ALPHA_SHOULD_DITHER_CLIP
             alpha = (1+cutoff) * alpha - cutoff;
             float mask = (T(intensity(pos)));
-            const float width = 1 / (samplecount*2-1);
-            alpha = alpha - (mask * (1-(alpha)) * width);
+            //const float width = 1 / (samplecount*2-1);
+            const float width = samplecount;
+            alpha = alpha - (mask * (1-alpha) * width);
             #endif
         }
         else {
@@ -178,59 +183,11 @@ float2 sharpSample( float4 texelSize , float2 p )
 	return p;
 }
 
-bool inMirror()
-{
-	return unity_CameraProjection[2][0] != 0.f || unity_CameraProjection[2][1] != 0.f;
-}
-
-// Only needed in Unity versions before Unity 2017.4.28 or so.
-// However, 2017.4.15 is a higher UNITY_VERSION.
-bool backfaceInMirror()
-{
-	#if ( (UNITY_VERSION <= 201711) || (UNITY_VERSION == 201755) )
-	return inMirror();
-	#else
-	return false;
-	#endif
-}
-
 //-----------------------------------------------------------------------------
 // These functions rely on data or functions not available in the shadow pass
 //-----------------------------------------------------------------------------
 
 #if defined(UNITY_STANDARD_BRDF_INCLUDED)
-
-struct SCSS_Light
-{
-    half3 color;
-    half3 dir;
-    half  intensity; 
-};
-
-
-SCSS_Light MainLight()
-{
-    SCSS_Light l;
-
-    l.color = _LightColor0.rgb;
-    l.intensity = _LightColor0.w;
-    l.dir = Unity_SafeNormalize(_WorldSpaceLightPos0.xyz); 
-
-    // Workaround for scenes with HDR off blowing out in VRchat.
-    #if !UNITY_HDR_ON && SCSS_CLAMP_IN_NON_HDR
-        l.color = saturate(l.color);
-    #endif
-
-    return l;
-}
-
-SCSS_Light MainLight(float3 worldPos)
-{
-    SCSS_Light l = MainLight();
-    l.dir = Unity_SafeNormalize(UnityWorldSpaceLightDir(worldPos)); 
-    return l;
-}
-
 //-----------------------------------------------------------------------------
 // Helper functions for roughness
 //-----------------------------------------------------------------------------

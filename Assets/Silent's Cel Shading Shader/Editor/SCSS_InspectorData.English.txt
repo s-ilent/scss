@@ -118,6 +118,10 @@ _2nd_ShadeColor_Step	2nd Shading Breakpoint	Sets the point at which the shading 
 _2nd_ShadeColor_Feather	2nd Shading Width	Sets the width of the transition between shaded and fully shaded.
 _ShadingGradeMap	Shading Adjustment	Adds additional shading to darkened regions, and acts as occlusion. The slider modifies the midpoint of the shading adjustment.
 _ShadingGradeMapLevel	Shading Adjustment Level	Modifies the middle point of the shading adjustment.
+_LightMultiplyAnimated	Runtime Light Adjustment	Modifies the output values. The lower this value, the darker the light reflected by the material.
+_LightClampAnimated	Runtime Light Clamp	Limits the output value of lighting. When enabled, total lighting applied is limited. Not recommended for regular use.
+_UseInventory	Inventory	Enables the inventory system. When enabled, the UV coordinates of the model are used to hide parts of the mesh. Every X units, where X is the inventory stride, the vertices assigned those UV coordinates are placed into a seperate item slot, and can be enabled or disabled using the toggles. The first slot, containing the 0-1 range, is always displayed.
+_InventoryStride	Inventory Stride	Sets the spacing between item slots. By default, this is 10, which means that if a vertex's UVs are 10 units away from the origin, they will be considered a seperate item slot.
 _Stencil	Stencil Test	Raising this enables reading or writing a stencil. When set, contains calue to compare against (if Comparison is anything but Always) and/or the value to be written to the buffer (if wither Pass, Fail or ZFail is set to Replace)
 _StencilComp	Comparison	The operation to be performed when reading the stencil value.
 _StencilOp	Operation	The operation to be performed when the stencil test passes.
@@ -135,6 +139,7 @@ s_shadingOptions	Shading Options	Settings that control the main light shading ca
 s_renderingOptions	Rendering Options	Settings that control additional effects rendered after the main shading. These settings are specific to these effects. (Some specular settings will affect the base albedo, which influences how other effects appear.)
 s_detailOptions	Detail Options	Settings that control details added into the basic lighting and shading.
 s_miscOptions	Misc Options	Settings that control specific effects which aren't related to lighting.
+s_inventoryOptions	Simple Inventory Options	Settings that control the simple inventory system, based on the input UV coordinates.
 s_advancedOptions	System Options	Settings that control specific system parameters that can have a large effect on how the shading is calculated.
 s_bakeButton	Bake material	Creates a copy of the shader with the material properties pre-applied and flattened. This reduces the size of the shader in the final build and can improve performance, but you won't be able to change the shader properties until you un-bake it.
 s_bakeButtonPlural	Bake {0} materials	Creates a copy of the shader with the material properties pre-applied and flattened for each material. This reduces the size of the shader in the final build and can improve performance, but you won't be able to change the shader properties until you un-bake it.

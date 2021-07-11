@@ -115,6 +115,20 @@ void vertShadowCaster (VertexInput v
     // Standard would apply texcoords here, but we need to apply them in fragment
     // due to pixel sampling mode options.
 
+    // Simple inventory.
+    float inventoryMask = getInventoryMask(v.uv0);
+
+    // Apply the inventory mask.
+    // Set the output variables based on the mask to completely remove it.
+    // - Set the clip-space position to one that won't be rendered
+    // - Set the vertex alpha to zero
+    // - Disable outlines
+    if (_UseInventory)
+    {
+        opos.z =     inventoryMask ? opos.z : 1e+9;
+        //o.vertex =    inventoryMask ? o.vertex : 1e+9;
+    }
+
     #if defined(UNITY_STANDARD_USE_SHADOW_UVS)
         o.tex = AnimateTexcoords(v.uv0);
     #endif

@@ -67,7 +67,7 @@ namespace SilentCelShading.Unity
 		protected MaterialEditor editor;
 		protected Dictionary<string, MaterialProperty> props = new Dictionary<string, MaterialProperty>();
 
-    	public int scssSettingsComplexityMode = 1;
+    	public int scssSettingsComplexityMode = (int)SettingsComplexityMode.Simple;
 
 		protected bool usingLightramp = true; // Compatibility
 		protected bool usingCrosstone = false;
@@ -102,7 +102,7 @@ namespace SilentCelShading.Unity
 
 			if (!Int32.TryParse(EditorUserSettings.GetConfigValue("scss_settings_complexity_mode"), out scssSettingsComplexityMode))
 			{
-				scssSettingsComplexityMode = 1;
+				scssSettingsComplexityMode = (int)SettingsComplexityMode.Simple;
 			}
 
 			// Handle old materials
@@ -336,47 +336,63 @@ namespace SilentCelShading.Unity
 				isBaked = (bakedSettings != null && bakedSettings.floatValue == 1);
 			}
 
-            if (isBaked) EditorGUI.BeginDisabledGroup(true);
-			base.OnGUI(materialEditor, matProps);
-            if (isBaked) EditorGUI.EndDisabledGroup();
+        	using (new EditorGUI.DisabledScope(isBaked == true))
+			{
+				base.OnGUI(materialEditor, matProps);
+			}
 			SettingsComplexityArea();
-            if (isBaked) EditorGUI.BeginDisabledGroup(true);
-			MainOptions();
-			ShadingOptions();
 			
 			switch ((SettingsComplexityMode)scssSettingsComplexityMode)
 			{
 				case SettingsComplexityMode.Simple:
+					using (new EditorGUI.DisabledScope(isBaked == true))
+					{
+					MainOptions();
+					ShadingOptions();
 					DrawSectionHeaderArea(Content("s_renderingOptions"));
 					EmissionOptions();
 					OutlineOptions();
-            if (isBaked) EditorGUI.EndDisabledGroup();
+            		}
 					ManualButtonArea();
-            if (isBaked) EditorGUI.BeginDisabledGroup(true);
 					break;
 				case SettingsComplexityMode.Normal:
+					using (new EditorGUI.DisabledScope(isBaked == true))
+					{
+					MainOptions();
+					ShadingOptions();
 					RenderingOptions();
 					OutlineOptions();
 					EmissionOptions();
-            if (isBaked) EditorGUI.EndDisabledGroup();
+            		}
+					RuntimeLightOptions();
+					InventoryOptions(isBaked);
 					ManualButtonArea();
-            if (isBaked) EditorGUI.BeginDisabledGroup(true);
+					using (new EditorGUI.DisabledScope(isBaked == true))
+					{
 					AdvancedOptions();
+					}
 					break;
 				default:
 				case SettingsComplexityMode.Complex:
+					using (new EditorGUI.DisabledScope(isBaked == true))
+					{
+					MainOptions();
+					ShadingOptions();
 					RenderingOptions();
 					OutlineOptions();
 					DetailOptions();
 					EmissionOptions();
 					MiscOptions();
-            if (isBaked) EditorGUI.EndDisabledGroup();
+            		}
+					RuntimeLightOptions();
+					InventoryOptions(isBaked);
 					ManualButtonArea();
-            if (isBaked) EditorGUI.BeginDisabledGroup(true);
+					using (new EditorGUI.DisabledScope(isBaked == true))
+					{
 					AdvancedOptions();
+					}
 					break;
 			}
-            if (isBaked) EditorGUI.EndDisabledGroup();
 			
 			FooterOptions();
 		}
@@ -923,6 +939,56 @@ namespace SilentCelShading.Unity
 				r2.x += r2.width;
 			if (GUI.Button(r2, Content("s_socialButton"), EditorStyles.miniButtonRight)) Application.OpenURL("https://discord.gg/uHJx4g629K");
 			EditorGUILayout.LabelField("", EditorStyles.label);
+		}
+
+		protected void RuntimeLightOptions()
+		{
+			EditorGUILayout.Space();
+			ShaderProperty("_LightMultiplyAnimated");
+			ShaderProperty("_LightClampAnimated");
+		}
+
+		protected void InventoryOptions(bool isBaked)
+		{
+			EditorGUILayout.Space();
+			DrawSectionHeaderArea(Content("s_inventoryOptions"));
+			EditorGUILayout.Space();
+
+			bool[] enabledItems = new bool[16];
+			float toggleOptionWidth = (EditorGUIUtility.currentViewWidth / 5.0f); // blursed
+
+			using (new EditorGUI.DisabledScope(isBaked == true))
+			{
+				TogglePropertyHeader("_UseInventory");
+				if (PropertyEnabled(props["_UseInventory"])) ShaderProperty("_InventoryStride");
+			}
+			if (PropertyEnabled(props["_UseInventory"]))
+			{
+				for (int i = 1; i <= 16; i++)
+				{
+					enabledItems[i-1] = Property(String.Format("_InventoryItem{0:00}Animated", i)).floatValue == 1;
+				}
+				EditorGUI.BeginChangeCheck();
+				for (int i = 0; i < (16/4); i++)
+				{	EditorGUILayout.BeginHorizontal("Box");
+					enabledItems[i*4+0] = EditorGUILayout.ToggleLeft(
+						(i*4+1).ToString(), enabledItems[i*4+0], GUILayout.Width(toggleOptionWidth));
+					enabledItems[i*4+1] = EditorGUILayout.ToggleLeft(
+						(i*4+2).ToString(), enabledItems[i*4+1], GUILayout.Width(toggleOptionWidth));
+					enabledItems[i*4+2] = EditorGUILayout.ToggleLeft(
+						(i*4+3).ToString(), enabledItems[i*4+2], GUILayout.Width(toggleOptionWidth));
+					enabledItems[i*4+3] = EditorGUILayout.ToggleLeft(
+						(i*4+4).ToString(), enabledItems[i*4+3], GUILayout.Width(toggleOptionWidth));
+					EditorGUILayout.EndHorizontal();
+				};
+				if (EditorGUI.EndChangeCheck())
+				{
+				for (int i = 1; i <= 16; i++)
+					{
+						Property(String.Format("_InventoryItem{0:00}Animated", i)).floatValue = enabledItems[i-1] ? 1 : 0;
+					}
+				};
+			}
 		}
 
 		protected void AdvancedOptions()
