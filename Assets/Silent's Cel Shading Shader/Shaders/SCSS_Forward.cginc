@@ -220,6 +220,7 @@ float4 frag(VertexOutput i, uint facing : SV_IsFrontFace
 	// optional. Review this at a later date...
 
 	SCSS_Input c = (SCSS_Input) 0;
+	initMaterial(c);
 
 	c.alpha = Alpha(texcoords.xy);
 
@@ -340,7 +341,7 @@ float4 frag(VertexOutput i, uint facing : SV_IsFrontFace
 	}
 	#endif
 
-	#if !(defined(_ALPHATEST_ON) || defined(_ALPHABLEND_ON) || defined(_ALPHAPREMULTIPLY_ON))
+	#if !defined(USING_TRANSPARENCY)
 		c.alpha = 1.0;
 	#endif
 

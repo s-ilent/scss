@@ -256,6 +256,39 @@ struct SCSS_Input
 	SCSS_TonemapInput tone[2];
 };
 
+void initMaterial(out SCSS_Input material)
+{
+	material = (SCSS_Input) 0;
+	material.albedo = 1.0;
+	material.alpha = 1.0;
+	material.normal = float3(0.0, 0.0, 1.0);
+	material.occlusion = 1.0;
+	material.specColor = 0.0;
+	material.oneMinusReflectivity = 1.0;
+	material.smoothness = 0.0;
+	material.perceptualRoughness = 1.0;
+	material.softness = 0.0;
+	material.emission = 0.0;
+	material.thickness = 1.0;
+
+	SCSS_RimLightInput rim = (SCSS_RimLightInput) 0;
+	rim.width = 0.0;
+	rim.power = 0.0;
+	rim.tint = 0.0;
+	rim.alpha = 0.0;
+	rim.invWidth = 0.0;
+	rim.invPower = 0.0;
+	rim.invTint = 0.0;
+	rim.invAlpha = 0.0;
+
+	material.rim = rim;
+
+	material.tone[0].col = 1.0;
+	material.tone[0].bias = 1.0;
+	material.tone[1].col = 1.0;
+	material.tone[1].bias = 1.0;
+}
+
 struct SCSS_LightParam
 {
 	half3 viewDir, halfDir, reflDir;
@@ -531,12 +564,11 @@ inline float getInventoryMask(float2 in_texcoord)
     // Initialise mask. This will cut things out.
     float inventoryMask = 0.0;
     // Which UV section are we in?
-    // UV sections are centred, so UV -1 and 1 are both in item 0.
-    uint itemID = floor((in_texcoord.x+0.5) / _InventoryStride);
-    // If the item ID is zero, always render.
+    uint itemID = floor((in_texcoord.x) / _InventoryStride);
+    // If the item ID is zero or below, always render.
     // But if it's higher, check against toggles.
 
-    inventoryMask += (itemID == 0);
+    inventoryMask += (itemID <= 0);
     inventoryMask += (itemID == 1) * _InventoryItem01Animated;
     inventoryMask += (itemID == 2) * _InventoryItem02Animated;
     inventoryMask += (itemID == 3) * _InventoryItem03Animated;
@@ -553,7 +585,7 @@ inline float getInventoryMask(float2 in_texcoord)
     inventoryMask += (itemID == 14) * _InventoryItem14Animated;
     inventoryMask += (itemID == 15) * _InventoryItem15Animated;
     inventoryMask += (itemID == 16) * _InventoryItem16Animated;
-    
+
     // Higher than 17? Enabled by default
     inventoryMask += (itemID >= 17);
 
