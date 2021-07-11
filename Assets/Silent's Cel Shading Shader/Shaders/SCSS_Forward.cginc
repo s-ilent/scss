@@ -74,7 +74,7 @@ VertexOutput vert(appdata_full v) {
 		o.pos.z =     inventoryMask ? o.pos.z : 1e+9;
 		o.posWorld =  inventoryMask ? o.posWorld : 0;
 		o.vertex =    inventoryMask ? o.vertex : 1e+9;
-		o.color.a =   inventoryMask ? 1 : 0;
+		o.color.a =   inventoryMask ? o.color.a : -1;
 		o.extraData.xz = inventoryMask ? o.extraData.xz : 0;
     }
 
@@ -113,7 +113,7 @@ void geom(triangle VertexOutput IN[3], inout TriangleStream<VertexOutput> tristr
         const float far_clip_value_raw = 1.0;
     #endif
 
-	if ((IN[0].color.a + IN[1].color.a + IN[2].color.a) >= 1.e-9)
+	if ((IN[0].color.a + IN[1].color.a + IN[2].color.a) >= 0)
 	{
 		// Generate base vertex
 		[unroll]
