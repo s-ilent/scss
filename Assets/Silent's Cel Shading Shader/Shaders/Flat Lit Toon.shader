@@ -135,7 +135,7 @@ Shader "Silent's Cel Shading/Lightramp (Outline)"
 		_EmissiveLightSenseEnd("Light Threshold End", Range(0, 1)) = 0.0
 		//[Space]
 		[ToggleUI]_UseInventory("Use Inventory", Float) = 0.0
-		_InventoryStride("Inventory Stride", Float) = 10.0
+		_InventoryStride("Inventory Stride", Int) = 1
 		[ToggleUI]_InventoryItem01Animated("Toggle Item 1", Float) = 1.0
 		[ToggleUI]_InventoryItem02Animated("Toggle Item 2", Float) = 1.0
 		[ToggleUI]_InventoryItem03Animated("Toggle Item 3", Float) = 1.0

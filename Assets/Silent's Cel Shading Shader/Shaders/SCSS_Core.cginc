@@ -742,6 +742,9 @@ float3 SCSS_ApplyLighting(SCSS_Input c, VertexOutput i, float4 texcoords)
 
 	#if defined(UNITY_PASS_FORWARDBASE)
 	addEmissive(c, i, effectLightShadow, finalColor);
+
+	// Emissive rim. 
+	finalColor += _CustomFresnelColor.xyz * (pow(d.rlPow4.y, rcp(_CustomFresnelColor.w+0.0001)));
 	#endif
 
 	return finalColor;
