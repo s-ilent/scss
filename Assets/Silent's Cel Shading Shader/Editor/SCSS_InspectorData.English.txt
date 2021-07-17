@@ -33,6 +33,7 @@ _CustomFresnelColor	Emissive Rim	RGB sets the colour of the additive rim light. 
 _outline_color	Outline Colour	Sets the colour used for outlines. In tint mode, this is multiplied against the texture.
 _outline_width	Outline Width	Sets the width of outlines in cm.
 _OutlineMask	Outline Mask	Sets the width of outlines.
+_OutlineZPush	Outline Depth Offset	Sets a depth offset that pushes the outlines behind the model, hiding outlines from overlapping parts of the material.
 _UseMatcap	Matcap Style	Enables the use of material capture textures.
 _MatcapTitle	Matcap Style	Enables the use of material capture textures.
 _Matcap1	Matcap 1	Matcap (RGB). Controlled by the matcap mask's R channel. The blend mode controls how the matcap is applied to the material.

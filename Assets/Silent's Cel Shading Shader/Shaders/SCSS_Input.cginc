@@ -111,9 +111,10 @@ uniform float _FresnelStrengthInv;
 uniform float4 _CustomFresnelColor;
 
 #if defined(SCSS_OUTLINE)
+uniform float _OutlineMode;
+uniform float _OutlineZPush;
 uniform float _outline_width;
 uniform float4 _outline_color;
-uniform float _OutlineMode;
 #endif
 
 uniform float _LightingCalculationType;

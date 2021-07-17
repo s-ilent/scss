@@ -914,6 +914,7 @@ namespace SilentCelShading.Unity
 					TexturePropertySingleLine("_OutlineMask");
 					ShaderProperty("_outline_color");
 					ShaderProperty("_outline_width");
+					ShaderProperty("_OutlineZPush");
 					break;
 					case OutlineMode.None:
 					default:
@@ -954,40 +955,44 @@ namespace SilentCelShading.Unity
 			DrawSectionHeaderArea(Content("s_inventoryOptions"));
 			EditorGUILayout.Space();
 
+			MaterialProperty invProp;
 			bool[] enabledItems = new bool[16];
 			float toggleOptionWidth = (EditorGUIUtility.currentViewWidth / 5.0f); // blursed
 
-			using (new EditorGUI.DisabledScope(isBaked == true))
+			if (props.TryGetValue("_UseInventory", out invProp))
 			{
-				TogglePropertyHeader("_UseInventory");
-				if (PropertyEnabled(props["_UseInventory"])) ShaderProperty("_InventoryStride");
-			}
-			if (PropertyEnabled(props["_UseInventory"]))
-			{
-				for (int i = 1; i <= 16; i++)
+				using (new EditorGUI.DisabledScope(isBaked == true))
 				{
-					enabledItems[i-1] = Property(String.Format("_InventoryItem{0:00}Animated", i)).floatValue == 1;
+					TogglePropertyHeader("_UseInventory");
+					if (PropertyEnabled(invProp)) ShaderProperty("_InventoryStride");
 				}
-				EditorGUI.BeginChangeCheck();
-				for (int i = 0; i < (16/4); i++)
-				{	EditorGUILayout.BeginHorizontal("Box");
-					enabledItems[i*4+0] = EditorGUILayout.ToggleLeft(
-						(i*4+1).ToString(), enabledItems[i*4+0], GUILayout.Width(toggleOptionWidth));
-					enabledItems[i*4+1] = EditorGUILayout.ToggleLeft(
-						(i*4+2).ToString(), enabledItems[i*4+1], GUILayout.Width(toggleOptionWidth));
-					enabledItems[i*4+2] = EditorGUILayout.ToggleLeft(
-						(i*4+3).ToString(), enabledItems[i*4+2], GUILayout.Width(toggleOptionWidth));
-					enabledItems[i*4+3] = EditorGUILayout.ToggleLeft(
-						(i*4+4).ToString(), enabledItems[i*4+3], GUILayout.Width(toggleOptionWidth));
-					EditorGUILayout.EndHorizontal();
-				};
-				if (EditorGUI.EndChangeCheck())
+				if (PropertyEnabled(invProp))
 				{
-				for (int i = 1; i <= 16; i++)
+					for (int i = 1; i <= 16; i++)
 					{
-						Property(String.Format("_InventoryItem{0:00}Animated", i)).floatValue = enabledItems[i-1] ? 1 : 0;
+						enabledItems[i-1] = Property(String.Format("_InventoryItem{0:00}Animated", i)).floatValue == 1;
 					}
-				};
+					EditorGUI.BeginChangeCheck();
+					for (int i = 0; i < (16/4); i++)
+					{	EditorGUILayout.BeginHorizontal("Box");
+						enabledItems[i*4+0] = EditorGUILayout.ToggleLeft(
+							(i*4+1).ToString(), enabledItems[i*4+0], GUILayout.Width(toggleOptionWidth));
+						enabledItems[i*4+1] = EditorGUILayout.ToggleLeft(
+							(i*4+2).ToString(), enabledItems[i*4+1], GUILayout.Width(toggleOptionWidth));
+						enabledItems[i*4+2] = EditorGUILayout.ToggleLeft(
+							(i*4+3).ToString(), enabledItems[i*4+2], GUILayout.Width(toggleOptionWidth));
+						enabledItems[i*4+3] = EditorGUILayout.ToggleLeft(
+							(i*4+4).ToString(), enabledItems[i*4+3], GUILayout.Width(toggleOptionWidth));
+						EditorGUILayout.EndHorizontal();
+					};
+					if (EditorGUI.EndChangeCheck())
+					{
+					for (int i = 1; i <= 16; i++)
+						{
+							Property(String.Format("_InventoryItem{0:00}Animated", i)).floatValue = enabledItems[i-1] ? 1 : 0;
+						}
+					};
+				}
 			}
 		}
 
@@ -1196,59 +1201,68 @@ protected Vector4? GetSerializedMaterialVector4(Material material, string propNa
 */
 		}
 
+
         public override void AssignNewShaderToMaterial(Material material, Shader oldShader, Shader newShader)
         {
+			// Use nullable types for Color and float, because Texture is nullable.
+			Dictionary<string, Color?> tColor = new Dictionary<string, Color?>();
+			Dictionary<string, float?> tFloat = new Dictionary<string, float?>();
+			Dictionary<string, Texture> tTexture = new Dictionary<string, Texture>();
+
             // Cache old shader properties with potentially different names than the new shader.
             Vector4? textureScaleOffset = null;
             float? cullMode = GetFloatProperty(material, "_Cull");
+			
+			// Register properties that already exist but may be overridden.
+			string[] colorProps = {
+				"_EmissionColor",
+				"_FresnelTint",
+				"_FresnelTintInv",
+				"_Matcap1Tint",
+				"_outline_color",
+				"_SpecColor"
+			};
 
-            Texture normalMapTexture = GetTextureProperty(material, "_BumpMap");
-            float? normalMapScale = GetFloatProperty(material, "_BumpScale");
+			string[] floatProps = {
+				"_1st_ShadeColor_Feather",
+				"_1st_ShadeColor_Step",
+				"_2nd_ShadeColor_Feather",
+				"_2nd_ShadeColor_Step",
+				"_BumpScale",
+				"_CelSpecularSoftness",
+				"_Crosstone2ndSeparation",
+				"_CrosstoneToneSeparation",
+				"_FresnelLightMask",
+				"_FresnelStrength",
+				"_FresnelStrengthInv",
+				"_FresnelWidth",
+				"_FresnelWidthInv",
+				"_Matcap1Blend",
+				"_Matcap1Strength",
+				"_outline_width",
+				"_OutlineMode",
+				"_Smoothness",
+				"_SpecularType",
+				"_UseFresnel",
+				"_UseFresnelLightMask",
+				"_UseMatcap"
+			};
 
-            Texture emissionTexture = GetTextureProperty(material, "_EmissionMap");
-            Color? emissionColor = GetColorProperty(material, "_EmissionColor");
+			string[] textureProps = {
+				"_1st_ShadeMap",
+				"_2nd_ShadeMap",
+				"_BumpMap",
+				"_EmissionMap",
+				"_Matcap1",
+				"_MatcapMask",
+				"_OutlineMask",
+				"_SpecGlossMap",
+				"_SpecularDetailMask"
+			};
 
- 			float? useToneSeparation = GetFloatProperty(material, "_CrosstoneToneSeparation");
- 			float? use2ndSeparation = GetFloatProperty(material, "_Crosstone2ndSeparation");
-
-            //shadeMap1 = GetFloatProperty(material, "_1st_ShadeMap");
-            //Color? shadeMap1Color = GetFloatProperty(material, "_1st_ShadeColor");
-            float? shadeMap1Step = GetFloatProperty(material, "_1st_ShadeColor_Step");
-            float? shadeMap1Feather = GetFloatProperty(material, "_1st_ShadeColor_Feather");
-            //shadeMap2 = GetFloatProperty(material, "_2nd_ShadeMap");
-            //Color? shadeMap2Color = GetFloatProperty(material, "_2nd_ShadeColor");
-            float? shadeMap2Step = GetFloatProperty(material, "_2nd_ShadeColor_Step");
-            float? shadeMap2Feather = GetFloatProperty(material, "_2nd_ShadeColor_Feather");
-
-            float? useMatcap = GetFloatProperty(material, "_UseMatcap");
-            Texture matcapMask = GetTextureProperty(material, "_MatcapMask");
-            Texture matcapTexture = GetTextureProperty(material, "_Matcap1");
-            float? matcapBlend = GetFloatProperty(material, "_Matcap1Blend");
-            float? matcapStrength = GetFloatProperty(material, "_Matcap1Strength");
-            Color? matcapTint = GetColorProperty(material, "_Matcap1Tint");
-
-            float? specularType = GetFloatProperty(material, "_SpecularType");
-            Texture specularMap = GetTextureProperty(material, "_SpecGlossMap");
-            Texture specularDetailMask = GetTextureProperty(material, "_SpecularDetailMask");
-            Color? specularTint = GetColorProperty(material, "_SpecColor");
-            float? smoothness = GetFloatProperty(material, "_Smoothness");
-            float? celSpecularSoftness = GetFloatProperty(material, "_CelSpecularSoftness");
-
-            float? useFresnel = GetFloatProperty(material, "_UseFresnel");
-            float? fresnelWidth = GetFloatProperty(material, "_FresnelWidth");
-            float? fresnelStrength = GetFloatProperty(material, "_FresnelStrength");
-            Color? fresnelTint = GetColorProperty(material, "_FresnelTint");
-
-            float? useFresnelLightMask = GetFloatProperty(material, "_UseFresnelLightMask");
-            float? fresnelLightMask = GetFloatProperty(material, "_FresnelLightMask");
-            Color? fresnelTintInv = GetColorProperty(material, "_FresnelTintInv");
-            float? fresnelWidthInv = GetFloatProperty(material, "_FresnelWidthInv");
-            float? fresnelStrengthInv = GetFloatProperty(material, "_FresnelStrengthInv");
-
-            float? outlineMode = GetFloatProperty(material, "_OutlineMode");
-            float? outlineWidth = GetFloatProperty(material, "_outline_width");
-            Color? outlineColor = GetColorProperty(material, "_outline_color");
-            Texture outlineMask = GetTextureProperty(material, "_OutlineMask");
+			foreach (string p in colorProps) { tColor[p] = GetColorProperty(material, p); };
+			foreach (string p in floatProps) { tFloat[p] = GetFloatProperty(material, p); };
+			foreach (string p in textureProps) { tTexture[p] = GetTextureProperty(material, p); };
 
             int? stencilReference = GetIntProperty(material, "_Stencil");
             int? stencilComparison = GetIntProperty(material, "_StencilComp");
@@ -1259,97 +1273,90 @@ protected Vector4? GetSerializedMaterialVector4(Material material, string propNa
             {
             	if (oldShader.name.Contains("UnityChanToonShader"))
                 {
-                    normalMapTexture = GetTextureProperty(material, "_NormalMap");
+					// Build translation table.
+                    tTexture["_BumpMap"] = GetTextureProperty(material, "_NormalMap");
                     // _Tweak_ShadingGradeMapLevel is named the same.
 
 					if (GetFloatProperty(material, "_Inverse_Clipping") == 1) Debug.Log("Note: Inverse clipping currently not supported.");
-					if (GetTextureProperty(material, "_ClippingMask")) SetFloatProperty(material, "_AlbedoAlphaMode", (float)AlbedoAlphaMode.ClippingMask);
+					if (GetTextureProperty(material, "_ClippingMask")) tFloat["_AlbedoAlphaMode"] = (float)AlbedoAlphaMode.ClippingMask;
 
                     // Tone seperation is based on whether BaseAs1st is set.
                     // 2nd seperation is based on whether 1stAs2nd is set.
-                    useToneSeparation = GetFloatProperty(material, "_Use_BaseAs1st");
-                    if (useToneSeparation.HasValue) useToneSeparation = 1.0f - useToneSeparation;
-                    use2ndSeparation = GetFloatProperty(material, "_Use_1stAs2nd");
-                    if (use2ndSeparation.HasValue) use2ndSeparation = 1.0f - use2ndSeparation;
+                    tFloat["_CrosstoneToneSeparation"] = 1.0f - GetFloatProperty(material, "_Use_BaseAs1st") ?? 0;
+                    tFloat["_Crosstone2ndSeparation"] = 1.0f - GetFloatProperty(material, "_Use_1stAs2nd") ?? 0;
+					
+                    if (oldShader.name.Contains("DoubleShadeWithFeather"))
+                    {
+                        tFloat["_1st_ShadeColor_Step"]    = GetFloatProperty(material, "_BaseColor_Step");
+                        tFloat["_1st_ShadeColor_Feather"] = GetFloatProperty(material, "_BaseShade_Feather");
+                        tFloat["_2nd_ShadeColor_Step"]    = GetFloatProperty(material, "_ShadeColor_Step");
+                        tFloat["_2nd_ShadeColor_Feather"] = GetFloatProperty(material, "_1st2nd_Shades_Feather");
+                    }
 
 					// Emission properties are not fully supported.
-					emissionTexture = GetTextureProperty(material, "_Emissive_Tex");
-					emissionColor = GetColorProperty(material, "_Emissive_Color");
+					tTexture["_EmissionMap"] = GetTextureProperty(material, "_Emissive_Tex");
+					tColor["_EmissionColor"] = GetColorProperty(material, "_Emissive_Color");
 
                     // HighColor is only supported in Specular mode
-                    specularMap = GetTextureProperty(material, "_HighColor_Tex");
-					if (specularMap) { specularDetailMask = GetTextureProperty(material, "_Set_HighColorMask"); }
-					else { specularMap = GetTextureProperty(material, "_Set_HighColorMask"); };
-                    specularType = GetFloatProperty(material, "_Is_SpecularToHighColor");
-					//if (specularDetailMask.HasValue) 
-                    if (specularType.HasValue) specularType = (float)SpecularType.Cel * specularType;
-                    specularTint = GetColorProperty(material, "_HighColor");
-					{
-						Color specularTint_var = (specularTint.HasValue)? (specularTint.Value) : (Color.white);
-						specularTint_var.a *= 0.1f;
-						specularTint = specularTint_var;
-					}
+                    Texture highColorTex = GetTextureProperty(material, "_HighColor_Tex");
+					Texture highColorMask = GetTextureProperty(material, "_Set_HighColorMask");
+					if (highColorTex) 
+					{ 
+						tTexture["_SpecGlossMap"] = highColorTex;
+						tTexture["_SpecularDetailMask"] = highColorMask; 
+					} else { 
+						tTexture["_SpecGlossMap"] = highColorMask; 
+					};
 
-                    smoothness = GetFloatProperty(material, "_HighColor_Power");
-                    if (smoothness.HasValue) smoothness = 1.0f - smoothness;
-					celSpecularSoftness = GetFloatProperty(material, "_Is_SpecularToHighColor");
+                    tFloat["_SpecularType"] = (float)SpecularType.Cel * GetFloatProperty(material, "_Is_SpecularToHighColor") ?? 0 ;
+
+                    tColor["_SpecColor"] = new Vector4(1,1,1,0.1f) * GetColorProperty(material, "_HighColor") ?? (Color.white);
+
+                    float? smoothness = GetFloatProperty(material, "_HighColor_Power");
+                    if (smoothness.HasValue) tFloat["_Smoothness"] = 1.0f - smoothness;
+					tFloat["_CelSpecularSoftness"] = GetFloatProperty(material, "_Is_SpecularToHighColor");
 
                     // Rim lighting works differently here, but there's not much we can do about it. 
-                    useFresnel = GetFloatProperty(material, "_RimLight");
-                    if (useFresnel.HasValue) if (useFresnel > 0.0f) useFresnel = (float)AmbientFresnelType.Lit;
-                    fresnelTint = GetColorProperty(material, "_RimLightColor");
-                    fresnelWidth = GetFloatProperty(material, "_RimLight_Power");
-                    if (fresnelWidth.HasValue) fresnelWidth = fresnelWidth * 10;
-                    fresnelStrength = GetFloatProperty(material, "_RimLight_FeatherOff");
-                    if (fresnelStrength.HasValue) fresnelStrength = 1.0f - fresnelStrength;
+					tFloat["_UseFresnel"] = (float)AmbientFresnelType.Lit * GetFloatProperty(material, "_RimLight") ?? 0;
+                    tColor["_FresnelTint"] = GetColorProperty(material, "_RimLightColor");
+					tFloat["_FresnelWidth"] = GetFloatProperty(material, "_RimLight_Power") ?? 0 * 10;
+                    tFloat["_FresnelStrength"] = 1.0f - GetFloatProperty(material, "_RimLight_FeatherOff") ?? 0;
 
-                    //GetFloatProperty(material, "_RimLight_FeatherOff");
-                    useFresnelLightMask = GetFloatProperty(material, "_LightDirection_MaskOn");
-                    fresnelLightMask = GetFloatProperty(material, "_Tweak_LightDirection_MaskLevel");
-                    if (fresnelLightMask.HasValue) fresnelLightMask += 1.0f;
+                    tFloat["_UseFresnelLightMask"] = GetFloatProperty(material, "_LightDirection_MaskOn");
+                    tFloat["_FresnelLightMask"] = 1.0f + GetFloatProperty(material, "_Tweak_LightDirection_MaskLevel") ?? 0;
                     //GetFloatProperty(material, "_Add_Antipodean_RimLight");
-                    fresnelTintInv = GetColorProperty(material, "_Ap_RimLightColor");
-                    fresnelWidthInv = GetFloatProperty(material, "_Ap_RimLight_Power");
-                    if (fresnelWidthInv.HasValue) fresnelWidthInv = fresnelWidthInv * 10;
-                    fresnelStrengthInv = GetFloatProperty(material, "_Ap_RimLight_FeatherOff");
-                    if (fresnelStrengthInv.HasValue) fresnelStrengthInv = 1.0f - fresnelStrengthInv;
+                    tColor["_FresnelTintInv"] = GetColorProperty(material, "_Ap_RimLightColor");
+                    tFloat["_FresnelWidthInv"] = 10 * GetFloatProperty(material, "_Ap_RimLight_Power") ?? 0;
+                    tFloat["_FresnelStrengthInv"] = 1.0f - GetFloatProperty(material, "_Ap_RimLight_FeatherOff") ?? 0;
                     //GetTextureProperty(material, "_Set_RimLightMask");
 
                     // Matcap properties are not fully supported
-                    useMatcap = GetFloatProperty(material, "_MatCap");
-                    matcapTexture = GetTextureProperty(material, "_MatCap_Sampler");
-                    matcapMask = GetTextureProperty(material, "_Set_MatcapMask");
-                    // _MatCapColor is not yet supported.
+                    tFloat["_UseMatcap"] = GetFloatProperty(material, "_MatCap");
+                    tTexture["_Matcap1"] = GetTextureProperty(material, "_MatCap_Sampler");
+                    tTexture["_MatcapMask"] = GetTextureProperty(material, "_Set_MatcapMask");
+                    tColor["_Matcap1Tint"] = GetColorProperty(material, "_MatCapColor");
                     // _Is_LightColor_MatCap is not supported.
-                    matcapBlend = GetFloatProperty(material, "_Is_BlendAddToMatCap");
-                    if (matcapBlend.HasValue) matcapBlend = 1.0f - matcapBlend;
+                    tFloat["_Matcap1Blend"] = 1.0f - GetFloatProperty(material, "_Is_BlendAddToMatCap") ?? 0;
 					// This seems to be used as a strength setting.
-					matcapStrength = 1.0f - GetFloatProperty(material, "_Tweak_MatcapMaskLevel");
-            		matcapTint = GetColorProperty(material, "_MatCapColor");
+					tFloat["_Matcap1Strength"] = 1.0f - GetFloatProperty(material, "_Tweak_MatcapMaskLevel");
                     // _Tweak_MatCapUV, _Rotate_MatCapUV are not yet supported.
                     // _Is_NormalMapForMatCap, _NormalMapForMatCap, _BumpScaleMatcap, _Rotate_NormalMapForMatCapUV
                     // are not supported.
 
-                    if (oldShader.name.Contains("DoubleShadeWithFeather"))
-                    {
-                        shadeMap1Step = GetFloatProperty(material, "_BaseColor_Step");
-                        shadeMap1Feather = GetFloatProperty(material, "_BaseShade_Feather");
-                        shadeMap2Step = GetFloatProperty(material, "_ShadeColor_Step");
-                        shadeMap2Feather = GetFloatProperty(material, "_1st2nd_Shades_Feather");
-                    }
-                    outlineMode = 1.0f;
+                    tFloat["_OutlineMode"] = 1.0f;
                     if (oldShader.name.Contains("NoOutline"))
                     {
-                    	outlineMode = 0.0f;
+                    	tFloat["_OutlineMode"] = 0.0f;
                 	}
-                    outlineColor = GetColorProperty(material, "_Outline_Color");
-            		outlineWidth = GetFloatProperty(material, "_Outline_Width") * 0.1f;
-            		outlineMask = GetTextureProperty(material, "_Outline_Sampler");
+                    tColor["_outline_color"] = GetColorProperty(material, "_Outline_Color");
+            		tFloat["_outline_width"] = 0.1f * GetFloatProperty(material, "_Outline_Width") ?? 1.0f;
+					tFloat["_OutlineZPush"] = GetFloatProperty(material, "_Offset_Z");
+            		tTexture["_OutlineMask"] = GetTextureProperty(material, "_Outline_Sampler");
 
                     // Stencil properties
                     if (oldShader.name.Contains("StencilMask"))
                     {
-                    	Debug.Log(GetIntProperty(material, "_StencilNo") % 256);
+                    	//Debug.Log(GetIntProperty(material, "_StencilNo") % 256);
                     	stencilReference = (int)GetIntProperty(material, "_StencilNo") % 256;
                     	stencilComparison = (int)CompareFunction.Always;
                     	stencilOperation = (int)StencilOp.Replace;
@@ -1358,77 +1365,45 @@ protected Vector4? GetSerializedMaterialVector4(Material material, string propNa
                 	}
                     if (oldShader.name.Contains("StencilOut"))
                     {
-                    	Debug.Log(GetIntProperty(material, "_StencilNo") % 256);
+                    	//Debug.Log(GetIntProperty(material, "_StencilNo") % 256);
                     	stencilReference = (int)GetIntProperty(material, "_StencilNo") % 256;
                     	stencilComparison = (int)CompareFunction.NotEqual;
                     	stencilOperation = (int)StencilOp.Keep;
 						stencilFail = (int)StencilOp.Keep;
                 	}
-
-
+					
                 }
+            	if (oldShader.name.Contains("Reflex Shader 2"))
+                {
+				}
+				if (oldShader.name.Contains("Silent's Cel Shading"))
+				{
+					// Handle the case where someone swaps the outline mode by changing from 
+					// the (Outline) to the no outline shader.
+					if (oldShader.name.Contains("Outline") && !newShader.name.Contains("Outline"))
+					{
+						tFloat["_OutlineMode"] = 0.0f;
+					}
+					if (!oldShader.name.Contains("Outline") && newShader.name.Contains("Outline"))
+					{
+						tFloat["_OutlineMode"] = 1.0f;
+					}
+				}
             }
+
+			float? outlineMode = tFloat["_OutlineMode"];
+			float? specularType = tFloat["_SpecularType"];
 
             base.AssignNewShaderToMaterial(material, oldShader, newShader);
 
             // Apply old shader properties to the new shader.
-            SetColorProperty(material, "_EmissionColor", emissionColor);
             SetVectorProperty(material, "_MainTex_ST", textureScaleOffset);
             SetShaderFeatureActive(material, null, "_CullMode", cullMode);
 
-            if (normalMapTexture)
-            {
-                material.SetTexture("_BumpMap", normalMapTexture);
-            }
-            if (matcapTexture)
-            {
-                material.SetTexture("_Matcap1", matcapTexture);
-            }
-            if (matcapMask)
-            {
-                material.SetTexture("_MatcapMask", matcapMask);
-            }
-            if (specularMap)
-            {
-                material.SetTexture("_SpecGlossMap", specularMap);
-            }
-            if (outlineMask)
-            {
-                material.SetTexture("_OutlineMask", outlineMask);
-            }
-            if (emissionTexture)
-            {
-                material.SetTexture("_EmissionMap", emissionTexture);
-            }
-
-            SetFloatProperty(material, "_BumpScale", normalMapScale);
-            SetColorProperty(material, "_EmissionColor", emissionColor);
-            SetFloatProperty(material, "_CrosstoneToneSeparation", useToneSeparation);
-            SetFloatProperty(material, "_Crosstone2ndSeparation", use2ndSeparation);
-            SetFloatProperty(material, "_1st_ShadeColor_Step", shadeMap1Step);
-            SetFloatProperty(material, "_1st_ShadeColor_Feather", shadeMap1Feather);
-            SetFloatProperty(material, "_2nd_ShadeColor_Step", shadeMap2Step);
-            SetFloatProperty(material, "_2nd_ShadeColor_Feather", shadeMap2Feather);
-            SetFloatProperty(material, "_UseMatcap", useMatcap);
-            SetFloatProperty(material, "_Matcap1Blend", matcapBlend);
-            SetColorProperty(material, "_Matcap1Tint", matcapTint);
-            SetFloatProperty(material, "_SpecularType", specularType);
-            SetColorProperty(material, "_SpecColor", specularTint);
-            SetFloatProperty(material, "_Smoothness", smoothness);
-            SetFloatProperty(material, "_CelSpecularSoftness", celSpecularSoftness);
-            SetFloatProperty(material, "_UseFresnel", useFresnel);
-            SetFloatProperty(material, "_FresnelWidth", fresnelWidth);
-            SetFloatProperty(material, "_FresnelStrength", fresnelStrength);
-            SetColorProperty(material, "_FresnelTint", fresnelTint);
-            SetFloatProperty(material, "_UseFresnelLightMask", useFresnelLightMask);
-            SetFloatProperty(material, "_FresnelLightMask", fresnelLightMask);
-            SetColorProperty(material, "_FresnelTintInv", fresnelTintInv);
-            SetFloatProperty(material, "_FresnelWidthInv", fresnelWidthInv);
-            SetFloatProperty(material, "_FresnelStrengthInv", fresnelStrengthInv);
-
-            SetFloatProperty(material, "_OutlineMode", outlineMode);
-            SetColorProperty(material, "_outline_color", outlineColor);
-            SetFloatProperty(material, "_outline_width", outlineWidth);
+			// Assign gathered properties. 
+			foreach (KeyValuePair<string, Color?> e in tColor)    { SetColorProperty(material, e.Key, e.Value); };
+			foreach (KeyValuePair<string, float?> e in tFloat)    { SetFloatProperty(material, e.Key, e.Value); };
+			foreach (KeyValuePair<string, Texture> e in tTexture) { material.SetTexture(e.Key, e.Value); };
 
 			SetIntProperty(material, "_Stencil", stencilReference);
 			SetIntProperty(material, "_StencilComp", stencilComparison);
