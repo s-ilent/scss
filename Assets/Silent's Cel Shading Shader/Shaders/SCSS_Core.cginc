@@ -640,11 +640,14 @@ float3 SCSS_ApplyLighting(SCSS_Input c, VertexOutput i, float4 texcoords)
     {
 	    // Colour-preserving clamp.
 	    // This light value is used later to flatten the overall output intensity. 
+	    // Get the maximum input value from the lighting.
 	    float maxEffectLight = max3(effectLighting);
+	    // The effect lighting is remapped to be within the 0-1.25 range when clamped.
 	    float modLight = min(maxEffectLight, 1.25);
+	    // Scale the values by the highest value. 
+	    // Needs a bit more testing, but should look nice. 
 	    effectLighting = (effectLighting/maxEffectLight)*modLight;
 	}
-    
 
 	float3 finalColor = 0; 
 
@@ -725,7 +728,13 @@ float3 SCSS_ApplyLighting(SCSS_Input c, VertexOutput i, float4 texcoords)
     	l.color = unity_LightColor[num].rgb;
     	l.dir = normalize(float3(unity_4LightPosX0[num], unity_4LightPosY0[num], unity_4LightPosZ0[num]) - i.posWorld.xyz);
 
-		finalColor += SCSS_ShadeLight(c, i, l, 1) *  i.vertexLight[num];	
+    	if (getLightClampActive()) l.color = saturate(l.color);
+
+		float3 addColor = SCSS_ShadeLight(c, i, l, 1) *  i.vertexLight[num];
+
+    	if (getLightClampActive()) addColor = saturate(addColor);
+    	
+		finalColor += addColor;
     	}
     };
 	#endif
@@ -735,10 +744,12 @@ float3 SCSS_ApplyLighting(SCSS_Input c, VertexOutput i, float4 texcoords)
 	#endif
 
 	finalColor *= _LightWrappingCompensationFactor;
-	finalColor *= _LightMultiplyAnimated;
 
-    // Workaround for scenes with HDR off blowing out in VRchat.
-   	if (getLightClampActive()) finalColor = finalColor / max3(effectLighting);
+	// Apply the light scaling if the light clamp is active. When the light clamp is active,
+	// the final colour is divided by the light intensity
+   	if (getLightClampActive()) finalColor = finalColor / max(max3(effectLighting), 1);
+
+	finalColor *= _LightMultiplyAnimated;
 
 	#if defined(UNITY_PASS_FORWARDBASE)
 	addEmissive(c, i, effectLightShadow, finalColor);

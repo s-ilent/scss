@@ -26,6 +26,10 @@ VertexOutput vert(appdata_full v) {
 	o.posWorld = mul(unity_ObjectToWorld, v.vertex);
 	o.vertex = v.vertex;
 
+	// This is mainly needed when Blender mangles vertex colour values.
+	// If you notice major differences in vertex colour behaviour to expectations, try this.
+	if (false) v.color.rgb = GammaToLinearSpace(v.color.rgb);
+
 	// Extra data handling
 	// X: Outline width | Y: Ramp softness
 	// Z: Outline Z offset | 
@@ -54,6 +58,7 @@ VertexOutput vert(appdata_full v) {
 	#endif
 
 	o.extraData.x *= _outline_width * .01; // Apply outline width and convert to cm
+	o.extraData.z *= (1 - _OutlineZPush * 0.1); // Apply outline push parameter.
 	
 	// Scale outlines relative to the distance from the camera. Outlines close up look ugly in VR because
 	// they can have holes, being shells. This is also why it is clamped to not make them bigger.
@@ -104,6 +109,37 @@ VertexOutput vert_nogeom(appdata_full v) {
 	return o;
 }
 
+// Based on code from MToon
+inline VertexOutput CalculateOutlineVertexClipPosition(VertexOutput v)
+{
+	const float outlineWidth = v.extraData.r;
+	if (true)
+	{
+        const float3 positionWS = mul(unity_ObjectToWorld, float4(v.vertex.xyz, 1)).xyz;
+        const half3 normalWS = v.normalDir;
+
+        v.posWorld = float4(positionWS + normalWS * outlineWidth, 1);
+        v.pos = UnityWorldToClipPos(v.posWorld);
+	} 
+	if (false) 
+	{
+        const float3 positionWS = mul(unity_ObjectToWorld, float4(v.vertex.xyz, 1)).xyz;
+        const half aspect = getScreenAspectRatio();
+
+        float4 positionCS = UnityObjectToClipPos(v.vertex.xyz);
+        const half3 normalVS = getObjectToViewNormal(v.normal.xyz);
+        const half3 normalCS = TransformViewToProjection(normalVS.xyz);
+        half2 normalProjectedCS = normalize(normalCS.xy);
+        normalProjectedCS *= positionCS.w;
+        normalProjectedCS.x *= aspect;
+        positionCS.xy += outlineWidth * normalProjectedCS.xy * saturate(1 - abs(normalVS.z)); // ignore offset when normal toward camera
+
+        v.posWorld = float4(positionWS, 1);
+        v.pos = positionCS;
+	}
+	return v;
+}
+
 [maxvertexcount(6)]
 void geom(triangle VertexOutput IN[3], inout TriangleStream<VertexOutput> tristream)
 {
@@ -140,8 +176,8 @@ void geom(triangle VertexOutput IN[3], inout TriangleStream<VertexOutput> tristr
 	    		UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(o); 
 			    UNITY_INITIALIZE_VERTEX_OUTPUT_STEREO(o);
 
-				o.pos = UnityObjectToClipPos(o.vertex + normalize(o.normal) * o.extraData.r);
-				//o.pos = CalculateOutlineVertexClipPosition(o);
+				//o.pos = UnityObjectToClipPos(o.vertex + normalize(o.normal) * o.extraData.r);
+				o = CalculateOutlineVertexClipPosition(o);
 
 				// Possible future parameter depending on what people need
 				float zPushLimit = lerp(far_clip_value_raw, o.pos.z, 0.9);

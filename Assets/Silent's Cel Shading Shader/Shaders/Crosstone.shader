@@ -35,6 +35,7 @@ Shader "Silent's Cel Shading/Crosstone (Outline)"
 		//[Space]
 		[Enum(OutlineMode)] _OutlineMode("Outline Mode", Float) = 1.0
 		_OutlineMask("Outline Map", 2D) = "white" {}
+		_OutlineZPush("Outline Z Push", Float) = 0.0
 		_outline_width("Outline Width", Float) = 0.1
 		_outline_color("Outline Colour", Color) = (0.5,0.5,0.5,1)
 		//[Space]

@@ -91,7 +91,7 @@ inline void applyAlphaClip(inout float alpha, float cutoff, float2 pos, bool sha
             alpha = (1+cutoff) * alpha - cutoff;
             float mask = (T(intensity(pos)));
             //const float width = 1 / (samplecount*2-1);
-            const float width = samplecount;
+            const float width = 1.0;
             alpha = alpha - (mask * (1-alpha) * width);
             #endif
         }
@@ -562,6 +562,12 @@ static float getScreenAspectRatio()
 
     // ...and the aspect ratio is width / height. 
     return viewSpaceUpperRight.x / viewSpaceUpperRight.y;
+}
+
+// MToon's implementation
+inline half3 getObjectToViewNormal(const half3 normalOS)
+{
+    return normalize(mul((half3x3)UNITY_MATRIX_IT_MV, normalOS));
 }
 
 // This is based on a typical calculation for tonemapping
