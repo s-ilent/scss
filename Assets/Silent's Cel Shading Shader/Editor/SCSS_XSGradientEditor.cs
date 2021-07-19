@@ -9,6 +9,7 @@ using System.IO;
 using System.Reflection;
 using System;
 using UnityEditorInternal;
+using static SilentCelShading.Unity.InspectorCommon;
 
 namespace SilentCelShading.Unity
 {
@@ -52,17 +53,26 @@ public class XSGradientEditor : EditorWindow
 
     private bool dHelpText = true;
 
-        public static class Styles
+
+    protected GUIContent GetInspectorGUIContent(string i)
+    {
+        GUIContent style;
+        if (!styles.TryGetValue(i, out style))
         {
-            public static string gradientEditorTitle = "Current Material: ";
-            public static string resolutionTitle = "Resolution: ";
-            public static string linearCheckbox = "Treat as non-sRGB";
-            public static string materialCheckbox = "Show material selector";
-            public static string helpCheckbox = "Show help";
-            public static string basicHelp = "Select the top slot to open the gradient editor. You can change it and see how your material reacts in realtime. \nNote that if you don't save the lighting ramp, it will revert to the old one and your changes will be lost. Use \"Save Ramp\" to save.";
-            public static string multiRampHelp = "Use the + and - buttons to add additional ramp levels. They'll be interpolated based on Softness, which is set by vertex colour.";
-            public static GUIContent reorderButton = new GUIContent("Reorder", "Make sure you don't want to undo anything before Reordering.");
+            style = new GUIContent(i);
         }
+        return style;
+    }
+
+    protected string GetInspectorData(string i)
+    {
+        GUIContent style;
+        if (!styles.TryGetValue(i, out style))
+        {
+            return i;
+        }
+        return style.text;
+    }
 
     [MenuItem("Tools/Silent's Cel Shading/Gradient Editor")]
     static public void Init()
@@ -94,12 +104,12 @@ public class XSGradientEditor : EditorWindow
         ? focusedMat.name 
         : "None";
 
-        GUILayout.Label(Styles.gradientEditorTitle + currentMatName, EditorStyles.boldLabel, new GUILayoutOption[0]);
+        GUILayout.Label(GetInspectorData("ge_gradientEditorTitle") + " " + currentMatName, EditorStyles.boldLabel, new GUILayoutOption[0]);
 
         if (preButton == null)
         {
-            iconToolbarPlus = EditorGUIUtility.IconContent("Toolbar Plus", "Add Gradient");
-            iconToolbarMinus = EditorGUIUtility.IconContent("Toolbar Minus", "Remove Gradient");
+            iconToolbarPlus = EditorGUIUtility.IconContent("Toolbar Plus", GetInspectorData("ge_addButton"));
+            iconToolbarMinus = EditorGUIUtility.IconContent("Toolbar Minus", GetInspectorData("ge_removeButton"));
             preButton = new GUIStyle("RL FooterButton");
             buttonBackground = new GUIStyle("RL Header");
         }
@@ -156,7 +166,7 @@ public class XSGradientEditor : EditorWindow
 
         GUIStyle button = new GUIStyle(EditorStyles.miniButton);
         button.normal = !reorder ? EditorStyles.miniButton.normal : EditorStyles.miniButton.onNormal;
-        if (GUILayout.Button(Styles.reorderButton, button, GUILayout.ExpandWidth(false)))
+        if (GUILayout.Button(GetInspectorGUIContent("ge_reorderButton"), button, GUILayout.ExpandWidth(false)))
         {
             reorder = !reorder;
         }
@@ -199,7 +209,7 @@ public class XSGradientEditor : EditorWindow
         }
 
         Resolutions oldRes = res;
-        res = (Resolutions)EditorGUILayout.EnumPopup(Styles.resolutionTitle, res);
+        res = (Resolutions)EditorGUILayout.EnumPopup(GetInspectorGUIContent("ge_resolutionTitle"), res);
         if (oldRes != res) changed = true;
 
         int width = (int)res;
@@ -230,10 +240,10 @@ public class XSGradientEditor : EditorWindow
             }
             else
             {
-                rampProperty = EditorGUILayout.TextField("Ramp Property Name", rampProperty);
+                rampProperty = EditorGUILayout.TextField(GetInspectorGUIContent("ge_rampPropertyField"), rampProperty);
                 if (!focusedMat.HasProperty(rampProperty))
                 {
-                    GUILayout.Label("Ramp property not found!");
+                    GUILayout.Label(GetInspectorGUIContent("ge_rampPropertyError"));
                 }
             }
         }
@@ -267,10 +277,10 @@ public class XSGradientEditor : EditorWindow
         drawMGInputOutput();
 
         EditorGUILayout.Space();
-        if (GUILayout.Button("Save Ramp"))
+        if (GUILayout.Button(GetInspectorGUIContent("ge_saveRampButton")))
         {
             finalFilePath = findAssetPath(finalFilePath);
-            string path = EditorUtility.SaveFilePanel("Save Ramp as PNG", finalFilePath + "/Textures/Shadow Ramps/Generated", "gradient", "png");
+            string path = EditorUtility.SaveFilePanel(GetInspectorData("ge_saveRampButton"), finalFilePath + "/Textures/Shadow Ramps/Generated", "gradient", "png");
             if (path.Length != 0)
             {
                 updateTexture(width, height);
@@ -404,7 +414,7 @@ public class XSGradientEditor : EditorWindow
         }
         else
         {
-            Debug.Log("Asset Path is Null. Unable to set to Clamped.\n Lighting ramp won't display correctly unless this is fixed.");
+            Debug.Log(GetInspectorGUIContent("ge_noAssetPathError"));
         }
         return false;
     }
@@ -413,7 +423,7 @@ public class XSGradientEditor : EditorWindow
     {
         GUILayout.BeginHorizontal();
         SCSSMultiGradient old_multiGrad = multiGrad;
-        multiGrad = (SCSSMultiGradient)EditorGUILayout.ObjectField("MultiGradient Preset", multiGrad, typeof(SCSSMultiGradient), false, null);
+        multiGrad = (SCSSMultiGradient)EditorGUILayout.ObjectField(GetInspectorGUIContent("ge_multiGradientPreset"), multiGrad, typeof(SCSSMultiGradient), false, null);
         if (multiGrad != old_multiGrad)
         {
             if (multiGrad != null)
@@ -436,10 +446,10 @@ public class XSGradientEditor : EditorWindow
             changed = true;
         }
 
-        if (GUILayout.Button("Save New", EditorStyles.miniButton, GUILayout.ExpandWidth(false)))
+        if (GUILayout.Button(GetInspectorGUIContent("ge_saveNewButton"), EditorStyles.miniButton, GUILayout.ExpandWidth(false)))
         {
             finalFilePath = findAssetPath(finalFilePath);
-            string path = EditorUtility.SaveFilePanel("Save MultiGradient", (finalFilePath + "/Textures/Shadow Ramps/MGPresets"), "MultiGradient", "asset");
+            string path = EditorUtility.SaveFilePanel(GetInspectorData("ge_saveMultiGradient"), (finalFilePath + "/Textures/Shadow Ramps/MGPresets"), "MultiGradient", "asset");
             if (path.Length != 0)
             {
                 path = path.Substring(Application.dataPath.Length - "Assets".Length);
@@ -464,9 +474,9 @@ public class XSGradientEditor : EditorWindow
     void drawAdvancedOptions()
     {
         GUILayout.BeginHorizontal();
-        isLinear = GUILayout.Toggle(isLinear, Styles.linearCheckbox);
-        manualMaterial = GUILayout.Toggle(manualMaterial, Styles.materialCheckbox);
-        dHelpText = GUILayout.Toggle(dHelpText, Styles.helpCheckbox);
+        isLinear = GUILayout.Toggle(isLinear, GetInspectorGUIContent("ge_linearCheckbox"));
+        manualMaterial = GUILayout.Toggle(manualMaterial, GetInspectorGUIContent("ge_materialCheckbox"));
+        dHelpText = GUILayout.Toggle(dHelpText, GetInspectorGUIContent("ge_helpCheckbox"));
         GUILayout.EndHorizontal();
     }
 
@@ -475,8 +485,8 @@ public class XSGradientEditor : EditorWindow
         if(dHelpText)
         {
             EditorGUILayout.Space();
-            EditorGUILayout.HelpBox(Styles.basicHelp, MessageType.Info);
-            EditorGUILayout.HelpBox(Styles.multiRampHelp, MessageType.Info);
+            EditorGUILayout.HelpBox(GetInspectorData("ge_basicHelp"), MessageType.Info);
+            EditorGUILayout.HelpBox(GetInspectorData("ge_multiRampHelp"), MessageType.Info);
         }
     }
 
