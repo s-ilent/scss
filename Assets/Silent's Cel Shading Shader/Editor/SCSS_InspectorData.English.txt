@@ -145,3 +145,20 @@ s_advancedOptions	System Options	Settings that control specific system parameter
 s_bakeButton	Bake material	Creates a copy of the shader with the material properties pre-applied and flattened. This reduces the size of the shader in the final build and can improve performance, but you won't be able to change the shader properties until you un-bake it.
 s_bakeButtonPlural	Bake {0} materials	Creates a copy of the shader with the material properties pre-applied and flattened for each material. This reduces the size of the shader in the final build and can improve performance, but you won't be able to change the shader properties until you un-bake it.
 s_bakeButtonRevert	Un-bake material	This material is baked, and material properties can't be changed. Selecting this option will undo the baking process and return this material to using the regular version of the shader.
+ge_gradientEditorTitle	Current Material:	
+ge_resolutionTitle	Resolution:	
+ge_linearCheckbox	Treat as non-sRGB	
+ge_materialCheckbox	Show material selector	
+ge_helpCheckbox	Show help	
+ge_basicHelp	Select the top slot to open the gradient editor. You can change it and see how your material reacts in realtime. \nNote that if you don't save the lighting ramp, it will revert to the old one and your changes will be lost. Use "Save Ramp" to save.	
+ge_multiRampHelp	Use the + and - buttons to add additional ramp levels. They'll be blended based on Softness, which is set by vertex colour.	
+ge_reorderButton	Reorder	Make sure you don't want to undo anything before Reordering.
+ge_addButton	Add Gradient	
+ge_removeButton	Remove Gradient	
+ge_rampPropertyField	Ramp Property Name	
+ge_rampPropertyError	Ramp property not found!	
+ge_saveRampButton	Save Ramp	
+ge_noAssetPathError	Asset path is Null. Unable to set to Clamped!\n Ramp won't display correctly unless this is fixed.	
+ge_multiGradientPreset	Multi Gradient Preset	
+ge_saveNewButton	Save New	
+ge_saveMultiGradient	Save Multi Gradient	

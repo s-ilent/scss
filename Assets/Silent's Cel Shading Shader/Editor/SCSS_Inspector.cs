@@ -1271,6 +1271,30 @@ protected Vector4? GetSerializedMaterialVector4(Material material, string propNa
 
             if (oldShader)
             {
+				if (oldShader.name.Contains("Silent's Cel Shading"))
+				{
+					// Handle the case where someone swaps the outline mode by changing from 
+					// the (Outline) to the no outline shader.
+					if (oldShader.name.Contains("Outline") && !newShader.name.Contains("Outline"))
+					{
+						tFloat["_OutlineMode"] = 0.0f;
+					}
+					if (!oldShader.name.Contains("Outline") && newShader.name.Contains("Outline"))
+					{
+						tFloat["_OutlineMode"] = 1.0f;
+					}
+					// Handle transferring from really old versions.
+					if (oldShader.name.Contains(TransparentCutoutShadersPath))
+					{
+						tFloat[BaseStyles.renderingModeName] = (float)RenderingMode.Cutout;
+						tFloat[BaseStyles.customRenderingModeName] = (float)CustomRenderingMode.Cutout;
+					}
+					else if (oldShader.name.Contains(TransparentShadersPath))
+					{
+						tFloat[BaseStyles.renderingModeName] = (float)RenderingMode.Fade;
+						tFloat[BaseStyles.customRenderingModeName] = (float)CustomRenderingMode.Fade;
+					}
+				}
             	if (oldShader.name.Contains("UnityChanToonShader"))
                 {
 					// Build translation table.
@@ -1279,7 +1303,9 @@ protected Vector4? GetSerializedMaterialVector4(Material material, string propNa
 
 					if (GetFloatProperty(material, "_Inverse_Clipping") == 1) Debug.Log("Note: Inverse clipping currently not supported.");
 					if (GetTextureProperty(material, "_ClippingMask")) tFloat["_AlbedoAlphaMode"] = (float)AlbedoAlphaMode.ClippingMask;
-
+                    tFloat["_Tweak_Transparency"] = GetFloatProperty(material, "_Tweak_transparency");
+                    tFloat["_Cutoff"] = 1.0f - GetFloatProperty(material, "_Clipping_Level") ?? 0;
+					
                     // Tone seperation is based on whether BaseAs1st is set.
                     // 2nd seperation is based on whether 1stAs2nd is set.
                     tFloat["_CrosstoneToneSeparation"] = 1.0f - GetFloatProperty(material, "_Use_BaseAs1st") ?? 0;
@@ -1371,23 +1397,33 @@ protected Vector4? GetSerializedMaterialVector4(Material material, string propNa
                     	stencilOperation = (int)StencilOp.Keep;
 						stencilFail = (int)StencilOp.Keep;
                 	}
+
+					// Transparency modes
+	            	if (oldShader.name.Contains("Clipping"))
+	                {
+						// Treat Clipping as cutout
+	                    tFloat[BaseStyles.renderingModeName] = (float)RenderingMode.Cutout;
+                    	tFloat[BaseStyles.customRenderingModeName] = (float)CustomRenderingMode.Cutout;
+	                }
+	            	if (oldShader.name.Contains("TransClipping"))
+	                {
+						// TransClipping mode depends on a depth prepass with cutout
+						// This is difficult to support and would have low performance, and more importantly,
+						// alpha to coverage can replicate it pretty well, so set to cutout.
+	                    tFloat[BaseStyles.renderingModeName] = (float)RenderingMode.Cutout;
+                    	tFloat[BaseStyles.customRenderingModeName] = (float)CustomRenderingMode.Cutout;
+	                }
+	            	if (oldShader.name.Contains("Transparent"))
+	                {
+						// Treat Transparent mode as Fade transparency.
+	                    tFloat[BaseStyles.renderingModeName] = (float)RenderingMode.Fade;
+                    	tFloat[BaseStyles.customRenderingModeName] = (float)CustomRenderingMode.Fade;
+	                }
 					
                 }
             	if (oldShader.name.Contains("Reflex Shader 2"))
                 {
-				}
-				if (oldShader.name.Contains("Silent's Cel Shading"))
-				{
-					// Handle the case where someone swaps the outline mode by changing from 
-					// the (Outline) to the no outline shader.
-					if (oldShader.name.Contains("Outline") && !newShader.name.Contains("Outline"))
-					{
-						tFloat["_OutlineMode"] = 0.0f;
-					}
-					if (!oldShader.name.Contains("Outline") && newShader.name.Contains("Outline"))
-					{
-						tFloat["_OutlineMode"] = 1.0f;
-					}
+					// Todo
 				}
             }
 
@@ -1418,37 +1454,8 @@ protected Vector4? GetSerializedMaterialVector4(Material material, string propNa
             {
                 SetupMaterialWithRenderingMode(material, (RenderingMode)material.GetFloat(BaseStyles.renderingModeName), CustomRenderingMode.Opaque, -1);
             }
-            else
+			else
             {
-                RenderingMode mode = RenderingMode.Opaque;
-
-                if (oldShader.name.Contains(TransparentCutoutShadersPath))
-                {
-                    mode = RenderingMode.Cutout;
-                }
-                else if (oldShader.name.Contains(TransparentShadersPath))
-                {
-                    mode = RenderingMode.Fade;
-                }
-
-            	if (oldShader.name.Contains("UnityChanToonShader"))
-                {
-	            	if (oldShader.name.Contains("Clipping"))
-	                {
-	                    mode = RenderingMode.Cutout;
-	                }
-	            	if (oldShader.name.Contains("TransClipping"))
-	                {
-	                    mode = RenderingMode.Cutout;
-	                }
-	            	if (oldShader.name.Contains("Transparent"))
-	                {
-	                    mode = RenderingMode.Fade;
-	                }
-	            }
-
-                material.SetFloat(BaseStyles.renderingModeName, (float)mode);
-
                 MaterialChanged(material);
             }
         }
