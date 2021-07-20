@@ -33,7 +33,8 @@ namespace SilentCelShading.Unity
         {
             Opaque = 0,
             Cutout = 1,
-            Fade = 2
+            Fade = 2,
+            Premultiplied = 3
         }
 
         protected static class BaseStyles
@@ -171,16 +172,6 @@ namespace SilentCelShading.Unity
 
             EditorGUI.showMixedValue = false;
 
-            if (EditorGUI.EndChangeCheck())
-            {
-                Object[] targets = renderingMode.targets;
-
-                foreach (Object target in targets)
-                {
-                    MaterialChanged((Material)target);
-                }
-            }
-
             if ((RenderingMode)renderingMode.floatValue == RenderingMode.Custom)
             {
                 EditorGUI.indentLevel += 2;
@@ -195,6 +186,16 @@ namespace SilentCelShading.Unity
             }
 
             materialEditor.ShaderProperty(cullMode, BaseStyles.cullMode);
+
+            if (EditorGUI.EndChangeCheck())
+            {
+                Object[] targets = renderingMode.targets;
+
+                foreach (Object target in targets)
+                {
+                    MaterialChanged((Material)target);
+                }
+            }
         }
 
         protected void StencilOptions(MaterialEditor materialEditor, Material material)
@@ -336,6 +337,7 @@ namespace SilentCelShading.Unity
                                 {
                                     material.DisableKeyword(BaseStyles.alphaTestOnName);
                                     material.DisableKeyword(BaseStyles.alphaBlendOnName);
+                                    material.DisableKeyword(BaseStyles.alphaPremultiplyOnName);
                                     material.SetInt(BaseStyles.alphaToMaskName, (int)DepthWrite.Off);
                                 }
                                 break;
@@ -344,6 +346,7 @@ namespace SilentCelShading.Unity
                                 {
                                     material.EnableKeyword(BaseStyles.alphaTestOnName);
                                     material.DisableKeyword(BaseStyles.alphaBlendOnName);
+                                    material.DisableKeyword(BaseStyles.alphaPremultiplyOnName);
                                     material.SetInt(BaseStyles.alphaToMaskName, (int)DepthWrite.On);
                                 }
                                 break;
@@ -352,6 +355,16 @@ namespace SilentCelShading.Unity
                                 {
                                     material.DisableKeyword(BaseStyles.alphaTestOnName);
                                     material.EnableKeyword(BaseStyles.alphaBlendOnName);
+                                    material.DisableKeyword(BaseStyles.alphaPremultiplyOnName);
+                                    material.SetInt(BaseStyles.alphaToMaskName, (int)DepthWrite.Off);
+                                }
+                                break;
+
+                            case CustomRenderingMode.Premultiplied:
+                                {
+                                    material.DisableKeyword(BaseStyles.alphaTestOnName);
+                                    material.DisableKeyword(BaseStyles.alphaBlendOnName);
+                                    material.EnableKeyword(BaseStyles.alphaPremultiplyOnName);
                                     material.SetInt(BaseStyles.alphaToMaskName, (int)DepthWrite.Off);
                                 }
                                 break;
