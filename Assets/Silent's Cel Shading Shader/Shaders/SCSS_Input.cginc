@@ -633,6 +633,25 @@ SCSS_Input applyDetail(SCSS_Input c, float4 texcoords)
     return c;
 }
 
+SCSS_Input applyVertexColour(SCSS_Input c, float4 color, float isOutline)
+{
+	switch (_VertexColorType)
+	{
+		case 2: 
+		case 0: 
+		c.albedo = c.albedo * color.rgb; 
+		if (_CrosstoneToneSeparation) c.tone[0].col *= color.rgb; 
+		if (_Crosstone2ndSeparation) c.tone[1].col *= color.rgb; 
+		break;
+		case 1: 
+		c.albedo = lerp(c.albedo, color.rgb, isOutline); 
+		if (_CrosstoneToneSeparation) c.tone[0].col = lerp(c.tone[0].col, color.rgb, isOutline); 
+		if (_Crosstone2ndSeparation)  c.tone[1].col = lerp(c.tone[1].col, color.rgb, isOutline); 
+		break;
+	}
+    return c;
+}
+
 half4 SpecularGloss(float4 texcoords, half mask)
 {
     half4 sg;
