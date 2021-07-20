@@ -307,15 +307,7 @@ float4 frag(VertexOutput i, uint facing : SV_IsFrontFace
 	#endif
 
 	c = applyDetail(c, texcoords);
-
-	// Vertex colour application. 
-	[flatten]
-	switch (_VertexColorType)
-	{
-		case 2: 
-		case 0: c.albedo = c.albedo * i.color.rgb; break;
-		case 1: c.albedo = lerp(c.albedo, i.color.rgb, isOutline); break;
-	}
+	c = applyVertexColour(c, i.color, isOutline);
 
 	c.emission = Emission(texcoords.xy);
 	
