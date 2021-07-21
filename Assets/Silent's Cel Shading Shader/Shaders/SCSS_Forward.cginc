@@ -225,9 +225,6 @@ void computeShadingParamsForward(inout ShadingParams shading, VertexOutput i)
 }
 */
 
-#if !defined(USING_TRANSPARENCY)
-[earlydepthstencil]
-#endif
 float4 frag(VertexOutput i, uint facing : SV_IsFrontFace
     #if defined(USING_COVERAGE_OUTPUT)
 	, out uint cov : SV_Coverage
