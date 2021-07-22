@@ -14,9 +14,8 @@ Shaders for Unity for cel shading, designed to take Unity's lighting into accoun
 ## Features include:
 * **Customisable lighting**
 
-  A shadow tone map system is integrated, which allows for true anime-style material shade colouring and light bias. 
-  Provides a light ramp system that are integrated seamlessly into lighting. 
-  Or, use the Crosstone system and define multiple shadow tones with ramp parameters.
+  The shadow tone system allows for true anime-style material shade colouring and light bias.
+  Use the Crosstone system and define multiple shadow tones with ramp parameters, or provide your own light ramp texture!
   All integrated with Unity's lighting system!
 
 * **NPR**
@@ -38,6 +37,12 @@ Shaders for Unity for cel shading, designed to take Unity's lighting into accoun
 
   Many advanced options for blend mode and more. Provides support for using premutiplied transparency, which allows for glossy transparent objects that naturally fit into their surroundings.
 
+* **VRchat Features**
+
+  Simple Inventory System lets you toggle parts of a material easily, allowing for runtime customisation of clothing without the costs of extra skinned meshes.
+  AudioLink compatibility allows for audio-reactive effects on materials, integrated into the emission system.
+  Shader baking creates an optimised variant of each material's shaders, allowing for a smaller upload size and better runtime performance. 
+
 <div style="width: 5em">
 ![Too Much Preview](https://cdn.discordapp.com/attachments/414634326995763201/694118872110071880/screen_10328x5640_2020-03-30_19-58-06.png.jpg)
 </div>
@@ -47,7 +52,3 @@ Shaders for Unity for cel shading, designed to take Unity's lighting into accoun
 Tested with Unity 2018.4.20f1 LTS and Unity 2019.4.13f1.
 
 For support, contact me on Discord or Twitter.
-
-![Silent＃0264](https://files.catbox.moe/lv2mdh.png) 
-
-![@Silent0264](https://files.catbox.moe/zma5gi.png)
