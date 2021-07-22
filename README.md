@@ -14,20 +14,23 @@ Shaders for Unity for cel shading, designed to take Unity's lighting into accoun
 ## Features include:
 * **Customisable lighting**
 
-  The shadow tone system allows for true anime-style material shade colouring and light bias.
-  Use the Crosstone system and define multiple shadow tones with ramp parameters, or provide your own light ramp texture!
+  The shadow tone system allows for true anime-style material shade colouring and light bias.<br>
+  Use the Crosstone system and define multiple shadow tones with ramp parameters, or provide your own light ramp texture!<br>
   All integrated with Unity's lighting system!
 
 * **NPR**
 
-  SCSS contains a unique matcap system. You can combine multiple blend modes and multiple matcaps. They can be anchored in world or tangent space, stopping them from shifting with head movement in VR. 
-  Customisable ambient and emissive rim lights are also provided for highlight effects. 
+  SCSS contains a unique matcap system. You can combine multiple blend modes and multiple matcaps. <br>
+  They can be anchored in world or tangent space, stopping them from shifting with head movement in VR. <br>
+  Customisable ambient and emissive rim lights are also provided for highlight effects. <br>
   Cel-shaded specular gives you a stylised shiny highlight.
 
 * **PBR**
 
-  Contains metalness and gloss functionality accurate to Unity's Standard shader. You can combine a cel-shaded material with realistic metal and gloss using the same parameters as Standard.
-  Detail maps are supported, allowing you to give materials a close-up fine texture. You can also use the secondary UV channel to add isolated details through decals.
+  Contains metalness and gloss functionality accurate to Unity's Standard shader. <br>
+  You can combine a cel-shaded material with realistic metal and gloss using the same parameters as Standard.<br>
+  Detail maps are supported, allowing you to give materials a close-up fine texture. <br>
+  You can also use the secondary UV channel to add isolated details through decals.
 
 * **Outlines and control**
 
@@ -39,8 +42,8 @@ Shaders for Unity for cel shading, designed to take Unity's lighting into accoun
 
 * **VRchat Features**
 
-  Simple Inventory System lets you toggle parts of a material easily, allowing for runtime customisation of clothing without the costs of extra skinned meshes.
-  AudioLink compatibility allows for audio-reactive effects on materials, integrated into the emission system.
+  Simple Inventory System lets you toggle parts of a material easily, allowing for runtime customisation of clothing without the costs of extra skinned meshes.<br>
+  AudioLink compatibility allows for audio-reactive effects on materials, integrated into the emission system.<br>
   Shader baking creates an optimised variant of each material's shaders, allowing for a smaller upload size and better runtime performance. 
 
 <div style="width: 5em">
