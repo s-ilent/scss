@@ -854,11 +854,26 @@ float3 applyOutline(float3 col, float is_outline)
 	#endif
 }
 
+float applyOutlineAlpha(float alpha, float is_outline)
+{    
+	#if defined(SCSS_OUTLINE)
+	alpha = lerp(alpha, alpha * _outline_color.a, is_outline);
+    if (_OutlineMode == 2) 
+    {
+        alpha = lerp(alpha, _outline_color.a, is_outline);
+    }
+    return alpha;
+    #else
+    return alpha;
+	#endif
+}
+
 SCSS_Input applyOutline(SCSS_Input c, float is_outline)
 {
 	c.albedo = applyOutline(c.albedo, is_outline);
     if (_CrosstoneToneSeparation) c.tone[0].col = applyOutline(c.tone[0].col, is_outline);
 	if (_Crosstone2ndSeparation)  c.tone[1].col = applyOutline(c.tone[1].col, is_outline);
+	c.alpha = applyOutlineAlpha(c.alpha, is_outline);
 
     return c;
 }

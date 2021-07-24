@@ -96,6 +96,10 @@ float sampleAudioTexture(float band, float delay, float range)
     } else {
         if (_alUseFallback != 0) 
         {
+            if (_alFallbackBPM == 0)
+            {
+                return 1;
+            }
         // If not available, fake one.
         float beat = _alFallbackBPM / 60;
         float rowTiming = (4-band)/4.0;
