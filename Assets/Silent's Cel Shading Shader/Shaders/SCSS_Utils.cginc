@@ -183,6 +183,28 @@ float2 sharpSample( float4 texelSize , float2 p )
 	return p;
 }
 
+// Colour transform helper functions
+// Source: https://beesbuzz.biz/code/16-hsv-color-transforms
+
+float3 TransformHSV(float3 col, float h, float s, float v)
+{
+    float vsu,vsw;
+    sincos(h*UNITY_PI/180, vsw, vsu);
+    vsu *= v*s;
+    vsw *= v*s;
+    float3 ret;
+    ret.r = (.299*v + .701*vsu + .168*vsw)*col.r
+        +   (.587*v - .587*vsu + .330*vsw)*col.g
+        +   (.114*v - .114*vsu - .497*vsw)*col.b;
+    ret.g = (.299*v - .299*vsu - .328*vsw)*col.r
+        +   (.587*v + .413*vsu + .035*vsw)*col.g
+        +   (.114*v - .114*vsu + .292*vsw)*col.b;
+    ret.b = (.299*v - .300*vsu + 1.25*vsw)*col.r
+        +   (.587*v - .588*vsu - 1.05*vsw)*col.g
+        +   (.114*v + .886*vsu - .203*vsw)*col.b;
+    return ret;
+}
+
 //-----------------------------------------------------------------------------
 // These functions rely on data or functions not available in the shadow pass
 //-----------------------------------------------------------------------------

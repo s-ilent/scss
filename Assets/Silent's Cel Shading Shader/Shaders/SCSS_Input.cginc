@@ -40,6 +40,7 @@ UNITY_DECLARE_TEX2D(_DetailAlbedoMap); uniform half4 _DetailAlbedoMap_ST; unifor
 UNITY_DECLARE_TEX2D_NOSAMPLER(_DetailNormalMap); uniform half4 _DetailNormalMap_ST;
 UNITY_DECLARE_TEX2D_NOSAMPLER(_SpecularDetailMask); uniform half4 _SpecularDetailMask_ST;
 uniform float _DetailAlbedoMapScale;
+uniform float _DetailAlbedoBlendMode;
 uniform float _DetailNormalMapScale;
 uniform float _SpecularDetailStrength;
 #endif
@@ -95,6 +96,11 @@ uniform float _AlphaSharp;
 uniform float _UVSec;
 uniform float _AlbedoAlphaMode;
 uniform float _Tweak_Transparency;
+
+uniform float _ToggleHueControls;
+uniform float _ShiftHue;
+uniform float _ShiftSaturation;
+uniform float _ShiftValue;
 
 uniform float4 _EmissionColor;
 
@@ -449,12 +455,12 @@ float4 TexCoords(float2 uv0, float2 uv1)
 {
     float4 texcoord;
 	texcoord.xy = TRANSFORM_TEX(uv0, _MainTex);// Always source from uv0
-	texcoord.xy = _PixelSampleMode? 
+	texcoord.xy = _PixelSampleMode ? 
 		sharpSample(_MainTex_TexelSize * _MainTex_ST.xyxy, texcoord.xy) : texcoord.xy;
 
 #if defined(_DETAIL) 
 	texcoord.zw = TRANSFORM_TEX(((_UVSec == 0) ? uv0 : uv1), _DetailAlbedoMap);
-	texcoord.zw = _PixelSampleMode? 
+	texcoord.zw = _PixelSampleMode ? 
 		sharpSample(_DetailAlbedoMap_TexelSize * _DetailAlbedoMap_ST.xyxy, texcoord.zw) : texcoord.zw;
 #else
 	texcoord.zw = texcoord.xy;
@@ -590,7 +596,7 @@ inline float getInventoryMask(float2 in_texcoord)
     // Higher than 17? Enabled by default
     inventoryMask += (itemID >= 17);
 
-    return inventoryMask;
+    return round(inventoryMask);
 }
 
 //-----------------------------------------------------------------------------
@@ -601,24 +607,50 @@ inline float getInventoryMask(float2 in_texcoord)
 
 float3 applyDetailToAlbedo(float3 albedo, float3 detail, float mask)
 {
-    #if defined(_DETAIL_MULX2)
+#if defined(_DETAIL)
+	// Note: In Standard this is handled by keywords, but only _DETAIL_MULX2 is used
+	// In this shader, they are all aliased to _DETAIL
+	switch ( _DetailAlbedoBlendMode )
+	{
+    case 0:
     	albedo *= LerpWhiteTo (detail.rgb * unity_ColorSpaceDouble.rgb, mask);
-    #elif defined(_DETAIL_MUL)
+		break;
+    case 1:
         albedo *= LerpWhiteTo (detail.rgb, mask);
-    #elif defined(_DETAIL_ADD)
+		break;
+    case 2:
         albedo += detail.rgb * mask;
-    #elif defined(_DETAIL_LERP)
+		break;
+    case 3:
         albedo = lerp (albedo, detail.rgb, mask);
-    #endif
+		break;
+	}
+#endif
     // Standard doesn't saturate albedo, but it can't go negative.
     return max(albedo, 0);
 }
 
+float3 applyMaskedHSVToAlbedo(float3 albedo, float mask)
+{
+	// HSV tinting, masked by tint mask
+	float3 warpedAlbedo = TransformHSV(albedo, _ShiftHue, _ShiftSaturation, _ShiftValue);
+	return lerp(albedo, warpedAlbedo, mask);
+}
+
 SCSS_Input applyDetail(SCSS_Input c, float4 texcoords)
 {
-	c.albedo *= LerpWhiteTo(_Color.rgb, ColorMask(texcoords.xy));
-	if (_CrosstoneToneSeparation) c.tone[0].col *= LerpWhiteTo(_Color.rgb, ColorMask(texcoords.xy));
-	if (_Crosstone2ndSeparation) c.tone[1].col *= LerpWhiteTo(_Color.rgb, ColorMask(texcoords.xy));
+	float tintMask = ColorMask(texcoords.xy);
+
+	if (_ToggleHueControls)
+	{
+		c.albedo = applyMaskedHSVToAlbedo(c.albedo, tintMask);
+		if (_CrosstoneToneSeparation) c.tone[0].col *= applyMaskedHSVToAlbedo(_Color.rgb, tintMask);
+		if (_Crosstone2ndSeparation) c.tone[1].col *= applyMaskedHSVToAlbedo(_Color.rgb, tintMask);
+	}
+
+	c.albedo *= LerpWhiteTo(_Color.rgb, tintMask);
+	if (_CrosstoneToneSeparation) c.tone[0].col *= LerpWhiteTo(_Color.rgb, tintMask);
+	if (_Crosstone2ndSeparation) c.tone[1].col *= LerpWhiteTo(_Color.rgb, tintMask);
 
 #if defined(_DETAIL)
     half mask = DetailMask(texcoords.xy);

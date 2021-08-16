@@ -4,6 +4,9 @@ _ClippingMask	Clipping Mask	Additional texture for transparency, applied over ot
 _Cutoff	Alpha Cutoff	Threshold for transparency cutoff. Values below the cutoff will be fully transparent.
 _AlphaSharp	Disable Dithering	Treats transparency cutoff as a hard edge, instead of a soft dithered one.
 _ColorMask	Tint Mask	Masks material colour tinting (G), rim light (B), and detail maps (A).
+_ShiftHue	Hue Shift	Shifts the hue of the main texture and tone, where the value is the number of degrees to shift the hue. 
+_ShiftSaturation	Saturation Shift	Shifts the level of saturation in the main texture and tone, dulling or increasing the vibrance of their respective colours.
+_ShiftValue	Luma Shift	Shifts the brightness of the main texture and tone.
 _BumpMap	Normal Map	Normal map (RGB), which adjusts the direction of the surface normals.
 _EmissionMap	Emission Map	Emission map (RGB), which controls emitted light that isn't affected by lighting.
 _UseAdvancedEmission	Advanced Emission	Applies additional effects to the emission map.
@@ -13,7 +16,7 @@ _EmissionDetailParams	Emission Detail Parameters	XY: Scrolling speed, ZW: Phase
 s_EmissionDetailScroll	Scroll	Sets the scrolling speed for the emission detail texture.
 s_EmissionDetailPhase	Phase/Pulse	Sets the phase of the emission detail texture. X controls the pulsing speed, and Y controls the phase. The higher the phase, the shorter the interval between repetitions.
 _SpecGlossMap	Specular Map	Specular Map (RGBA, RGB: Specular/Metalness, A: Smoothness)
-_SpecularType	Specular Style	Allows you to set the shading mode used for specular.
+_SpecularType	Specular Style	Allows you to set whether specular is active, and what kind of specular to use if so.
 _Smoothness	Smoothness	The smoothness of the material. The specular map's alpha channel is used for this, with this slider being a multiplier.
 _Anisotropy	Anisotropy	Direction of the anisotropic specular highlights.
 _UseEnergyConservation	Use Energy Conservation	Reduces the intensity of the diffuse on specular areas, to realistically conserve energy.
@@ -30,6 +33,7 @@ _FresnelTintInv	Inverse Rim Tint	Tints the colours of the inverse rim lighting. 
 _FresnelWidthInv	Inverse Rim Width	Sets the width of the inverse rim lighting.
 _FresnelStrengthInv	Inverse Rim Softness	Sets the sharpness of the inverse rim edge.
 _CustomFresnelColor	Emissive Rim	RGB sets the colour of the additive rim light. Alpha controls the power/width of the effect.
+_OutlineMode	Outline Mode	Adds outlines to the model with the specified blend mode.
 _outline_color	Outline Colour	Sets the colour used for outlines. In tint mode, this is multiplied against the texture.
 _outline_width	Outline Width	Sets the width of outlines in cm.
 _OutlineMask	Outline Mask	Sets the width of outlines.
@@ -106,6 +110,7 @@ _Shadow	Shadow Mask Lightening	Sets the power of the shadow mask.
 _LightRampType	Lighting Ramp Type	For if you use lightramps that run from bottom to top instead of left to right, or none at all.
 _ShadowMaskType	Shadow Mask Style	Changes how the shadow mask is used.
 _VertexColorType	Vertex Colour Type	Sets how the vertex colour should be used. Outline only affects the colour of outlines. Additional data uses the red channel for outline width and the green for ramp softness.
+_AlbedoAlphaMode	Albedo Alpha Mode	Sets how the alpha channel of the albedo texture is used. 
 _GradientEditorButton	Open Gradient Editor	Opens the gradient editor window with the current material focused. This allows you to create a new lighting ramp and view the results on this material in realtime.
 _CrosstoneToneSeparation	1st Tone Blending Mode	Specifies the method used to blend tone with the albedo texture. Combined will merge one over the other, while Seperate will not.
 _Crosstone2ndSeparation	2nd Tone Blending Mode	Specifies the method used to blend 2nd tone with the tone texture. Combined will merge one over the other, while Seperate will not.
@@ -150,7 +155,7 @@ ge_resolutionTitle	Resolution:
 ge_linearCheckbox	Treat as non-sRGB	
 ge_materialCheckbox	Show material selector	
 ge_helpCheckbox	Show help	
-ge_basicHelp	Select the top slot to open the gradient editor. You can change it and see how your material reacts in realtime. \nNote that if you don't save the lighting ramp, it will revert to the old one and your changes will be lost. Use "Save Ramp" to save.	
+ge_basicHelp	Select the top slot to open the gradient editor. You can change it and see how your material reacts in realtime. Note that if you don't save the lighting ramp, it will revert to the old one and your changes will be lost. Use Save Ramp to save.	
 ge_multiRampHelp	Use the + and - buttons to add additional ramp levels. They'll be blended based on Softness, which is set by vertex colour.	
 ge_reorderButton	Reorder	Make sure you don't want to undo anything before Reordering.
 ge_addButton	Add Gradient	
