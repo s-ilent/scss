@@ -100,18 +100,37 @@ namespace SilentCelShading.Unity
 			}
 		}
 
+		static public SystemLanguage inspectorLanguage;
 		static private TextAsset inspectorData;
 		public static Dictionary<string, GUIContent> styles = new Dictionary<string, GUIContent>();
 
+		private static void UpdateInspectorLanguageSetting()
+		{
+			string inspectorLanguageSetting = EditorUserSettings.GetConfigValue("scss_editor_language");
+			// Initial setup of editor language
+			if (inspectorLanguageSetting == null)
+			{
+				inspectorLanguage = Application.systemLanguage;
+			} 
+			// Load editor language
+			else
+			{
+				inspectorLanguage = (SystemLanguage) Enum.Parse(typeof(SystemLanguage), inspectorLanguageSetting);
+			}
+		}
+
 		public static void LoadInspectorData()
 		{
+			UpdateInspectorLanguageSetting();
+
 			char[] recordSep = new char[] {'\n'};
 			char[] fieldSep = new char[] {'\t'};
 			//if (styles.Count == 0)
 			{
-					string[] guids = AssetDatabase.FindAssets("t:TextAsset SCSS_InspectorData." + Application.systemLanguage);
+					string[] guids = AssetDatabase.FindAssets("t:TextAsset SCSS_InspectorData." + inspectorLanguage);
 					if (guids.Length == 0)
 					{
+						Debug.LogWarning("SCSS: Failed to load localisation file.");
 						guids = AssetDatabase.FindAssets("t:TextAsset SCSS_InspectorData.English");
 					}
 					inspectorData = (TextAsset)AssetDatabase.LoadAssetAtPath(AssetDatabase.GUIDToAssetPath(guids[0]), typeof(TextAsset));
@@ -125,6 +144,69 @@ namespace SilentCelShading.Unity
 					
 				}	
 			}		
+		}
+        internal static bool ButtonWithDropdownList(GUIContent content, string[] buttonNames, GenericMenu.MenuFunction2 callback) {
+            var style = new GUIStyle("DropDownButton");
+            var rect = GUILayoutUtility.GetRect(content, style);
+
+            var dropDownRect = rect;
+            const float kDropDownButtonWidth = 20f;
+            dropDownRect.xMin = dropDownRect.xMax - kDropDownButtonWidth;
+
+            if (Event.current.type == EventType.MouseDown && dropDownRect.Contains(Event.current.mousePosition)) {
+                var menu = new GenericMenu();
+                for (int i = 0; i != buttonNames.Length; i++)
+                    menu.AddItem(new GUIContent(buttonNames[i]), false, callback, i);
+
+                menu.DropDown(rect);
+                Event.current.Use();
+
+                return false;
+            }
+
+            return GUI.Button(rect, content, style);
+        }
+
+		// Selectable languages 
+		internal enum InspectorLanguageSelection
+		{
+			English, 日本語
+		}
+
+		static private InspectorLanguageSelection selectedLanguage;
+
+		public static void DrawInspectorLanguageDropdown()
+		{
+			switch(inspectorLanguage)
+			{
+				case SystemLanguage.English:
+					selectedLanguage = InspectorLanguageSelection.English; 
+					break;
+				case SystemLanguage.Japanese:
+					selectedLanguage = InspectorLanguageSelection.日本語;
+					break;
+			}
+
+			
+			if (WithChangeCheck(() => 
+			{
+            	selectedLanguage = (InspectorLanguageSelection)EditorGUILayout.EnumPopup("Language", selectedLanguage);
+			}))
+			{
+				switch(selectedLanguage)
+				{
+					case InspectorLanguageSelection.English:
+						inspectorLanguage = SystemLanguage.English;
+						break;
+					case InspectorLanguageSelection.日本語:
+						inspectorLanguage = SystemLanguage.Japanese;
+						break;
+				}
+				// Update configuration
+				EditorUserSettings.SetConfigValue("scss_editor_language", inspectorLanguage.ToString());
+				// Reload localisation file
+				LoadInspectorData();
+			}
 		}
 
         public static void WithGroupVertical(Action action)
@@ -162,6 +244,22 @@ namespace SilentCelShading.Unity
 			int selection = (int)prop.floatValue;
 			EditorGUI.BeginChangeCheck();
 			selection = EditorGUILayout.Popup(prop.displayName, (int)selection, options);
+
+			if (EditorGUI.EndChangeCheck())
+			{
+				editor.RegisterPropertyChangeUndo(prop.displayName);
+				prop.floatValue = (float)selection;
+				return Array.ConvertAll(prop.targets, target => (Material)target);
+			}
+
+			return new Material[0];
+
+		}
+		public static Material[] WithMaterialPropertyDropdown(MaterialProperty prop, GUIContent label, string[] options, MaterialEditor editor)
+		{
+			int selection = (int)prop.floatValue;
+			EditorGUI.BeginChangeCheck();
+			selection = EditorGUILayout.Popup(label, (int)selection, options);
 
 			if (EditorGUI.EndChangeCheck())
 			{

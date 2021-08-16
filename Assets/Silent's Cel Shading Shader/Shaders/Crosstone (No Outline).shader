@@ -15,6 +15,11 @@ Shader "Silent's Cel Shading/Crosstone"
 		_BumpScale("Normal Map Scale", Float) = 1.0
 		[Enum(VertexColorType)]_VertexColorType ("Vertex Colour Type", Float) = 2.0
 		//[Space]
+		[Enum(TintApplyMode)]_ToggleHueControls("Show HSV Controls", Float) = 0.0
+		_ShiftHue ("Hue Shift", Range(-180, 180)) = 0.0
+		_ShiftSaturation ("Saturation Shift", Range(0, 2)) = 1.0
+		_ShiftValue ("Value Shift", Range(0, 2)) = 1.0
+		//[Space]
 		_EmissionMap("Emission Map", 2D) = "white" {}
 		[HDR]_EmissionColor("Emission Color", Color) = (0,0,0,1)
 		//[Space]
@@ -84,13 +89,14 @@ Shader "Silent's Cel Shading/Crosstone"
 		[Toggle(_DETAIL_MULX2)]_UseDetailMaps("Enable Detail Maps", Float ) = 0.0
 		_DetailAlbedoMap ("Detail Albedo Map", 2D) = "gray" {}
 		_DetailAlbedoMapScale ("Detail Albedo Map Scale", Float) = 1.0
+		[Enum(DetailAlbedoBlendMode)]_DetailAlbedoBlendMode ("Detail Albedo Blend Mode", Float) = 0.0
 		_DetailNormalMap("Detail Normal Map", 2D) = "bump" {}
 		_DetailNormalMapScale("Detail Normal Map Scale", Float) = 1.0
 		_SpecularDetailMask ("Specular Detail Mask", 2D) = "white" {}
 		_SpecularDetailStrength ("Specular Detail Strength", Range(0, 1)) = 1.0
 		[Toggle(_EMISSION)]_UseAdvancedEmission("Enable Advanced Emission", Float ) = 0.0
         [Enum(UV0, 0, UV1, 1)]_DetailEmissionUVSec("Detail Emission UV Source", Float) = 0
-		_EmissionDetailType("Emission Detail Type", Float) = 0
+		[Enum(DetailEmissionMode)]_EmissionDetailType("Emission Detail Type", Float) = 0
 		_DetailEmissionMap("Detail Emission Map", 2D) = "white" {}
 		[HDR]_EmissionDetailParams("Emission Detail Params", Vector) = (0,0,0,0)
 		//[Space]
@@ -230,6 +236,7 @@ Shader "Silent's Cel Shading/Crosstone"
 		#pragma target 5.0
 		#pragma shader_feature _ _ALPHATEST_ON _ALPHABLEND_ON _ALPHAPREMULTIPLY_ON
 		#pragma multi_compile _ UNITY_HDR_ON
+        #pragma multi_compile_instancing
 
 		#define SCSS_CROSSTONE
 		#define SCSS_COVERAGE_OUTPUT
