@@ -532,7 +532,7 @@ namespace SilentCelShading.Unity.Baking
                 }
                 catch (IOException e)
                 {
-                    Debug.LogError(LogHeader + "Processed shader file " + newShaderDirectory + newShaderFilePath + " could not be written.  " + e.ToString());
+                    Debug.LogError(LogHeader + "Processed shader file " + newShaderDirectory + newShaderFilePath + " could not be written.  " + e);
                     return false;
                 }
             }
@@ -589,12 +589,12 @@ namespace SilentCelShading.Unity.Baking
             }
             catch (FileNotFoundException e)
             {
-                Debug.LogError(LogHeader + "Shader file " + filePath + " not found.  " + e.ToString());
+                Debug.LogError(LogHeader + "Shader file " + filePath + " not found.  " + e);
                 return false;
             }
             catch (IOException e)
             {
-                Debug.LogError(LogHeader + "Error reading shader file.  " + e.ToString());
+                Debug.LogError(LogHeader + "Error reading shader file.  " + e);
                 return false;
             }
 
@@ -687,7 +687,7 @@ namespace SilentCelShading.Unity.Baking
                 relativePath = relativePath.Remove(0, "./".Length);
             while (relativePath.StartsWith("../"))
             {
-                basePath = basePath.Remove(basePath.LastIndexOf("/"), basePath.Length - basePath.LastIndexOf("/"));
+                basePath = basePath.Remove(basePath.LastIndexOf("/", StringComparison.Ordinal), basePath.Length - basePath.LastIndexOf("/", StringComparison.Ordinal));
                 relativePath = relativePath.Remove(0, "../".Length);
             }
             return basePath + '/' + relativePath;
@@ -889,7 +889,7 @@ namespace SilentCelShading.Unity.Baking
                 {
                     // Expects only one instance of a macro per line!
                     int macroIndex;
-                    if ((macroIndex = lines[i].IndexOf(macro.name + "(")) != -1)
+                    if ((macroIndex = lines[i].IndexOf(macro.name + "(", StringComparison.Ordinal)) != -1)
                     {
                         // Macro exists on this line, make sure its not the definition
                         string lineParsed = lineTrimmed.Replace(" ", "").Replace("\t", "");
@@ -908,7 +908,7 @@ namespace SilentCelShading.Unity.Baking
                             args[j] = args[j].Trim();
                             int argIndex;
                             int lastIndex = 0;
-                            while ((argIndex = newContents.IndexOf(macro.args[j], lastIndex)) != -1)
+                            while ((argIndex = newContents.IndexOf(macro.args[j], lastIndex, StringComparison.Ordinal)) != -1)
                             {
                                 lastIndex = argIndex+1;
                                 char charLeft = ' ';
@@ -943,7 +943,7 @@ namespace SilentCelShading.Unity.Baking
                     int constantIndex;
                     int lastIndex = 0;
                     bool declarationFound = false;
-                    while ((constantIndex = lines[i].IndexOf(constant.name, lastIndex)) != -1)
+                    while ((constantIndex = lines[i].IndexOf(constant.name, lastIndex, StringComparison.Ordinal)) != -1)
                     {
                         lastIndex = constantIndex+1;
                         char charLeft = ' ';
@@ -997,7 +997,7 @@ namespace SilentCelShading.Unity.Baking
                     // find indexes of all instances of gpr.originalName that exist on this line
                     int lastIndex = 0;
                     int gbIndex;
-                    while ((gbIndex = lines[i].IndexOf(gpr.originalName, lastIndex)) != -1)
+                    while ((gbIndex = lines[i].IndexOf(gpr.originalName, lastIndex, StringComparison.Ordinal)) != -1)
                     {
                         lastIndex = gbIndex+1;
                         char charLeft = ' ';
