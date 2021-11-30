@@ -15,6 +15,10 @@
     #define USING_TRANSPARENCY
 #endif
 
+#if defined (_ALPHABLEND_ON) || defined (_ALPHAPREMULTIPLY_ON)
+    #define USING_ALPHA_BLENDING
+#endif
+
 #if defined (SCSS_COVERAGE_OUTPUT) && defined (_ALPHATEST_ON)
     #define USING_COVERAGE_OUTPUT
 #endif
@@ -27,6 +31,14 @@ sampler2D_float _CameraDepthTexture;
 float4 _CameraDepthTexture_TexelSize;
 
 #define sRGB_Luminance float3(0.2126, 0.7152, 0.0722)
+
+// Epsilon value for floating point numbers that we can't allow to reach 0
+#define FLT_EPS 1e-5
+
+bool inMirror()
+{
+    return unity_CameraProjection[2][0] != 0.f || unity_CameraProjection[2][1] != 0.f;
+}
 
 float interleaved_gradient(float2 uv : SV_POSITION) : SV_Target
 {
