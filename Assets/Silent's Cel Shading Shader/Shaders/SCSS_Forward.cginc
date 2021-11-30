@@ -151,6 +151,7 @@ void geom(triangle VertexOutput IN[3], inout TriangleStream<VertexOutput> tristr
 
 	if ((IN[0].color.a + IN[1].color.a + IN[2].color.a) >= 0)
 	{
+		#if !defined(USING_ALPHA_BLENDING)
 		// Generate base vertex
 		[unroll]
 		for (int ii = 0; ii < 3; ii++)
@@ -162,6 +163,7 @@ void geom(triangle VertexOutput IN[3], inout TriangleStream<VertexOutput> tristr
 		}
 
 		tristream.RestartStrip();
+		#endif
 
 		// Generate outline vertex
 		// If the outline triangle is too small, don't emit it.
@@ -190,6 +192,20 @@ void geom(triangle VertexOutput IN[3], inout TriangleStream<VertexOutput> tristr
 
 			tristream.RestartStrip();
 		}
+			
+		#if defined(USING_ALPHA_BLENDING)
+		// Generate base vertex
+		[unroll]
+		for (int ii = 0; ii < 3; ii++)
+		{
+			VertexOutput o = IN[ii];
+			o.extraData.x = false;
+
+			tristream.Append(o);
+		}
+
+		tristream.RestartStrip();
+		#endif
 	}
 }
 /*
@@ -381,10 +397,6 @@ float4 frag(VertexOutput i, uint facing : SV_IsFrontFace
 	// Lighting handling
 	float3 finalColor = SCSS_ApplyLighting(c, i, texcoords);
 
-	float3 lightmap = float4(1.0,1.0,1.0,1.0);
-	#if defined(LIGHTMAP_ON)
-		lightmap = DecodeLightmap(UNITY_SAMPLE_TEX2D(unity_Lightmap, i.uv1 * unity_LightmapST.xy + unity_LightmapST.zw));
-	#endif
 
     #if defined(USING_COVERAGE_OUTPUT)
     // Get the amount of MSAA samples enabled
@@ -400,7 +412,7 @@ float4 frag(VertexOutput i, uint facing : SV_IsFrontFace
 	outputAlpha = 1;
 	#endif
 
-	fixed4 finalRGBA = fixed4(finalColor * lightmap, outputAlpha);
+	fixed4 finalRGBA = fixed4(finalColor, outputAlpha);
 	UNITY_APPLY_FOG(i.fogCoord, finalRGBA);
 	return finalRGBA;
 }

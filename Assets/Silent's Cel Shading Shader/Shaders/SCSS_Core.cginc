@@ -217,6 +217,10 @@ void getDirectIndirectLighting(float3 normal, out float3 directLighting, out flo
 		indirectLighting = BetterSH9(half4(0.0, 0.0, 0.0, 1.0)); 
 	break;
 	}
+
+	directLighting   += FLT_EPS;
+	indirectLighting += FLT_EPS;
+
     // Workaround for scenes with HDR off blowing out in VRchat.
     if (getLightClampActive())
     {
@@ -624,7 +628,7 @@ float3 SCSS_ApplyLighting(SCSS_Input c, VertexOutput i, float4 texcoords)
 	#endif
 
 	// Generic lighting for effects.
-	float3 effectLighting = l.color;
+	float3 effectLighting = FLT_EPS + l.color;
 	#if defined(UNITY_PASS_FORWARDBASE)
 	effectLighting += GetSHAverage();
 	#endif
@@ -641,6 +645,8 @@ float3 SCSS_ApplyLighting(SCSS_Input c, VertexOutput i, float4 texcoords)
 	    // Colour-preserving clamp.
 	    // This light value is used later to flatten the overall output intensity. 
 	    // Get the maximum input value from the lighting.
+	    // Note: Not luminance, because the final output is still tinted by the output colour.
+	    // So bright blue light is OK because blue is still dark. 
 	    float maxEffectLight = max3(effectLighting);
 	    // The effect lighting is remapped to be within the 0-1.25 range when clamped.
 	    float modLight = min(maxEffectLight, 1.25);
@@ -743,6 +749,11 @@ float3 SCSS_ApplyLighting(SCSS_Input c, VertexOutput i, float4 texcoords)
 		finalColor *= attenuation;
 	#endif
 
+	#if defined(LIGHTMAP_ON)
+		lightmap = DecodeLightmap(UNITY_SAMPLE_TEX2D(unity_Lightmap, i.uv1 * unity_LightmapST.xy + unity_LightmapST.zw));
+		finalColor *= lightmap;
+	#endif
+
 	finalColor *= _LightWrappingCompensationFactor;
 
 	// Apply the light scaling if the light clamp is active. When the light clamp is active,
@@ -755,7 +766,7 @@ float3 SCSS_ApplyLighting(SCSS_Input c, VertexOutput i, float4 texcoords)
 	addEmissive(c, i, effectLightShadow, finalColor);
 
 	// Emissive rim. 
-	finalColor += _CustomFresnelColor.xyz * (pow(d.rlPow4.y, rcp(_CustomFresnelColor.w+0.0001)));
+	finalColor += _CustomFresnelColor.xyz * (pow(d.rlPow4.y, rcp(_CustomFresnelColor.w+FLT_EPS)));
 	#endif
 
 	return finalColor;

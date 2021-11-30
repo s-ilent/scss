@@ -305,22 +305,6 @@ struct SCSS_LightParam
 };
 
 #if defined(UNITY_STANDARD_BRDF_INCLUDED)
-bool inMirror()
-{
-	return unity_CameraProjection[2][0] != 0.f || unity_CameraProjection[2][1] != 0.f;
-}
-
-// Only needed in Unity versions before Unity 2017.4.28 or so.
-// However, 2017.4.15 is a higher UNITY_VERSION.
-bool backfaceInMirror()
-{
-	#if ( (UNITY_VERSION <= 201711) || (UNITY_VERSION == 201755) )
-	return inMirror();
-	#else
-	return false;
-	#endif
-}
-
 bool getLightClampActive()
 {
 	#if !UNITY_HDR_ON && SCSS_CLAMP_IN_NON_HDR
@@ -644,8 +628,8 @@ SCSS_Input applyDetail(SCSS_Input c, float4 texcoords)
 	if (_ToggleHueControls)
 	{
 		c.albedo = applyMaskedHSVToAlbedo(c.albedo, tintMask);
-		if (_CrosstoneToneSeparation) c.tone[0].col *= applyMaskedHSVToAlbedo(_Color.rgb, tintMask);
-		if (_Crosstone2ndSeparation) c.tone[1].col *= applyMaskedHSVToAlbedo(_Color.rgb, tintMask);
+		 c.tone[0].col = applyMaskedHSVToAlbedo(c.tone[0].col, tintMask);
+		 c.tone[1].col = applyMaskedHSVToAlbedo(c.tone[1].col, tintMask);
 	}
 
 	c.albedo *= LerpWhiteTo(_Color.rgb, tintMask);
