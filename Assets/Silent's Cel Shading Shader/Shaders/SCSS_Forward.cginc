@@ -26,6 +26,16 @@ VertexOutput vert(appdata_full v) {
 	o.posWorld = mul(unity_ObjectToWorld, v.vertex);
 	o.vertex = v.vertex;
 
+	// Compress meshes when they're close to the camera.
+	// https://qiita.com/lilxyzw/items/3684d8f252ab1894773a#
+	#if defined(UNITY_REVERSED_Z)
+    // DirectX
+    	if(o.pos.w < _ProjectionParams.y * 1.01 && o.pos.w > 0) o.pos.z = o.pos.z * 0.0001 + o.pos.w * 0.999;
+	#else
+	// OpenGL
+	    if(o.pos.w < _ProjectionParams.y * 1.01 && o.pos.w > 0) o.pos.z = o.pos.z * 0.0001 - o.pos.w * 0.999;
+	#endif
+
 	// This is mainly needed when Blender mangles vertex colour values.
 	// If you notice major differences in vertex colour behaviour to expectations, try this.
 	if (false) v.color.rgb = GammaToLinearSpace(v.color.rgb);
