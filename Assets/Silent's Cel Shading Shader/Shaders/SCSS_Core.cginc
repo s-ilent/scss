@@ -259,7 +259,6 @@ half3 calcDiffuseGI(float3 albedo, SCSS_TonemapInput tone[2], float occlusion, h
 
 	#if defined(SCSS_CROSSTONE)
 	ambientLight *= occlusion;
-	indirectAverage *= albedo;
 	float3 indirectContribution = sampleCrossToneLighting(ambientLight, tone[0], tone[1], albedo);
 	#endif
 
@@ -272,7 +271,7 @@ half3 calcDiffuseGI(float3 albedo, SCSS_TonemapInput tone[2], float occlusion, h
 	ambientLightSplitFactor) * albedo;
 
 	if (_CrosstoneToneSeparation == 1) lightContribution = 
-	lerp(indirectAverage,
+	lerp(indirectAverage * albedo,
 	directLighting*indirectContribution,
 	ambientLightSplitFactor);
 	#endif
