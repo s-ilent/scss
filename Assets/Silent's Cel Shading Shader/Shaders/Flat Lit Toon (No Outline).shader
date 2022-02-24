@@ -161,6 +161,7 @@ Shader "Silent's Cel Shading/Lightramp"
 		//[Space]
 		_LightMultiplyAnimated("Modulate outgoing light", Range(0, 1)) = 1.0
 		[ToggleUI]_LightClampAnimated("Reduce outgoing light", Range(0, 1)) = 0.0
+		_LightAddAnimated("Boost outgoing light", Range(0, 1)) = 0.0
 		//[Space]
 		[ToggleUI]_AlbedoAlphaMode("Albedo Alpha Mode", Float) = 0.0
 		[HDR]_CustomFresnelColor("Emissive Fresnel Color", Color) = (0,0,0,1)

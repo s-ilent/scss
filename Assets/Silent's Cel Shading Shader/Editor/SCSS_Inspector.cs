@@ -1011,6 +1011,7 @@ namespace SilentCelShading.Unity
 			EditorGUILayout.Space();
 			ShaderProperty("_LightMultiplyAnimated");
 			ShaderProperty("_LightClampAnimated");
+			ShaderProperty("_LightAddAnimated");
 		}
 
 		protected void InventoryOptions(bool isBaked)
