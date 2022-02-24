@@ -760,7 +760,9 @@ float3 SCSS_ApplyLighting(SCSS_Input c, VertexOutput i, float4 texcoords)
 
 	// Apply the light scaling if the light clamp is active. When the light clamp is active,
 	// the final colour is divided by the light intensity
-   	if (getLightClampActive()) finalColor = finalColor / max(max3(effectLighting), 1);
+	float tweak = rcp(2 * max3(effectLighting));
+	float lightScaling = max(max3(effectLighting), 1-tweak);
+   	if (getLightClampActive()) finalColor = finalColor / lightScaling;
 
 	finalColor *= _LightMultiplyAnimated;
 
