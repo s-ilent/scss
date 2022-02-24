@@ -125,6 +125,7 @@ _2nd_ShadeColor_Feather	2nd Shading Width	Sets the width of the transition betwe
 _ShadingGradeMap	Shading Adjustment	Adds additional shading to darkened regions, and acts as occlusion. The slider modifies the midpoint of the shading adjustment.
 _ShadingGradeMapLevel	Shading Adjustment Level	Modifies the middle point of the shading adjustment.
 _LightMultiplyAnimated	Runtime Light Adjustment	Modifies the output values. The lower this value, the darker the light reflected by the material.
+_LightAddAnimated	Runtime Light Increase	Modifies the output values. The higher this value, the greater the amount of baseline luminance is applied to the material. Not recommended for regular use.
 _LightClampAnimated	Runtime Light Clamp	Limits the output value of lighting. When enabled, total lighting applied is limited. Not recommended for regular use.
 _UseInventory	Inventory	Enables the inventory system. When enabled, the UV coordinates of the model are used to hide parts of the mesh. Every X units, where X is the inventory stride, the vertices assigned those UV coordinates are placed into a seperate item slot, and can be enabled or disabled using the toggles. The first slot, containing the 0-1 range, is always displayed.
 _InventoryStride	Inventory Stride	Sets the spacing between item slots. By default, this is 10, which means that if a vertex's UVs are 10 units away from the origin, they will be considered a seperate item slot.

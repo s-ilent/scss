@@ -191,7 +191,7 @@ half3 calcVertexLight(float4 vertexAttenuation, float occlusion, SCSS_TonemapInp
 
 void getDirectIndirectLighting(float3 normal, out float3 directLighting, out float3 indirectLighting)
 {
-	directLighting = 0.0;
+	directLighting   = 0.0;
 	indirectLighting = 0.0;
 	switch (_LightingCalculationType)
 	{
@@ -609,6 +609,9 @@ float3 SCSS_ApplyLighting(SCSS_Input c, VertexOutput i, float4 texcoords)
 
 	// Lighting parameters
 	SCSS_Light l = MainLight(i.posWorld.xyz);
+	// Apply a minimum light level.
+	l.color += _LightAddAnimated;
+
 	#if defined(UNITY_PASS_FORWARDADD) && !defined(USING_DIRECTIONAL_LIGHT)
 	l.dir = normalize(_WorldSpaceLightPos0.xyz - i.posWorld.xyz);
 	#endif 

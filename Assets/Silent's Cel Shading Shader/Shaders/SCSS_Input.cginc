@@ -220,6 +220,7 @@ uniform fixed _InventoryItem16Animated;
 // Light adjustment
 uniform float _LightMultiplyAnimated;
 uniform float _LightClampAnimated;
+uniform float _LightAddAnimated;
 
 //-------------------------------------------------------------------------------------
 // Input functions
