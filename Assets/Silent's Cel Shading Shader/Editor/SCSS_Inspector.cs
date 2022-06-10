@@ -379,7 +379,7 @@ namespace SilentCelShading.Unity
 
 			CheckShaderType(material);
 			
-			ShaderBakeHeader();
+			DrawInspectorHeader();
 			
 			bool isBaked = false;
 			{
@@ -470,7 +470,9 @@ namespace SilentCelShading.Unity
 			}
 		}
 
-		protected void ShaderBakeHeader()
+		private InspectorLanguageSelection currentLanguage;
+
+		protected void DrawInspectorHeader()
 		{
             Rect r = EditorGUILayout.GetControlRect(true,0,EditorStyles.layerMaskField);
 				r.x -= 12.0f;
@@ -481,6 +483,9 @@ namespace SilentCelShading.Unity
 			Rect r2 = r;
 				r2.x = r.width - maxWidth + 14.0f;
 				r2.width = maxWidth;
+			Rect r3 = r;
+				r3.x = 14.0f + 4.0f;
+				r3.width = maxWidth;
 			GUI.Box(r, "", EditorStyles.toolbar);
 
 			GUIContent s_bakeButton;
@@ -513,6 +518,30 @@ namespace SilentCelShading.Unity
 						s_bakeButton.text = String.Format(s_bakeButton.text, "" + editor.targets.Length.ToString());
 					}
 				}
+			}
+			
+			string s_langButton = "";
+			var language = GetInspectorLanguage();
+			switch(inspectorLanguage)
+			{
+				case SystemLanguage.English:
+					s_langButton = ("English");
+					currentLanguage = InspectorLanguageSelection.English; 
+					break;
+				case SystemLanguage.Japanese:
+					s_langButton = ("日本語");
+					currentLanguage = InspectorLanguageSelection.日本語;
+					break;
+			}
+				
+			//(GUI.Button(r3, s_langButton, EditorStyles.toolbarDropDown))
+
+			if (WithChangeCheck(() => 
+			{
+        		currentLanguage = (InspectorLanguageSelection) EditorGUI.EnumPopup(r3, currentLanguage);
+			}))
+			{
+				UpdateInspectorLanguage(currentLanguage);
 			}
 			// Draw the button. Because of Unity shenanigans, if we don't always draw the button, 
 			// the layout will explode on the first update of the inspector.
@@ -1127,7 +1156,6 @@ namespace SilentCelShading.Unity
 			}
 
 			editor.EnableInstancingField();
-			DrawInspectorLanguageDropdown();
 		}
 
 		protected static void SetupMaterialWithTransparencyMode(Material material, TransparencyMode shadowMaskType)

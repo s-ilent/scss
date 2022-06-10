@@ -151,6 +151,7 @@ s_advancedOptions	System Options	Settings that control specific system parameter
 s_bakeButton	Bake material	Creates a copy of the shader with the material properties pre-applied and flattened. This reduces the size of the shader in the final build and can improve performance, but you won't be able to change the shader properties until you un-bake it.
 s_bakeButtonPlural	Bake {0} materials	Creates a copy of the shader with the material properties pre-applied and flattened for each material. This reduces the size of the shader in the final build and can improve performance, but you won't be able to change the shader properties until you un-bake it.
 s_bakeButtonRevert	Un-bake material	This material is baked, and material properties can't be changed. Selecting this option will undo the baking process and return this material to using the regular version of the shader.
+s_langButton	Language	Select the language for the material editor.
 ge_gradientEditorTitle	Current Material:	
 ge_resolutionTitle	Resolution:	
 ge_linearCheckbox	Treat as non-sRGB	
