@@ -217,6 +217,21 @@ float3 TransformHSV(float3 col, float h, float s, float v)
     return ret;
 }
 
+inline float4 ApplyNearVertexSquishing(float4 posCS)
+{
+    // Compress meshes when they're close to the camera.
+    // https://qiita.com/lilxyzw/items/3684d8f252ab1894773a#
+    #if defined(UNITY_REVERSED_Z)
+    // DirectX
+        if(posCS.w < _ProjectionParams.y * 1.01 && posCS.w > 0) posCS.z = posCS.z * 0.0001 + posCS.w * 0.999;
+    #else
+    // OpenGL
+        if(posCS.w < _ProjectionParams.y * 1.01 && posCS.w > 0) posCS.z = posCS.z * 0.0001 - posCS.w * 0.999;
+    #endif
+
+    return posCS;
+}
+
 //-----------------------------------------------------------------------------
 // These functions rely on data or functions not available in the shadow pass
 //-----------------------------------------------------------------------------
@@ -251,34 +266,24 @@ float PerceptualRoughnessToPerceptualSmoothness(float perceptualRoughness)
     return (1.0 - perceptualRoughness);
 }
 
-// Return modified perceptualSmoothness based on provided variance (get from GeometricNormalVariance + TextureNormalVariance)
-float NormalFiltering(float perceptualSmoothness, float variance, float threshold)
-{
-    float roughness = PerceptualSmoothnessToRoughness(perceptualSmoothness);
-    // Ref: Geometry into Shading - http://graphics.pixar.com/library/BumpRoughness/paper.pdf - equation (3)
-    float squaredRoughness = saturate(roughness * roughness + min(2.0 * variance, threshold * threshold)); // threshold can be really low, square the value for easier control
+#define MIN_N_DOT_V 1e-4
 
-    return RoughnessToPerceptualSmoothness(sqrt(squaredRoughness));
+float clampNoV(float NoV) {
+    // Neubelt and Pettineo 2013, "Crafting a Next-gen Material Pipeline for The Order: 1886"
+    return max(NoV, MIN_N_DOT_V);
 }
 
-// Reference: Error Reduction and Simplification for Shading Anti-Aliasing
-// Specular antialiasing for geometry-induced normal (and NDF) variations: Tokuyoshi / Kaplanyan et al.'s method.
-// This is the deferred approximation, which works reasonably well so we keep it for forward too for now.
-// screenSpaceVariance should be at most 0.5^2 = 0.25, as that corresponds to considering
-// a gaussian pixel reconstruction kernel with a standard deviation of 0.5 of a pixel, thus 2 sigma covering the whole pixel.
-float GeometricNormalVariance(float3 geometricNormalWS, float screenSpaceVariance)
-{
-    float3 deltaU = ddx(geometricNormalWS);
-    float3 deltaV = ddy(geometricNormalWS);
-
-    return screenSpaceVariance * (dot(deltaU, deltaU) + dot(deltaV, deltaV));
-}
-
-// Return modified perceptualSmoothness
-float GeometricNormalFiltering(float perceptualSmoothness, float3 geometricNormalWS, float screenSpaceVariance, float threshold)
-{
-    float variance = GeometricNormalVariance(geometricNormalWS, screenSpaceVariance);
-    return NormalFiltering(perceptualSmoothness, variance, threshold);
+float IsotropicNDFFiltering(float3 normal, float roughness2) {
+    // Tokuyoshi and Kaplanyan 2021, "Stable Geometric Specular Antialiasing with
+    // Projected-Space NDF Filtering"
+    float SIGMA2 = 0.15915494;
+    float KAPPA = 0.18;
+    float3 dndu = ddx(normal);
+    float3 dndv = ddy(normal);
+    float kernelRoughness2 = 2.0 * SIGMA2 * (dot(dndu, dndu) + dot(dndv, dndv));
+    float clampedKernelRoughness2 = min(kernelRoughness2, KAPPA);
+    float filteredRoughness2 = saturate(roughness2 + clampedKernelRoughness2);
+    return filteredRoughness2;
 }
 
 // bgolus's method for "fixing" screen space directional shadows and anti-aliasing

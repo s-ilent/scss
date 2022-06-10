@@ -9,16 +9,14 @@ struct VertexOutput
     UNITY_VERTEX_INPUT_INSTANCE_ID
     UNITY_VERTEX_OUTPUT_STEREO
 
-	UNITY_POSITION(pos);
-	float3 normal : NORMAL;
+	UNITY_POSITION(pos); // UnityCG macro specified name. Technically "positionCS"
 	fixed4 color : COLOR0_centroid;
-	float2 uv0 : TEXCOORD0;
-	float2 uv1 : TEXCOORD1;
+	float4 uvPack0 : TEXCOORD0;
+	float4 uvPack1 : TEXCOORD1;
 	float4 posWorld : TEXCOORD2;
-	float3 normalDir : TEXCOORD3;
-	float3 tangentDir : TEXCOORD4;
-	float3 bitangentDir : TEXCOORD5;
-	float4 vertex : VERTEX;
+    float4 tangentToWorldAndPackedData[3] : TEXCOORD3;    // [3x3:tangentToWorld | 1x3: normal]
+
+	float4 vertex : VERTEX; // UnityCG macro specified name. Technically "positionOS"
 
 	#if defined(VERTEXLIGHT_ON)
 	half4 vertexLight : TEXCOORD6;

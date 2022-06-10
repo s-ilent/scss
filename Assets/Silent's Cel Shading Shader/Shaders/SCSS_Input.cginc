@@ -197,6 +197,13 @@ uniform float _UseVanishing;
 uniform float _VanishingStart;
 uniform float _VanishingEnd;
 
+// Proximity Shadow
+uniform float _UseProximityShadow;
+uniform float _ProximityShadowDistance;
+uniform float _ProximityShadowDistancePower;
+uniform float4 _ProximityShadowFrontColor;
+uniform float4 _ProximityShadowBackColor;
+
 // Inventory 
 uniform fixed _UseInventory;
 uniform float _InventoryStride;
@@ -225,6 +232,23 @@ uniform float _LightAddAnimated;
 //-------------------------------------------------------------------------------------
 // Input functions
 
+struct SCSS_ShadingParam
+{
+	float3  position;         // world-space position
+	float3x3 tangentToWorld;  // TBN matrix
+    float3  normal;           // normalized transformed normal, in world space
+	float3  view;             // normalized vector from the fragment to the eye
+    float3  geometricNormal;  // normalized geometric normal, in world space
+    float3  reflected;        // reflection of view about normal
+    float NoV;                // dot(normal, view), always strictly >= MIN_N_DOT_V
+
+    float2 normalizedViewportCoord;
+    float2 lightmapUV;
+    float attenuation;
+    float isOutline;
+    float3 ambient;
+};
+
 struct SCSS_RimLightInput
 {
 	half width;
@@ -243,22 +267,27 @@ struct SCSS_TonemapInput
 {
 	half3 col; 
 	half bias;
+	half offset;
+	half width;
 };
 
 struct SCSS_Input 
 {
 	half3 albedo;
 	half alpha;
-	float3 normal;
+	float3 normalTangent;
 
 	half occlusion;
 
 	half3 specColor;
+	half3 anisotropyDirection;
 	float oneMinusReflectivity, smoothness, perceptualRoughness;
-	half softness;
-	half3 emission;
 
+	half softness;
 	half3 thickness;
+
+	half4 emission; // rgb: colour, alpha: darkening
+	half3 postEffect; // effects applied after shading, affected by lighting 
 
 	SCSS_RimLightInput rim;
 	SCSS_TonemapInput tone[2];
@@ -269,7 +298,7 @@ void initMaterial(out SCSS_Input material)
 	material = (SCSS_Input) 0;
 	material.albedo = 1.0;
 	material.alpha = 1.0;
-	material.normal = float3(0.0, 0.0, 1.0);
+	material.normalTangent = float3(0.0, 0.0, 1.0);
 	material.occlusion = 1.0;
 	material.specColor = 0.0;
 	material.oneMinusReflectivity = 1.0;
@@ -325,29 +354,24 @@ struct SCSS_Light
 };
 
 
-SCSS_Light MainLight()
+SCSS_Light MainLight(float3 worldPos)
 {
     SCSS_Light l;
 
     l.color = _LightColor0.rgb;
-    l.intensity = _LightColor0.w;
-    l.dir = Unity_SafeNormalize(_WorldSpaceLightPos0.xyz); 
+    l.dir = Unity_SafeNormalize(UnityWorldSpaceLightDir(worldPos)); 
 
     // Workaround for scenes with HDR off blowing out in VRchat.
     if (getLightClampActive())
         l.color = saturate(l.color);
 
+	// Minimum light level setting.
+	l.color += _LightAddAnimated;
+
     return l;
 }
 
-SCSS_Light MainLight(float3 worldPos)
-{
-    SCSS_Light l = MainLight();
-    l.dir = Unity_SafeNormalize(UnityWorldSpaceLightDir(worldPos)); 
-    return l;
-}
-
-float getAmbientLight (float3 normal)
+float getAmbientLight (float3 normal, float3 viewDir)
 {
 	float3 ambientLightDirection = Unity_SafeNormalize((unity_SHAr.xyz + unity_SHAg.xyz + unity_SHAb.xyz) * _LightSkew.xyz);
 
@@ -358,6 +382,13 @@ float getAmbientLight (float3 normal)
 		: ambientLightDirection;
 	}
 
+	if (_IndirectShadingType == 3) // UTS-like
+	{
+		ambientLightDirection = any(_LightColor0) 
+		? normalize(_WorldSpaceLightPos0) 
+		: viewDir;
+	}
+
 	float ambientLight = dot(normal, ambientLightDirection);
 	ambientLight = ambientLight * 0.5 + 0.5;
 
@@ -366,18 +397,16 @@ float getAmbientLight (float3 normal)
 	return ambientLight;
 }
 
-SCSS_LightParam initialiseLightParam (SCSS_Light l, float3 normal, float3 posWorld)
+SCSS_LightParam initialiseLightParam (SCSS_Light l, SCSS_ShadingParam s)
 {
 	SCSS_LightParam d = (SCSS_LightParam) 0;
-	d.viewDir = normalize(_WorldSpaceCameraPos.xyz - posWorld.xyz);
-	d.halfDir = Unity_SafeNormalize (l.dir + d.viewDir);
-	d.reflDir = reflect(-d.viewDir, normal); // Calculate reflection vector
-	d.NdotL = (dot(l.dir, normal)); // Calculate NdotL
-	d.NdotV = (dot(d.viewDir,  normal)); // Calculate NdotV
+	d.halfDir = Unity_SafeNormalize (l.dir + s.view);
+	d.reflDir = reflect(-s.view, s.normal); // Calculate reflection vector
+	d.NdotL = (dot(l.dir, s.normal)); // Calculate NdotL
+	d.NdotV = (dot(s.view,  s.normal)); // Calculate NdotV
 	d.LdotH = (dot(l.dir, d.halfDir));
-	d.NdotH = (dot(normal, d.halfDir)); // Saturate seems to cause artifacts
-	d.rlPow4 = Pow4(float2(dot(d.reflDir, l.dir), 1 - d.NdotV));  
-	d.NdotAmb = getAmbientLight(normal);
+	d.NdotH = (dot(s.normal, d.halfDir)); // Saturate seems to cause artifacts
+	d.NdotAmb = getAmbientLight(s.normal, s.view);
 	return d;
 }
 #endif
@@ -590,6 +619,47 @@ inline float getInventoryMask(float2 in_texcoord)
 
 #if defined(UNITY_STANDARD_BRDF_INCLUDED)
 
+
+void getDirectIndirectLighting(float3 normal, out float3 directLighting, out float3 indirectLighting)
+{
+	directLighting   = 0.0;
+	indirectLighting = 0.0;
+	switch (_LightingCalculationType)
+	{
+	case 0: // Unbiased
+		directLighting   = GetSHMaxL1();
+		indirectLighting = GetSHAverage(); 
+	break;
+	case 1: // Standard
+		directLighting = 
+		indirectLighting = BetterSH9(half4(normal, 1.0));
+	break;
+	case 2: // Cubed
+		directLighting   = BetterSH9(half4(0.0,  1.0, 0.0, 1.0));
+		indirectLighting = BetterSH9(half4(0.0, -1.0, 0.0, 1.0)); 
+	break;
+	case 3: // True Directional
+		float4 ambientDir = float4(Unity_SafeNormalize(unity_SHAr.xyz + unity_SHAg.xyz + unity_SHAb.xyz), 1.0);
+		directLighting   = BetterSH9(ambientDir);
+		indirectLighting = BetterSH9(-ambientDir); 
+	break;
+	case 4: // Biased
+		directLighting   = GetSHMaxL1();
+		indirectLighting = BetterSH9(half4(0.0, 0.0, 0.0, 1.0)); 
+	break;
+	}
+
+	directLighting   += FLT_EPS;
+	indirectLighting += FLT_EPS;
+
+    // Workaround for scenes with HDR off blowing out in VRchat.
+    if (getLightClampActive())
+    {
+        directLighting = saturate(directLighting);
+        indirectLighting = saturate(indirectLighting);
+    }
+}
+
 float3 applyDetailToAlbedo(float3 albedo, float3 detail, float mask)
 {
 #if defined(_DETAIL)
@@ -622,7 +692,7 @@ float3 applyMaskedHSVToAlbedo(float3 albedo, float mask)
 	return lerp(albedo, warpedAlbedo, mask);
 }
 
-SCSS_Input applyDetail(SCSS_Input c, float4 texcoords)
+void applyDetail(float4 texcoords, inout SCSS_Input c)
 {
 	float tintMask = ColorMask(texcoords.xy);
 
@@ -647,10 +717,9 @@ SCSS_Input applyDetail(SCSS_Input c, float4 texcoords)
     if (_CrosstoneToneSeparation) c.tone[0].col = applyDetailToAlbedo(c.tone[0].col, detailAlbedo, mask);
 	if (_Crosstone2ndSeparation)  c.tone[1].col = applyDetailToAlbedo(c.tone[1].col, detailAlbedo, mask);
 #endif
-    return c;
 }
 
-SCSS_Input applyVertexColour(SCSS_Input c, float4 color, float isOutline)
+void applyVertexColour(float4 color, float isOutline, SCSS_Input c)
 {
 	switch (_VertexColorType)
 	{
@@ -666,7 +735,6 @@ SCSS_Input applyVertexColour(SCSS_Input c, float4 color, float isOutline)
 		if (_Crosstone2ndSeparation)  c.tone[1].col = lerp(c.tone[1].col, color.rgb, isOutline); 
 		break;
 	}
-    return c;
 }
 
 half4 SpecularGloss(float4 texcoords, half mask)
@@ -819,6 +887,8 @@ SCSS_TonemapInput Tonemap1st (float2 uv)
 	SCSS_TonemapInput t = (SCSS_TonemapInput)1;
 	t.col = tonemap.rgb;
 	t.bias = tonemap.a;
+	t.offset = t.bias * _1st_ShadeColor_Step;
+	t.width = _1st_ShadeColor_Feather;
 	return t;
 }
 SCSS_TonemapInput Tonemap2nd (float2 uv)
@@ -828,6 +898,8 @@ SCSS_TonemapInput Tonemap2nd (float2 uv)
 	SCSS_TonemapInput t = (SCSS_TonemapInput)1;
 	t.col = tonemap.rgb;
 	t.bias = tonemap.a;
+	t.offset = t.bias * _2nd_ShadeColor_Step;
+	t.width = _2nd_ShadeColor_Feather;
 	return t;
 }
 
@@ -885,14 +957,37 @@ float applyOutlineAlpha(float alpha, float is_outline)
 	#endif
 }
 
-SCSS_Input applyOutline(SCSS_Input c, float is_outline)
+void applyOutline(float is_outline, inout SCSS_Input c)
 {
 	c.albedo = applyOutline(c.albedo, is_outline);
     if (_CrosstoneToneSeparation) c.tone[0].col = applyOutline(c.tone[0].col, is_outline);
 	if (_Crosstone2ndSeparation)  c.tone[1].col = applyOutline(c.tone[1].col, is_outline);
 	c.alpha = applyOutlineAlpha(c.alpha, is_outline);
+}
 
-    return c;
+// A neat gimmick to darken meshes that are right up against the camera, to fake
+// the shadows from your camera/face being up against them.
+float3 applyNearShading(float3 color, float3 worldPos, bool isFrontFace)
+{
+#if defined(UNITY_STANDARD_BRDF_INCLUDED)
+	// Disable in mirrors.
+    if (inMirror()) return color;
+#endif
+    float depth = distance(_WorldSpaceCameraPos, worldPos);
+    // Transform clip pos depth into linear depth. Then, remove the near-clip plane. 
+
+    depth = max(0, depth/_ProximityShadowDistance);
+    depth = saturate(depth);
+    depth = pow(depth, abs(_ProximityShadowDistancePower));
+
+    if (_UseProximityShadow == 1)
+    {
+    	float4 shadowColor = isFrontFace ? _ProximityShadowFrontColor : _ProximityShadowBackColor;
+    	shadowColor.rgb = lerp(color, shadowColor, shadowColor.a);
+    	color = lerp( shadowColor, color, depth );
+    }
+
+    return color;
 }
 
 #endif // if UNITY_STANDARD_BRDF_INCLUDED
