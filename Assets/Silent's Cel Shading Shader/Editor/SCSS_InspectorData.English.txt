@@ -127,6 +127,11 @@ _ShadingGradeMapLevel	Shading Adjustment Level	Modifies the middle point of the 
 _LightMultiplyAnimated	Runtime Light Adjustment	Modifies the output values. The lower this value, the darker the light reflected by the material.
 _LightAddAnimated	Runtime Light Increase	Modifies the output values. The higher this value, the greater the amount of baseline luminance is applied to the material. Not recommended for regular use.
 _LightClampAnimated	Runtime Light Clamp	Limits the output value of lighting. When enabled, total lighting applied is limited. Not recommended for regular use.
+_UseProximityShadow	Proximity Shadow	Applies extra shadowing to the material when the camera is closer than a certain distance. 
+_ProximityShadowDistance	Distance	Controls the distance at which to begin application of the shadow. Applies when the mesh is closer than this distance, in world-space units (centimetres).
+_ProximityShadowDistancePower	Power	Controls the rate at which the shadow is applied while inside the shadow application distance. 
+_ProximityShadowFrontColor	Shadow Colour (Front)	The colour of the shadowing on front-facing polygons. The alpha value controls the opacity of the effect.
+_ProximityShadowBackColor	Shadow Colour (Back)	The colour of the shadowing on back-facing polygons. The alpha value controls the opacity of the effect.
 _UseInventory	Inventory	Enables the inventory system. When enabled, the UV coordinates of the model are used to hide parts of the mesh. Every X units, where X is the inventory stride, the vertices assigned those UV coordinates are placed into a seperate item slot, and can be enabled or disabled using the toggles. The first slot, containing the 0-1 range, is always displayed.
 _InventoryStride	Inventory Stride	Sets the spacing between item slots. By default, this is 10, which means that if a vertex's UVs are 10 units away from the origin, they will be considered a seperate item slot.
 _Stencil	Stencil Test	Raising this enables reading or writing a stencil. When set, contains calue to compare against (if Comparison is anything but Always) and/or the value to be written to the buffer (if wither Pass, Fail or ZFail is set to Replace)
@@ -138,6 +143,7 @@ s_gradientEditorButton	Open Gradient Editor	Opens the gradient editor window wit
 s_helpArea	Check out our resources!	Hover over the buttons for more info.
 s_manualButton	Manual	For information on new features, old features, and just how to use the shader in general, check out the manual on the shader wiki!
 s_socialButton	Discord	For support, feedback, and updates on new versions, join the Secret Shader Facility Discord!
+s_fanboxButton	Fanbox	If you like the shader, check out my Fanbox! You can become a FAN and get a special supporter card!
 s_simpleComplexity	Only show main options. (Simple mode)	Only show main options. (Simple mode)
 s_normalComplexity	Hide niche options. (Normal mode)	Hide niche options. (Normal mode)
 s_fullComplexity	Show all options. (Complex mode)	Show all options. (Complex mode)

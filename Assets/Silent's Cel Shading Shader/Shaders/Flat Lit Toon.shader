@@ -137,6 +137,12 @@ Shader "Silent's Cel Shading/Lightramp (Outline)"
 		_VanishingStart("Vanishing Start", Float) = 0.0
 		_VanishingEnd("Vanishing End", Float) = 0.0
 		//[Space]
+		[ToggleUI]_UseProximityShadow ("Use Proximity Shadow", Float) = 0.0
+		_ProximityShadowDistance("Shadow Start Distance", Float) = 0.1
+		_ProximityShadowDistancePower("Shadow Start Distance Power", Float) = 1.5
+		_ProximityShadowFrontColor("Shadow Color (front)", Color) = (0,0,0,1)
+		_ProximityShadowBackColor("Shadow Color (back)", Color) = (0,0,0,1)
+		//[Space]
 		[ToggleUI]_UseEmissiveLightSense ("Use Light-sensing Emission", Float) = 0.0
 		_EmissiveLightSenseStart("Light Threshold Start", Range(0, 1)) = 1.0
 		_EmissiveLightSenseEnd("Light Threshold End", Range(0, 1)) = 0.0
@@ -201,6 +207,7 @@ Shader "Silent's Cel Shading/Lightramp (Outline)"
 	    [Enum(UnityEngine.Rendering.StencilOp)] _StencilFail ("Stencil Fail", Int) = 0
 	    [Enum(UnityEngine.Rendering.StencilOp)] _StencilZFail ("Stencil ZFail", Int) = 0
 	    [HideInInspector]__Baked ("Is this material referencing a baked shader?", Float) = 0
+		[NonModifiableTextureData][HideInInspector]_DFG("Specular Distribution", 2D) = "green" {}
 	}
 
 	SubShader

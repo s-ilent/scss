@@ -128,6 +128,8 @@ void vertShadowCaster (VertexInput v
         opos.z =     inventoryMask ? opos.z : 1e+9;
         //o.vertex =    inventoryMask ? o.vertex : 1e+9;
     }
+    
+    opos = ApplyNearVertexSquishing(opos);
 
     #if defined(UNITY_STANDARD_USE_SHADOW_UVS)
         o.tex = AnimateTexcoords(v.uv0);

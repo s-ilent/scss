@@ -2,6 +2,34 @@
 #ifndef SCSS_UNITYGI_INCLUDED
 #define SCSS_UNITYGI_INCLUDED
 
+// https://github.com/z3y/shaders/blob/d52e2831a82ffd7dba0a070edf6fad6b1a5d4ed3/Shaders/ShaderLibrary/EnvironmentBRDF.cginc
+// Based on z3y's implementation of Filament's indirect specular distribution
+Texture2D _DFG;
+SamplerState sampler_DFG;
+
+half3 PrefilteredDFG_LUT(half NoV, half perceptualRoughness)
+{
+    return _DFG.SampleLevel(sampler_DFG, float2(NoV, perceptualRoughness), 0);
+}
+
+half3 specularDFG(half3 dfg, half3 f0, bool isCloth = false)
+{
+    if (isCloth)
+    {
+        return f0 * dfg.zzz;
+    } 
+    return lerp(dfg.xxx, dfg.yyy, f0);
+}
+
+half3 specularDFGEnergyCompensation(half3 dfg, half3 f0, bool isCloth = false)
+{
+    if (isCloth)
+    {
+        return 1.0;
+    } 
+    return 1.0 + f0 * (1.0 / dfg.y - 1.0);
+}
+
 /* http://www.geomerics.com/wp-content/uploads/2015/08/CEDEC_Geomerics_ReconstructingDiffuseLighting1.pdf */
 float shEvaluateDiffuseL1Geomerics_local(float L0, float3 L1, float3 n)
 {

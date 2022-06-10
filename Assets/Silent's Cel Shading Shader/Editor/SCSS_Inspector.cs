@@ -746,6 +746,7 @@ namespace SilentCelShading.Unity
 			ShaderProperty("_PixelSampleMode");
 			AnimationOptions();
 			VanishingOptions();
+			ProximityShadowOptions();
 		}
 
         protected void LightrampOptions()
@@ -987,6 +988,18 @@ namespace SilentCelShading.Unity
 			}
 		}
 
+		protected void ProximityShadowOptions()
+		{ 
+            EditorGUILayout.Space();
+			if (TogglePropertyHeader("_UseProximityShadow") && PropertyEnabled(props["_UseProximityShadow"]))
+			{
+				ShaderProperty("_ProximityShadowDistance");
+				ShaderProperty("_ProximityShadowDistancePower");
+				ShaderProperty("_ProximityShadowFrontColor");
+				ShaderProperty("_ProximityShadowBackColor");
+			}
+		}
+
 		protected void OutlineOptions()
 		{ 
 			EditorGUILayout.Space();
@@ -1027,11 +1040,13 @@ namespace SilentCelShading.Unity
 				r.y += 2.0f;
 				r.height = 18.0f;
 			Rect r2 = r;
-				r2.width = r.width / 2.0f;
+				r2.width = r.width / 3.0f;
 			//GUI.Box(r, EditorGUIUtility.IconContent("Toolbar"), EditorStyles.toolbar);
 			if (GUI.Button(r2, Content("s_manualButton"), EditorStyles.miniButtonLeft)) Application.OpenURL("https://gitlab.com/s-ilent/SCSS/wikis/Manual/Setting-Overview");
 				r2.x += r2.width;
 			if (GUI.Button(r2, Content("s_socialButton"), EditorStyles.miniButtonRight)) Application.OpenURL("https://discord.gg/uHJx4g629K");
+				r2.x += r2.width;
+			if (GUI.Button(r2, Content("s_fanboxButton"), EditorStyles.miniButtonRight)) Application.OpenURL("https://s-ilent.fanbox.cc/");
 			EditorGUILayout.LabelField("", EditorStyles.label);
 		}
 
