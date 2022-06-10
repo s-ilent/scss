@@ -168,20 +168,44 @@ namespace SilentCelShading.Unity
         }
 
 		// Selectable languages 
-		internal enum InspectorLanguageSelection
+		public enum InspectorLanguageSelection
 		{
 			English, 日本語
 		}
 
-		static private InspectorLanguageSelection selectedLanguage;
+		public static SystemLanguage GetInspectorLanguage()
+		{
+			return inspectorLanguage;
+		}
+
+		public static void UpdateInspectorLanguage(InspectorLanguageSelection selectedLanguage)
+		{
+			switch(selectedLanguage)
+			{
+				case InspectorLanguageSelection.English:
+					inspectorLanguage = SystemLanguage.English;
+					break;
+				case InspectorLanguageSelection.日本語:
+					inspectorLanguage = SystemLanguage.Japanese;
+					break;
+			}
+			// Update configuration
+			EditorUserSettings.SetConfigValue("scss_editor_language", inspectorLanguage.ToString());
+			// Reload localisation file
+			LoadInspectorData();
+
+		}
+		
 
 		public static void DrawInspectorLanguageDropdown()
 		{
+			InspectorLanguageSelection selectedLanguage = InspectorLanguageSelection.English;
+
 			switch(inspectorLanguage)
 			{
 				case SystemLanguage.English:
 					selectedLanguage = InspectorLanguageSelection.English; 
-					break;
+					break; 
 				case SystemLanguage.Japanese:
 					selectedLanguage = InspectorLanguageSelection.日本語;
 					break;
@@ -193,19 +217,7 @@ namespace SilentCelShading.Unity
             	selectedLanguage = (InspectorLanguageSelection)EditorGUILayout.EnumPopup("Language", selectedLanguage);
 			}))
 			{
-				switch(selectedLanguage)
-				{
-					case InspectorLanguageSelection.English:
-						inspectorLanguage = SystemLanguage.English;
-						break;
-					case InspectorLanguageSelection.日本語:
-						inspectorLanguage = SystemLanguage.Japanese;
-						break;
-				}
-				// Update configuration
-				EditorUserSettings.SetConfigValue("scss_editor_language", inspectorLanguage.ToString());
-				// Reload localisation file
-				LoadInspectorData();
+				UpdateInspectorLanguage(selectedLanguage);
 			}
 		}
 
