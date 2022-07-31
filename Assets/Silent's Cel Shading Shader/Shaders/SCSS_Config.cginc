@@ -18,6 +18,25 @@
 // used by directional lights.
 #define SCSS_SCREEN_SHADOW_FILTER 1
 
+// As objects become further and further from the origin point
+// (0, 0, 0) in world space, they become affected by the 
+// limitations of precision in floating point numbers.
+// For shaders, this manifests as polygons wobbling and warping
+// as they are further away from the origin point.
+// This setting enables a system that calculates the final placement
+// of polygons on screen seperately from their world-space
+// position, partly alleviating this issue.
+#define SCSS_CAMERA_RELATIVE_VERTEX 1
+
+// When objects reach the nearest extent of the camera's frustrum,
+// they can intersect it and clip through. In VR, this can be a 
+// problem as frustrum extents which are suitable for most circumstances
+// will fall apart when close to an object - or, more commonly, another
+// person. This setting enables a tweak to squish objects before they can
+// intersect with the frustrum, giving them the appearance of a
+// closer clipping plane on the camera.
+#define SCSS_NEAR_SQUISH 1
+
 // Safety net for things that can't be used in Standard's codepaths on weaker hardware
 // Following implementation in Unity 2020's built-in pipeline
 

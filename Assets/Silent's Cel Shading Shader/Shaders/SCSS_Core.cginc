@@ -11,74 +11,6 @@
 #include "SCSS_Input.cginc"
 #include "SCSS_Attributes.cginc"
 
-
-// Shade4PointLights from UnityCG.cginc but only returns their attenuation.
-float4 Shade4PointLightsAtten (
-    float4 lightPosX, float4 lightPosY, float4 lightPosZ,
-    float4 lightAttenSq,
-    float3 pos, float3 normal)
-{
-    // to light vectors
-    float4 toLightX = lightPosX - pos.x;
-    float4 toLightY = lightPosY - pos.y;
-    float4 toLightZ = lightPosZ - pos.z;
-    // squared lengths
-    float4 lengthSq = 0;
-    lengthSq += toLightX * toLightX;
-    lengthSq += toLightY * toLightY;
-    lengthSq += toLightZ * toLightZ;
-    // don't produce NaNs if some vertex position overlaps with the light
-    lengthSq = max(lengthSq, 0.000001);
-
-    // NdotL
-    float4 ndotl = 0;
-    ndotl += toLightX * normal.x;
-    ndotl += toLightY * normal.y;
-    ndotl += toLightZ * normal.z;
-    // correct NdotL
-    float4 corr = 0;//rsqrt(lengthSq);
-    corr.x = fastRcpSqrtNR0(lengthSq.x);
-    corr.y = fastRcpSqrtNR0(lengthSq.y);
-    corr.z = fastRcpSqrtNR0(lengthSq.z);
-    corr.w = fastRcpSqrtNR0(lengthSq.x);
-
-    ndotl = corr * (ndotl * 0.5 + 0.5); // Match with Forward for light ramp sampling
-    ndotl = max (float4(0,0,0,0), ndotl);
-    // attenuation
-    // Fixes popin. Thanks, d4rkplayer!
-    float4 atten = 1.0 / (1.0 + lengthSq * lightAttenSq);
-	float4 atten2 = saturate(1 - (lengthSq * lightAttenSq / 25));
-	atten = min(atten, atten2 * atten2);
-
-    float4 diff = ndotl * atten;
-    #if defined(SCSS_UNIMPORTANT_LIGHTS_FRAGMENT)
-    return atten;
-    #else
-    return diff;
-    #endif
-}
-
-// Based on Standard Shader's forwardbase vertex lighting calculations in VertexGIForward
-// This revision does not pass the light values themselves, but only their attenuation.
-inline half4 VertexLightContribution(float3 posWorld, half3 normalWorld)
-{
-	half4 vertexLight = 0;
-
-	// Static lightmapped materials are not allowed to have vertex lights.
-	#ifdef LIGHTMAP_ON
-		return 0;
-	#elif UNITY_SHOULD_SAMPLE_SH
-		#ifdef VERTEXLIGHT_ON
-			// Approximated illumination from non-important point lights
-			vertexLight = Shade4PointLightsAtten(
-				unity_4LightPosX0, unity_4LightPosY0, unity_4LightPosZ0,
-				unity_4LightAtten0, posWorld, normalWorld);
-		#endif
-	#endif
-
-	return vertexLight;
-}
-
 #if defined(_SUBSURFACE)
 //SSS method from GDC 2011 conference by Colin Barre-Bresebois & Marc Bouchard and modified by Xiexe
 float3 getSubsurfaceScatteringLight (SCSS_Light l, float3 normalDirection, float3 viewDirection, 
@@ -517,11 +449,10 @@ float3 SCSS_ShadeBase(const SCSS_Input c, const SCSS_ShadingParam p)
     return finalColor;
 }
 
-float3 SCSS_ShadeLight(const SCSS_Input c, const SCSS_ShadingParam p)
+float3 SCSS_ShadeLight(const SCSS_Input c, const SCSS_ShadingParam p, const SCSS_Light l)
 {
 	float3 finalColor;
 
-	SCSS_Light l = MainLight(p.position.xyz);
 	SCSS_LightParam d = initialiseLightParam(l, p);
 
     finalColor = calcDiffuseAdd(c.albedo, c.tone, c.occlusion, c.perceptualRoughness, c.softness, d, l);
@@ -544,6 +475,11 @@ float3 SCSS_ShadeLight(const SCSS_Input c, const SCSS_ShadingParam p)
 	return finalColor;
 }
 
+float3 SCSS_ShadeLight(const SCSS_Input c, const SCSS_ShadingParam p)
+{
+	SCSS_Light l = MainLight(p.position.xyz);
+	return SCSS_ShadeLight(c, p, l);
+}
 
 float3 SCSS_ApplyLighting(SCSS_Input c, SCSS_ShadingParam p)
 {

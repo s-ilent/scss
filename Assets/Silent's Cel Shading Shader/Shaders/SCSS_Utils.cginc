@@ -219,6 +219,7 @@ float3 TransformHSV(float3 col, float h, float s, float v)
 
 inline float4 ApplyNearVertexSquishing(float4 posCS)
 {
+    #if SCSS_NEAR_SQUISH
     // Compress meshes when they're close to the camera.
     // https://qiita.com/lilxyzw/items/3684d8f252ab1894773a#
     #if defined(UNITY_REVERSED_Z)
@@ -227,6 +228,7 @@ inline float4 ApplyNearVertexSquishing(float4 posCS)
     #else
     // OpenGL
         if(posCS.w < _ProjectionParams.y * 1.01 && posCS.w > 0) posCS.z = posCS.z * 0.0001 - posCS.w * 0.999;
+    #endif
     #endif
 
     return posCS;

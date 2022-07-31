@@ -247,6 +247,10 @@ struct SCSS_ShadingParam
     float attenuation;
     float isOutline;
     float3 ambient;
+
+	#if defined(VERTEXLIGHT_ON)
+	half4 vertexLight;  
+	#endif
 };
 
 struct SCSS_RimLightInput
