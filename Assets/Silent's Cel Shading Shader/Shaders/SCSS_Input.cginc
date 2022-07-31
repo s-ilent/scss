@@ -76,6 +76,23 @@ uniform float _Anisotropy; // Can not be removed yet.
 UNITY_DECLARE_TEX2D_NOSAMPLER(_1st_ShadeMap);
 UNITY_DECLARE_TEX2D_NOSAMPLER(_2nd_ShadeMap);
 UNITY_DECLARE_TEX2D_NOSAMPLER(_ShadingGradeMap);
+// CrossTone
+uniform float4 _1st_ShadeColor;
+uniform float4 _2nd_ShadeColor;
+uniform float _1st_ShadeColor_Step;
+uniform float _1st_ShadeColor_Feather;
+uniform float _2nd_ShadeColor_Step;
+uniform float _2nd_ShadeColor_Feather;
+
+uniform float _Tweak_ShadingGradeMapLevel;
+uniform float _CrosstoneToneSeparation;
+uniform float _Crosstone2ndSeparation;
+
+uniform float4 _ShadowBorderColor;
+uniform float _ShadowBorderRange;
+#else
+#define _CrosstoneToneSeparation float(0)
+#define _Crosstone2ndSeparation float(0)
 #endif
 
 #if !defined(SCSS_CROSSTONE)
@@ -162,22 +179,10 @@ uniform float4 _LightSkew;
 uniform float _PixelSampleMode;
 uniform float _VertexColorType;
 
-// CrossTone
-uniform float4 _1st_ShadeColor;
-uniform float4 _2nd_ShadeColor;
-uniform float _1st_ShadeColor_Step;
-uniform float _1st_ShadeColor_Feather;
-uniform float _2nd_ShadeColor_Step;
-uniform float _2nd_ShadeColor_Feather;
-
-uniform float _Tweak_ShadingGradeMapLevel;
-
 uniform float _DiffuseGeomShadowFactor;
 uniform float _LightWrappingCompensationFactor;
 
 uniform float _IndirectShadingType;
-uniform float _CrosstoneToneSeparation;
-uniform float _Crosstone2ndSeparation;
 
 uniform float _UseInteriorOutline;
 uniform float _InteriorOutlineWidth;
