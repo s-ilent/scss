@@ -3,6 +3,103 @@
 
 #include "SCSS_Attributes.cginc"
 
+// Shade4PointLights from UnityCG.cginc but only returns their attenuation.
+float4 Shade4PointLightsAtten (
+    float4 lightPosX, float4 lightPosY, float4 lightPosZ,
+    float4 lightAttenSq,
+    float3 pos, float3 normal)
+{
+    // to light vectors
+    float4 toLightX = lightPosX - pos.x;
+    float4 toLightY = lightPosY - pos.y;
+    float4 toLightZ = lightPosZ - pos.z;
+    // squared lengths
+    float4 lengthSq = 0;
+    lengthSq += toLightX * toLightX;
+    lengthSq += toLightY * toLightY;
+    lengthSq += toLightZ * toLightZ;
+    // don't produce NaNs if some vertex position overlaps with the light
+    lengthSq = max(lengthSq, 0.000001);
+
+    // NdotL
+    float4 ndotl = 0;
+    ndotl += toLightX * normal.x;
+    ndotl += toLightY * normal.y;
+    ndotl += toLightZ * normal.z;
+    // correct NdotL
+    float4 corr = 0;//rsqrt(lengthSq);
+    corr.x = fastRcpSqrtNR0(lengthSq.x);
+    corr.y = fastRcpSqrtNR0(lengthSq.y);
+    corr.z = fastRcpSqrtNR0(lengthSq.z);
+    corr.w = fastRcpSqrtNR0(lengthSq.x);
+
+    ndotl = corr * (ndotl * 0.5 + 0.5); // Match with Forward for light ramp sampling
+    ndotl = max (float4(0,0,0,0), ndotl);
+    // attenuation
+    // Fixes popin. Thanks, d4rkplayer!
+    float4 atten = 1.0 / (1.0 + lengthSq * lightAttenSq);
+	float4 atten2 = saturate(1 - (lengthSq * lightAttenSq / 25));
+	atten = min(atten, atten2 * atten2);
+
+    float4 diff = ndotl * atten;
+    #if defined(SCSS_UNIMPORTANT_LIGHTS_FRAGMENT)
+    return atten;
+    #else
+    return diff;
+    #endif
+}
+
+// Based on Standard Shader's forwardbase vertex lighting calculations in VertexGIForward
+// This revision does not pass the light values themselves, but only their attenuation.
+half4 VertexLightContribution(float3 posWorld, half3 normalWorld)
+{
+	half4 vertexLight = 0;
+
+	// Static lightmapped materials are not allowed to have vertex lights.
+	#ifdef LIGHTMAP_ON
+		return 0;
+	#elif UNITY_SHOULD_SAMPLE_SH
+		#ifdef VERTEXLIGHT_ON
+			// Approximated illumination from non-important point lights
+			vertexLight = Shade4PointLightsAtten(
+				unity_4LightPosX0, unity_4LightPosY0, unity_4LightPosZ0,
+				unity_4LightAtten0, posWorld, normalWorld);
+		#endif
+	#endif
+
+	return vertexLight;
+}
+
+inline float4 ObjectToClipPosRelative(float3 pos)
+{
+	float4x4 matrixM = unity_ObjectToWorld;
+	float4x4 matrixV = UNITY_MATRIX_V; // todo: verify
+	matrixM._m03_m13_m23 -= _WorldSpaceCameraPos.xyz;
+	matrixV._m03_m13_m23 = 0.0;
+
+	float3 posWS = mul(matrixM, float4(pos, 1.0)).xyz;
+	float3 posVS = mul(matrixV, float4(posWS, 1.0)).xyz;
+
+	float4 posCS = mul(UNITY_MATRIX_P, float4(posVS, 1.0));
+
+	return posCS;
+}
+inline float4 WorldToClipPosRelative(float3 posWS)
+{
+	float4x4 matrixM = unity_ObjectToWorld;
+	float4x4 matrixV = UNITY_MATRIX_V; // todo: verify
+	matrixM._m03_m13_m23 -= _WorldSpaceCameraPos.xyz;
+	matrixV._m03_m13_m23 = 0.0;
+
+	posWS -= _WorldSpaceCameraPos.xyz;
+	//float3 posWS = mul(matrixM, float4(pos, 1.0)).xyz;
+	float3 posVS = mul(matrixV, float4(posWS, 1.0)).xyz;
+
+	float4 posCS = mul(UNITY_MATRIX_P, float4(posVS, 1.0));
+
+	return posCS;
+}
+
 VertexOutput vert(appdata_full v) {
 	VertexOutput o = (VertexOutput)0;
 
@@ -11,7 +108,11 @@ VertexOutput vert(appdata_full v) {
     UNITY_TRANSFER_INSTANCE_ID(v, o);
     UNITY_INITIALIZE_VERTEX_OUTPUT_STEREO(o);
 
+	#if (SCSS_CAMERA_RELATIVE_VERTEX)
+	o.pos = ObjectToClipPosRelative(v.vertex);
+	#else
 	o.pos = UnityObjectToClipPos(v.vertex);
+	#endif
 
 	float4 uvPack0 = float4(v.texcoord.xy, v.texcoord1.xy);
 	float4 uvPack1 = float4(v.texcoord2.xy, v.texcoord3.xy);
@@ -109,7 +210,7 @@ VertexOutput vert(appdata_full v) {
 #endif
 
 #if defined(VERTEXLIGHT_ON)
-	o.vertexLight = VertexLightContribution(o.posWorld, o.normalDir);
+	o.vertexLight = VertexLightContribution(o.posWorld, normalDir);
 #endif
 
 	return o;
@@ -132,18 +233,36 @@ inline VertexOutput CalculateOutlineVertexClipPosition(VertexOutput v)
 	const float outlineWidth = v.extraData.r;
 	if (true)
 	{
+		#if (SCSS_CAMERA_RELATIVE_VERTEX)
+		const half3 positionOS = v.vertex.xyz;
+        const half3 normalOS = float3(v.tangentToWorldAndPackedData[0].w, v.tangentToWorldAndPackedData[1].w, v.tangentToWorldAndPackedData[2].w);
+        float4x4 matrixIM = unity_WorldToObject;
+		matrixIM._m03_m13_m23 += _WorldSpaceCameraPos.xyz;
+
+		// Calculate a world-space vertex offset we can apply in object space
+        half3 offsetOS = mul(matrixIM, outlineWidth.xxx);
+
+        half3 localPosition = positionOS + normalOS * offsetOS;
+
+        v.pos = ObjectToClipPosRelative(localPosition);
+        #else
         const float3 positionWS = mul(unity_ObjectToWorld, float4(v.vertex.xyz, 1)).xyz;
         const half3 normalWS = v.tangentToWorldAndPackedData[2].xyz;
 
         v.posWorld = float4(positionWS + normalWS * outlineWidth, 1);
         v.pos = UnityWorldToClipPos(v.posWorld);
+        #endif
 	} 
 	if (false) 
 	{
         const float3 positionWS = mul(unity_ObjectToWorld, float4(v.vertex.xyz, 1)).xyz;
         const half aspect = getScreenAspectRatio();
 
+		#if (SCSS_CAMERA_RELATIVE_VERTEX)
+        float4 positionCS = ObjectToClipPosRelative(v.vertex.xyz);
+        #else
         float4 positionCS = UnityObjectToClipPos(v.vertex.xyz);
+        #endif
         const half3 normalOS = float3(v.tangentToWorldAndPackedData[0].w, v.tangentToWorldAndPackedData[1].w, v.tangentToWorldAndPackedData[2].w);
         const half3 normalVS = getObjectToViewNormal(normalOS);
         const half3 normalCS = TransformViewToProjection(normalVS.xyz);
@@ -205,7 +324,6 @@ void geom(triangle VertexOutput IN[3], inout TriangleStream<VertexOutput> tristr
 	    		UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(o); 
 			    UNITY_INITIALIZE_VERTEX_OUTPUT_STEREO(o);
 
-				//o.pos = UnityObjectToClipPos(o.vertex + normalize(o.normal) * o.extraData.r);
 				o = CalculateOutlineVertexClipPosition(o);
 
 				o.pos = ApplyOutlineZBias(o.pos, o.extraData.z);
