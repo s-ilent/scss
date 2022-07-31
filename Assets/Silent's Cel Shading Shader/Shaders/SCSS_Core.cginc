@@ -27,6 +27,7 @@ float3 getSubsurfaceScatteringLight (SCSS_Light l, float3 normalDirection, float
 }
 #endif
 
+#if defined(SCSS_CROSSTONE)
 float3 sampleCrossToneLighting(inout float remappedLight, SCSS_TonemapInput tone0, SCSS_TonemapInput tone1, float3 albedo)
 {
 	// A three-tiered tone system.
@@ -54,6 +55,7 @@ float3 sampleCrossToneLighting(inout float remappedLight, SCSS_TonemapInput tone
 	
 	return final;
 }
+#endif
 
 #if !defined(SCSS_CROSSTONE)
 float applyShadowLift(float baseLight, float occlusion)
