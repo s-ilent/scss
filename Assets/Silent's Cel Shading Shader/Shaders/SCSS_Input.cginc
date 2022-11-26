@@ -19,14 +19,19 @@
 
 //---------------------------------------
 
-#if defined(_EMISSION)
+#if defined(_AUDIOLINK)
 #include "SCSS_AudioLink.cginc"
 #endif
 
 UNITY_DECLARE_TEX2D(_MainTex); uniform half4 _MainTex_ST; uniform half4 _MainTex_TexelSize;
 UNITY_DECLARE_TEX2D_NOSAMPLER(_ColorMask); uniform half4 _ColorMask_ST;
 UNITY_DECLARE_TEX2D_NOSAMPLER(_BumpMap); uniform half4 _BumpMap_ST;
-UNITY_DECLARE_TEX2D_NOSAMPLER(_EmissionMap); uniform half4 _EmissionMap_ST;
+UNITY_DECLARE_TEX2D_NOSAMPLER(_EmissionMap); uniform half4 _EmissionMap_ST; uniform half4 _EmissionMap_TexelSize;
+uniform half _EmissionUVSec;
+
+#if defined(_BACKFACE)
+UNITY_DECLARE_TEX2D(_MainTexBackface); // Texel size assumed same as _MainTex.
+#endif
 
 // Workaround for shadow compiler error. 
 #if defined(SCSS_SHADOWS_INCLUDED)
@@ -53,6 +58,18 @@ uniform float4 _EmissionDetailParams;
 uniform float _UseEmissiveLightSense;
 uniform float _EmissiveLightSenseStart;
 uniform float _EmissiveLightSenseEnd;
+#endif
+
+#if defined(_AUDIOLINK)
+UNITY_DECLARE_TEX2D(_AudiolinkMaskMap); uniform half4 _AudiolinkMaskMap_ST;
+UNITY_DECLARE_TEX2D(_AudiolinkSweepMap); uniform half4 _AudiolinkSweepMap_ST;
+uniform float _AudiolinkIntensity;
+uniform float _AudiolinkMaskMapUVSec;
+uniform float _AudiolinkSweepMapUVSec;
+// Not implemented yet
+// uniform float _UseAudiolinkLightSense;
+// uniform float _AudiolinkLightSenseStart;
+// uniform float _AudiolinkLightSenseEnd;
 #endif
 
 #if defined(_SPECULAR)
@@ -107,6 +124,11 @@ uniform float _ShadowLift;
 #endif
 
 uniform float4 _Color;
+
+#if defined(_BACKFACE)
+uniform float4 _ColorBackface;
+#endif
+
 uniform float _BumpScale;
 uniform float _Cutoff;
 uniform float _AlphaSharp;
@@ -288,7 +310,7 @@ struct SCSS_Input
 
 	half occlusion;
 
-	half3 specColor;
+	half3 specColor; half specOcclusion;
 	half3 anisotropyDirection;
 	float oneMinusReflectivity, smoothness, perceptualRoughness;
 
@@ -310,6 +332,7 @@ void initMaterial(out SCSS_Input material)
 	material.normalTangent = float3(0.0, 0.0, 1.0);
 	material.occlusion = 1.0;
 	material.specColor = 0.0;
+	material.specOcclusion = 1.0;
 	material.oneMinusReflectivity = 1.0;
 	material.smoothness = 0.0;
 	material.perceptualRoughness = 1.0;
@@ -474,15 +497,23 @@ float2 AnimateTexcoords(float2 texcoord)
 
 }
 
-float4 TexCoords(float2 uv0, float2 uv1)
+float4 TexCoords(float4 uvPack0, float4 uvPack1)
 {
+	float2 uv0 = uvPack0.xy;
+	float2 uv1 = uvPack0.zw;
+	float2 uv2 = uvPack1.xy;
+	float2 uv3 = uvPack1.zw;
+
     float4 texcoord;
 	texcoord.xy = TRANSFORM_TEX(uv0, _MainTex);// Always source from uv0
 	texcoord.xy = _PixelSampleMode ? 
 		sharpSample(_MainTex_TexelSize * _MainTex_ST.xyxy, texcoord.xy) : texcoord.xy;
 
 #if defined(_DETAIL) 
-	texcoord.zw = TRANSFORM_TEX(((_UVSec == 0) ? uv0 : uv1), _DetailAlbedoMap);
+	float2 detailTexcoord = 
+	float2(float4(uv0.x, uv1.x, uv2.x, uv3.x)[_UVSec], 
+		   float4(uv0.y, uv1.y, uv2.y, uv3.y)[_UVSec]);
+	texcoord.zw = TRANSFORM_TEX((detailTexcoord), _DetailAlbedoMap);
 	texcoord.zw = _PixelSampleMode ? 
 		sharpSample(_DetailAlbedoMap_TexelSize * _DetailAlbedoMap_ST.xyxy, texcoord.zw) : texcoord.zw;
 #else
@@ -491,15 +522,60 @@ float4 TexCoords(float2 uv0, float2 uv1)
     return texcoord;
 }
 
-float2 EmissionDetailTexCoords(float2 uv0, float2 uv1)
+float4 EmissionTexCoords(float4 uvPack0, float4 uvPack1)
 {
-	float2 texcoord;
-#if defined(_EMISSION) 
-	texcoord.xy = TRANSFORM_TEX(((_DetailEmissionUVSec == 0) ? uv0 : uv1), _DetailEmissionMap);
+	float2 uv0 = uvPack0.xy;
+	float2 uv1 = uvPack0.zw;
+	float2 uv2 = uvPack1.xy;
+	float2 uv3 = uvPack1.zw;
+
+	float4 texcoord;
+	texcoord.xy = 
+		float2(float4(uv0.x, uv1.x, uv2.x, uv3.x)[_EmissionUVSec], 
+			   float4(uv0.y, uv1.y, uv2.y, uv3.y)[_EmissionUVSec]);
+	texcoord.xy = TRANSFORM_TEX(texcoord, _EmissionMap);
 	texcoord.xy = _PixelSampleMode? 
-		sharpSample(_DetailEmissionMap_TexelSize * _DetailEmissionMap_ST.xyxy, texcoord.xy) : texcoord.xy;
+		sharpSample(_EmissionMap_TexelSize * _EmissionMap_ST.xyxy, texcoord.xy) : texcoord.xy;
+
+#if defined(_EMISSION) 
+	float2 detailTexcoord = 
+		float2(float4(uv0.x, uv1.x, uv2.x, uv3.x)[_DetailEmissionUVSec], 
+			   float4(uv0.y, uv1.y, uv2.y, uv3.y)[_DetailEmissionUVSec]);
+	detailTexcoord = TRANSFORM_TEX(detailTexcoord, _DetailEmissionMap);
+	detailTexcoord = _PixelSampleMode? 
+		sharpSample(_DetailEmissionMap_TexelSize * _DetailEmissionMap_ST.xyxy, detailTexcoord) : detailTexcoord;
+	texcoord.zw = detailTexcoord;
 #else
-	texcoord.xy = uv0; // Default we won't need
+	texcoord.zw = uv0; // Default we won't need
+#endif
+
+	return texcoord;
+}
+
+float4 EmissiveAudioLinkTexCoords(float4 uvPack0, float4 uvPack1)
+{
+	float2 uv0 = uvPack0.xy;
+	float2 uv1 = uvPack0.zw;
+	float2 uv2 = uvPack1.xy;
+	float2 uv3 = uvPack1.zw;
+
+	float4 texcoord;
+#if defined(_AUDIOLINK) 
+	float2 maskTexcoord = 
+		float2(float4(uv0.x, uv1.x, uv2.x, uv3.x)[_AudiolinkMaskMapUVSec], 
+			   float4(uv0.y, uv1.y, uv2.y, uv3.y)[_AudiolinkMaskMapUVSec]);
+	float2 sweepTexcoord = 
+		float2(float4(uv0.x, uv1.x, uv2.x, uv3.x)[_AudiolinkSweepMapUVSec], 
+			   float4(uv0.y, uv1.y, uv2.y, uv3.y)[_AudiolinkSweepMapUVSec]);
+
+	maskTexcoord.xy = TRANSFORM_TEX(maskTexcoord, _AudiolinkMaskMap);
+	// Pixel sample mode not implemented yet.
+	sweepTexcoord.xy = TRANSFORM_TEX(sweepTexcoord, _AudiolinkSweepMap);
+	// Pixel sampling probably won't work with sweeps...
+
+	texcoord = float4(maskTexcoord, sweepTexcoord); // Default we won't need
+#else
+	texcoord = float4(uv0, uv1); // Default we won't need
 #endif
     return texcoord;
 }
@@ -588,6 +664,24 @@ void applyVanishing (inout float alpha) {
     float vanishing = saturate(lerpstep(_VanishingStart, _VanishingEnd, closeDist));
     alpha = lerp(alpha, alpha * vanishing, _UseVanishing);
 }
+
+#if defined(_BACKFACE)
+half3 BackfaceAlbedo(float4 texcoords)
+{
+    half3 albedo = UNITY_SAMPLE_TEX2D (_MainTexBackface, texcoords.xy).rgb;
+    return albedo;
+}
+half BackfaceAlpha(float2 uv)
+{
+	half alpha = _ColorBackface.a;
+	switch(_AlbedoAlphaMode)
+	{
+		case 0: alpha *= UNITY_SAMPLE_TEX2D(_MainTexBackface, uv).a; break;
+		case 2: alpha *= ClippingMask(uv); break;
+	}
+	return alpha;
+}
+#endif // _BACKFACE
 
 inline float getInventoryMask(float2 in_texcoord)
 {
@@ -728,6 +822,35 @@ void applyDetail(float4 texcoords, inout SCSS_Input c)
 #endif
 }
 
+#if defined(_BACKFACE)
+void applyBackfaceDetail(float4 texcoordsbackface, inout SCSS_Input c)
+{
+	float tintMask = ColorMask(texcoordsbackface.xy);
+
+	if (_ToggleHueControls)
+	{
+		c.albedo = applyMaskedHSVToAlbedo(c.albedo, tintMask);
+		 c.tone[0].col = applyMaskedHSVToAlbedo(c.tone[0].col, tintMask);
+		 c.tone[1].col = applyMaskedHSVToAlbedo(c.tone[1].col, tintMask);
+	}
+
+	c.albedo *= LerpWhiteTo(_ColorBackface.rgb, tintMask);
+	if (_CrosstoneToneSeparation) c.tone[0].col *= LerpWhiteTo(_ColorBackface.rgb, tintMask);
+	if (_Crosstone2ndSeparation) c.tone[1].col *= LerpWhiteTo(_ColorBackface.rgb, tintMask);
+
+#if defined(_DETAIL)
+    half mask = DetailMask(texcoordsbackface.xy);
+    half4 detailAlbedo = UNITY_SAMPLE_TEX2D_SAMPLER (_DetailAlbedoMap, _DetailAlbedoMap, texcoordsbackface.zw);
+    mask *= detailAlbedo.a;
+    mask *= _DetailAlbedoMapScale;
+
+	c.albedo = applyDetailToAlbedo(c.albedo, detailAlbedo, mask);
+    if (_CrosstoneToneSeparation) c.tone[0].col = applyDetailToAlbedo(c.tone[0].col, detailAlbedo, mask);
+	if (_Crosstone2ndSeparation)  c.tone[1].col = applyDetailToAlbedo(c.tone[1].col, detailAlbedo, mask);
+#endif
+}
+#endif // _BACKFACE
+
 void applyVertexColour(float4 color, float isOutline, SCSS_Input c)
 {
 	switch (_VertexColorType)
@@ -772,7 +895,7 @@ half4 SpecularGloss(float4 texcoords, half mask)
 half4 EmissionDetail(float2 uv)
 {
 #if defined(_EMISSION) 
-	if (_EmissionDetailType == 0) // Pulse
+	//if (_EmissionDetailType == 0) // Pulse
 	{
 		uv += _EmissionDetailParams.xy * _Time.y;
 		half4 ed = UNITY_SAMPLE_TEX2D_SAMPLER(_DetailEmissionMap, _DetailEmissionMap, uv);
@@ -783,24 +906,30 @@ half4 EmissionDetail(float2 uv)
 		}
 		return ed;
 	}
-	if (_EmissionDetailType == 1) // AudioLink
-	{
-		// Load weights texture
-		half4 weights = UNITY_SAMPLE_TEX2D_SAMPLER(_DetailEmissionMap, _DetailEmissionMap, uv);
-		// Apply a small epsilon to the weights to avoid artifacts.
-	    const float epsilon = (1.0/255.0);
-	    weights = saturate(weights-epsilon);
-	    // sample the texture
-	    float4 col = 0;
-	    col.rgb += (_alBandR >= 1) ? audioLinkGetLayer(weights.r, _alTimeRangeR, _alBandR, _alModeR) * _alColorR : 0;
-	    col.rgb += (_alBandG >= 1) ? audioLinkGetLayer(weights.g, _alTimeRangeG, _alBandG, _alModeG) * _alColorG : 0;
-	    col.rgb += (_alBandB >= 1) ? audioLinkGetLayer(weights.b, _alTimeRangeB, _alBandB, _alModeB) * _alColorB : 0;
-	    col.rgb += (_alBandA >= 1) ? audioLinkGetLayer(weights.a, _alTimeRangeA, _alBandA, _alModeA) * _alColorA : 0;
-	    col.a = 1.0;
-	    return col;
-	}
 #endif
 	return 1;
+}
+
+half4 EmissiveAudioLink(float2 maskUV, float2 sweepUV)
+{
+	float4 col = 0;
+#if defined(_AUDIOLINK) 
+	// Load mask texture
+	half4 mask = UNITY_SAMPLE_TEX2D_SAMPLER(_AudiolinkMaskMap, _AudiolinkMaskMap, maskUV);
+	// Load weights texture
+	half4 weights = UNITY_SAMPLE_TEX2D_SAMPLER(_AudiolinkSweepMap, _AudiolinkSweepMap, sweepUV);
+	// Apply a small epsilon to the weights to avoid artifacts.
+	const float epsilon = (1.0/255.0);
+	weights = saturate(weights-epsilon);
+	// sample the texture
+	col.rgb += (_alBandR >= 1) ? audioLinkGetLayer(weights.r, _alTimeRangeR, _alBandR, _alModeR) * _alColorR : 0;
+	col.rgb += (_alBandG >= 1) ? audioLinkGetLayer(weights.g, _alTimeRangeG, _alBandG, _alModeG) * _alColorG : 0;
+	col.rgb += (_alBandB >= 1) ? audioLinkGetLayer(weights.b, _alTimeRangeB, _alBandB, _alModeB) * _alColorB : 0;
+	col.rgb += (_alBandA >= 1) ? audioLinkGetLayer(weights.a, _alTimeRangeA, _alBandA, _alModeA) * _alColorA : 0;
+	col.a = 1.0;
+	col.rgb *= mask * _AudiolinkIntensity;
+#endif
+	return col;
 }
 
 half3 NormalInTangentSpace(float4 texcoords, half mask)

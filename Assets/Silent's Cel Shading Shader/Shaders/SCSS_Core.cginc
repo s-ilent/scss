@@ -33,6 +33,9 @@ float3 sampleCrossToneLighting(inout float remappedLight, SCSS_TonemapInput tone
 	// A three-tiered tone system.
 	// Input remappedLight is potentially affected by occlusion map.
 
+	// Todo: clean this up, compatibility hacks
+	half factorBorder = saturate(simpleSharpen(remappedLight, tone0.width + _ShadowBorderRange, tone0.offset));
+
 	half factor0 = saturate(simpleSharpen(remappedLight, tone0.width, tone0.offset));
 	half factor1 = saturate(simpleSharpen(remappedLight, tone1.width, tone1.offset));
 
@@ -49,6 +52,8 @@ float3 sampleCrossToneLighting(inout float remappedLight, SCSS_TonemapInput tone
 	if (_CrosstoneToneSeparation == 0) 	final = final*albedo;
 	// if (_CrosstoneToneSeparation == 1) 	final = final; // Just here for completeness
 	
+	final = lerp(final, albedo, factorBorder*_ShadowBorderColor);
+
 	final = lerp(final, albedo, factor0);
 
 	remappedLight = factor0;
@@ -310,7 +315,7 @@ half3 calcSpecularBase(SCSS_Input c, float attenuation,
 	SCSS_LightParam d, SCSS_Light l, SCSS_ShadingParam p)
 {
 	return calcSpecularBase(c.specColor, c.smoothness, p.normal, c.oneMinusReflectivity, c.perceptualRoughness, 
-		attenuation, c.occlusion, d, l, p);
+		attenuation, c.specOcclusion, d, l, p);
 }
 
 half3 calcSpecularAdd(float3 specColor, float smoothness, float3 normal, float oneMinusReflectivity, float perceptualRoughness,

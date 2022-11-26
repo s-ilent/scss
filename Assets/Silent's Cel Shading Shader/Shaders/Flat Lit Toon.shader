@@ -8,6 +8,10 @@ Shader "Silent's Cel Shading/Lightramp (Outline)"
 		_Cutoff("Alpha Cutoff", Range(0,1)) = 0.5
 		[Enum(TransparencyMode)]_AlphaSharp("Transparency Mode", Float) = 0.0
 		//[Space]
+		[Toggle(_BACKFACE)]_UseBackfaceTexture("Enable Backface Texture", Float ) = 0.0
+		_ColorBackface("Backface Tint", Color) = (1,1,1,1)
+		_MainTexBackface("Backface Main Texture", 2D) = "white" {}
+		//[Space]
 		_ColorMask("Color Mask Map", 2D) = "white" {}
 		_ClippingMask ("Alpha Transparency Map", 2D) = "white" {}
         _Tweak_Transparency ("Transparency Adjustment", Range(-1, 1)) = 0
@@ -21,6 +25,7 @@ Shader "Silent's Cel Shading/Lightramp (Outline)"
 		_ShiftValue ("Value Shift", Range(0, 2)) = 1.0
 		//[Space]
 		_EmissionMap("Emission Map", 2D) = "white" {}
+        [Enum(UV0, 0, UV1, 1, UV2, 2, UV3, 3)]_EmissionUVSec("Emission UV Source", Float) = 0
 		[HDR]_EmissionColor("Emission Color", Color) = (0,0,0,1)
 		//[Space]
 		[Enum(LightRampType)]_LightRampType ("Light Ramp Type", Float) = 0.0
@@ -91,10 +96,20 @@ Shader "Silent's Cel Shading/Lightramp (Outline)"
 		_SpecularDetailMask ("Specular Detail Mask", 2D) = "white" {}
 		_SpecularDetailStrength ("Specular Detail Strength", Range(0, 1)) = 1.0
 		[Toggle(_EMISSION)]_UseAdvancedEmission("Enable Advanced Emission", Float ) = 0.0
-        [Enum(UV0, 0, UV1, 1)]_DetailEmissionUVSec("Detail Emission UV Source", Float) = 0
+        [Enum(UV0, 0, UV1, 1, UV2, 2, UV3, 3)]_DetailEmissionUVSec("Detail Emission UV Source", Float) = 0
 		[Enum(DetailEmissionMode)]_EmissionDetailType("Emission Detail Type", Float) = 0
 		_DetailEmissionMap("Detail Emission Map", 2D) = "white" {}
 		[HDR]_EmissionDetailParams("Emission Detail Params", Vector) = (0,0,0,0)
+		//[Space]
+		[Toggle(_AUDIOLINK)]_UseEmissiveAudiolink("Enable Audiolink Emission", Float ) = 0.0
+		_AudiolinkIntensity("Audiolink Emission Intensity", Float) = 1.0
+		_AudiolinkMaskMap ("Audiolink Mask Map", 2D) = "white" {}
+        [Enum(UV0, 0, UV1, 1, UV2, 2, UV3, 3)]_AudiolinkMaskMapUVSec("Audiolink Mask UV Source", Float) = 0
+		_AudiolinkSweepMap ("Audiolink Sweep Map", 2D) = "gray" {}
+        [Enum(UV0, 0, UV1, 1, UV2, 2, UV3, 3)]_AudiolinkSweepMapUVSec("Audiolink Sweep UV Source", Float) = 0
+		[ToggleUI]_UseAudiolinkLightSense ("Use Light-sensing Audiolink", Float) = 0.0
+		_AudiolinkLightSenseStart("Light Threshold Start", Range(0, 1)) = 1.0
+		_AudiolinkLightSenseEnd("Light Threshold End", Range(0, 1)) = 0.0
 		//[Space]
         _alColorR("Red Channel Tint", Color)   = (1, 0.333, 0, 0)
         _alColorG("Green Channel Tint", Color) = (0, 1, 0.333, 0)
@@ -217,8 +232,8 @@ Shader "Silent's Cel Shading/Lightramp (Outline)"
 			"RenderType" = "Opaque"
 		}
 
-        Blend[_SrcBlend][_DstBlend]
-        BlendOp[_BlendOp]
+        Blend[_SrcBlend][_DstBlend], One One
+        BlendOp[_BlendOp], Max
         ZTest[_ZTest]
         ZWrite[_ZWrite]
         Cull[_CullMode]
@@ -239,7 +254,6 @@ Shader "Silent's Cel Shading/Lightramp (Outline)"
         CGINCLUDE
 		#pragma target 5.0
 		#pragma shader_feature _ _ALPHATEST_ON _ALPHABLEND_ON _ALPHAPREMULTIPLY_ON
-		#pragma multi_compile _ UNITY_HDR_ON
         #pragma multi_compile_instancing
 		
 		#define SCSS_OUTLINE
@@ -261,18 +275,22 @@ Shader "Silent's Cel Shading/Lightramp (Outline)"
 
 			#pragma require geometry
 
-			#pragma multi_compile _ VERTEXLIGHT_ON
-
 			#pragma multi_compile_fwdbase
 			#pragma multi_compile_fog
+			#pragma multi_compile _ UNITY_HDR_ON
+			#pragma multi_compile _ VERTEXLIGHT_ON
 
-			#pragma shader_feature _ _DETAIL_MULX2
-			#pragma shader_feature _ _METALLICGLOSSMAP _SPECGLOSSMAP
+			// Needs to be global for Unity reasons
 			#pragma shader_feature _ _EMISSION
-			#pragma shader_feature _ _SMOOTHNESS_TEXTURE_ALBEDO_CHANNEL_A
-			#pragma shader_feature _ _SPECULARHIGHLIGHTS_OFF
-			#pragma shader_feature _ _GLOSSYREFLECTIONS_OFF		
-			#pragma shader_feature _ _SUNDISK_NONE				
+
+			#pragma shader_feature_local _ _DETAIL_MULX2
+			#pragma shader_feature_local _ _METALLICGLOSSMAP _SPECGLOSSMAP
+			#pragma shader_feature_local _ _SMOOTHNESS_TEXTURE_ALBEDO_CHANNEL_A
+			#pragma shader_feature_local _ _SPECULARHIGHLIGHTS_OFF
+			#pragma shader_feature_local _ _GLOSSYREFLECTIONS_OFF		
+			#pragma shader_feature_local _ _SUNDISK_NONE		
+			#pragma shader_feature_local _ _BACKFACE
+			#pragma shader_feature_local _ _AUDIOLINK
 			
 			#include "SCSS_Core.cginc"
 
@@ -290,7 +308,7 @@ Shader "Silent's Cel Shading/Lightramp (Outline)"
 		{
 			Name "FORWARD_DELTA"
 			Tags { "LightMode" = "ForwardAdd" }
-			Blend [_SrcBlend] One
+			Blend [_SrcBlend] One, Zero One
 
 			CGPROGRAM
 
@@ -302,12 +320,15 @@ Shader "Silent's Cel Shading/Lightramp (Outline)"
 
 			#pragma multi_compile_fwdadd_fullshadows
 			#pragma multi_compile_fog
-			#pragma shader_feature _ _DETAIL_MULX2
-			#pragma shader_feature _ _METALLICGLOSSMAP _SPECGLOSSMAP
-			#pragma shader_feature _ _SMOOTHNESS_TEXTURE_ALBEDO_CHANNEL_A
-			#pragma shader_feature _ _SPECULARHIGHLIGHTS_OFF
-			#pragma shader_feature _ _GLOSSYREFLECTIONS_OFF
-			#pragma shader_feature _ _SUNDISK_NONE			
+			#pragma multi_compile _ UNITY_HDR_ON
+			
+			#pragma shader_feature_local _ _DETAIL_MULX2
+			#pragma shader_feature_local _ _METALLICGLOSSMAP _SPECGLOSSMAP
+			#pragma shader_feature_local _ _SMOOTHNESS_TEXTURE_ALBEDO_CHANNEL_A
+			#pragma shader_feature_local _ _SPECULARHIGHLIGHTS_OFF
+			#pragma shader_feature_local _ _GLOSSYREFLECTIONS_OFF
+			#pragma shader_feature_local _ _SUNDISK_NONE			
+			#pragma shader_feature_local _ _BACKFACE
 
 			#include "SCSS_Core.cginc"
 

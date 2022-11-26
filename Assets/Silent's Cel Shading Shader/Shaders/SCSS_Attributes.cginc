@@ -36,6 +36,32 @@ struct VertexOutput
 	#endif
 };
 
+struct VertexInputShadowCaster
+{
+    float4 vertex   : POSITION;
+    float3 normal   : NORMAL;
+    float2 uv0      : TEXCOORD0;
+    UNITY_VERTEX_INPUT_INSTANCE_ID
+};
+
+#ifdef SCSS_USE_SHADOW_OUTPUT_STRUCT
+struct VertexOutputShadowCaster
+{
+    V2F_SHADOW_CASTER_NOPOS
+    #if defined(SCSS_USE_SHADOW_UVS)
+        float2 tex : TEXCOORD1;
+    #endif
+};
+#endif
+
+#ifdef SCSS_USE_STEREO_SHADOW_OUTPUT_STRUCT
+struct VertexOutputStereoShadowCaster
+{
+    UNITY_VERTEX_OUTPUT_STEREO
+};
+#endif
+
+
 struct FragmentInput
 {
 	VertexOutput i; 

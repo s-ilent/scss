@@ -1,4 +1,6 @@
 _MainTex	Main Texture	Main colour texture (RGBA), which controls the basic appearance of the shader. The colour channels and alpha channels are used.
+_MainTexBackface	Backface Texture 	Main colour texture for backface (RGBA). Same as the main colour texture, but for backface only.
+_UseBackfaceTexture	Backface Texture	Use a separate albedo texture for the material's backface.
 _LightingCalculationType	Lighting Calculation Type	Sets the method used to perform the direct/indirect lighting calculation.
 _ClippingMask	Clipping Mask	Additional texture for transparency, applied over other transparency sources.
 _Cutoff	Alpha Cutoff	Threshold for transparency cutoff. Values below the cutoff will be fully transparent.
@@ -83,6 +85,9 @@ _VanishingEnd	End Vanishing	The outer bound of the vanishing effect. The higher 
 _UseEmissiveLightSense	Light Sensitivity	Enables light sensitivity for emission, which will change the intensity of emission depending on the incoming light. This can be used to make emissive patterns that only glow in the dark, or that scale with light intensity.
 _EmissiveLightSenseStart	Glow Start	The threshold at which the glow starts. For example, setting this to 1 will hide the glow when there is 1 or more unit of light hitting the material.
 _EmissiveLightSenseEnd	Glow End	The threshold at which the glow ends.  For example, setting this to 0 will show the glow at full intensity when there is no light, and raising it will allow the maximum glow to be triggered even with light.
+_UseEmissiveAudiolink	Emissive AudioLink	Enables the emissive AudioLink effect, which will pulse in time to music in supported scenes. 
+_AudiolinkMaskMap	AudioLink Mask Map	A texture multiplied over the emissive AudioLink pulse to allow for masking or colouring it seperately from the sweep parameters.
+_AudiolinkSweepMap	AudioLink Sweep Map	A texture that defines the shape of the emissive AudioLink pulse. The colour and intensity of each pixel determine the channel and time offset, respectively.
 _alColorR	Colour (R)	The colour of the effect applied to the first channel of the AudioLink pulse. Controlled by the Detail Emission Mask's R channel.
 _alColorG	Colour (G)	The colour of the effect applied to the second channel of the AudioLink pulse. Controlled by the Detail Emission Mask's G channel.
 _alColorB	Colour (B)	The colour of the effect applied to the third channel of the AudioLink pulse. Controlled by the Detail Emission Mask's B channel.
@@ -124,6 +129,8 @@ _2nd_ShadeColor_Step	2nd Shading Breakpoint	Sets the point at which the shading 
 _2nd_ShadeColor_Feather	2nd Shading Width	Sets the width of the transition between shaded and fully shaded.
 _ShadingGradeMap	Shading Adjustment	Adds additional shading to darkened regions, and acts as occlusion. The slider modifies the midpoint of the shading adjustment.
 _ShadingGradeMapLevel	Shading Adjustment Level	Modifies the middle point of the shading adjustment.
+_ShadowBorderColor	Shading Tone Border	Adds a colour shift to the intersection between the shading tones. Black means no change.
+_ShadowBorderRange	Width	Sets the width of the colour shift. 
 _LightMultiplyAnimated	Runtime Light Adjustment	Modifies the output values. The lower this value, the darker the light reflected by the material.
 _LightAddAnimated	Runtime Light Increase	Modifies the output values. The higher this value, the greater the amount of baseline luminance is applied to the material. Not recommended for regular use.
 _LightClampAnimated	Runtime Light Clamp	Limits the output value of lighting. When enabled, total lighting applied is limited. Not recommended for regular use.
@@ -150,6 +157,7 @@ s_fullComplexity	Show all options. (Complex mode)	Show all options. (Complex mod
 s_mainOptions	Main Options	Settings that control the basic appearance of the shader, which affect all subsequent settings.
 s_shadingOptions	Shading Options	Settings that control the main light shading calculations. However, they mostly don't affect other settings.
 s_renderingOptions	Rendering Options	Settings that control additional effects rendered after the main shading. These settings are specific to these effects. (Some specular settings will affect the base albedo, which influences how other effects appear.)
+s_emissionOptions	Emission Options	Settings that control additive light seemingly emitted from the material.
 s_detailOptions	Detail Options	Settings that control details added into the basic lighting and shading.
 s_miscOptions	Misc Options	Settings that control specific effects which aren't related to lighting.
 s_inventoryOptions	Simple Inventory Options	Settings that control the simple inventory system, based on the input UV coordinates.

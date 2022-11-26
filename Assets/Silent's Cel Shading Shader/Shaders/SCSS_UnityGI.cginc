@@ -30,6 +30,11 @@ half3 specularDFGEnergyCompensation(half3 dfg, half3 f0, bool isCloth = false)
     return 1.0 + f0 * (1.0 / dfg.y - 1.0);
 }
 
+float SpecularAO_Lagarde(float NoV, float visibility, float roughness) {
+    // Lagarde and de Rousiers 2014, "Moving Frostbite to PBR"
+    return saturate(pow(NoV + visibility, exp2(-16.0 * roughness - 1.0)) - 1.0 + visibility);
+}
+
 /* http://www.geomerics.com/wp-content/uploads/2015/08/CEDEC_Geomerics_ReconstructingDiffuseLighting1.pdf */
 float shEvaluateDiffuseL1Geomerics_local(float L0, float3 L1, float3 n)
 {
@@ -165,6 +170,8 @@ bool isReflectionProbeActive()
 
 inline UnityGI UnityGlobalIllumination_SCSS (UnityGIInput data, half occlusion, half3 normalWorld, Unity_GlossyEnvironmentData glossIn)
 {
+    float localNoV = max(0.002, dot(normalWorld, data.worldViewDir));
+    occlusion = SpecularAO_Lagarde(localNoV, occlusion, glossIn.roughness);
     UnityGI o_gi = UnityGI_Base(data, occlusion, normalWorld);
 	#if defined(SAMPLE_SH_NONLINEAR) 
 	    float3 L0 = float3(unity_SHAr.w, unity_SHAg.w, unity_SHAb.w)
