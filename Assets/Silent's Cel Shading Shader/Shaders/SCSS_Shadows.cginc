@@ -6,38 +6,31 @@
 
 #include "UnityCG.cginc"
 #include "UnityShaderVariables.cginc"
-#include "SCSS_Utils.cginc"
-#include "SCSS_Input.cginc"
 
-#if (defined(_ALPHABLEND_ON) || defined(_ALPHAPREMULTIPLY_ON)) && defined(UNITY_USE_DITHER_MASK_FOR_ALPHABLENDED_SHADOWS)
-    #define UNITY_STANDARD_USE_DITHER_MASK 1
+#if (defined(_ALPHABLEND_ON) || defined(_ALPHAPREMULTIPLY_ON))
+    #define SCSS_USE_DITHER_MASK 1
 #endif
 
 // Need to output UVs in shadow caster, since we need to sample texture and do clip/dithering based on it
 #if defined(_ALPHATEST_ON) || defined(_ALPHABLEND_ON) || defined(_ALPHAPREMULTIPLY_ON)
-    #define UNITY_STANDARD_USE_SHADOW_UVS 1
+    #define SCSS_USE_SHADOW_UVS 1
 #endif
 
 // Has a non-empty shadow caster output struct (it's an error to have empty structs on some platforms...)
-#if !defined(V2F_SHADOW_CASTER_NOPOS_IS_EMPTY) || defined(UNITY_STANDARD_USE_SHADOW_UVS)
-    #define UNITY_STANDARD_USE_SHADOW_OUTPUT_STRUCT 1
+#if !defined(V2F_SHADOW_CASTER_NOPOS_IS_EMPTY) || defined(SCSS_USE_SHADOW_UVS)
+    #define SCSS_USE_SHADOW_OUTPUT_STRUCT 1
 #endif
 
 #ifdef UNITY_STEREO_INSTANCING_ENABLED
-    #define UNITY_STANDARD_USE_STEREO_SHADOW_OUTPUT_STRUCT 1
+    #define SCSS_USE_STEREO_SHADOW_OUTPUT_STRUCT 1
 #endif
 
-//uniform float4      _Color;
-//uniform float       _Cutoff;
-//uniform sampler2D   _MainTex;
-//uniform sampler2D   _ClippingMask;
-//uniform float4      _MainTex_ST;
-//uniform float       _AlbedoAlphaMode;
-//uniform float       _VanishingStart;
-//uniform float       _VanishingEnd;
-//uniform float       _UseVanishing;
-//uniform float       _AlphaSharp;
-//uniform float       _Tweak_Transparency;
+#include "SCSS_Config.cginc"
+#include "SCSS_Utils.cginc"
+#include "SCSS_Input.cginc"
+#include "SCSS_Attributes.cginc"
+#include "SCSS_ForwardVertex.cginc"
+
 
 #if defined(_SPECULAR)
 /*
@@ -50,32 +43,6 @@ half SpecularSetup_ShadowGetOneMinusReflectivity(half2 uv)
     return (1 - SpecularStrength(specColor));
 }
 */
-#endif
-
-
-struct VertexInput
-{
-    float4 vertex   : POSITION;
-    float3 normal   : NORMAL;
-    float2 uv0      : TEXCOORD0;
-    UNITY_VERTEX_INPUT_INSTANCE_ID
-};
-
-#ifdef UNITY_STANDARD_USE_SHADOW_OUTPUT_STRUCT
-struct VertexOutputShadowCaster
-{
-    V2F_SHADOW_CASTER_NOPOS
-    #if defined(UNITY_STANDARD_USE_SHADOW_UVS)
-        float2 tex : TEXCOORD1;
-    #endif
-};
-#endif
-
-#ifdef UNITY_STANDARD_USE_STEREO_SHADOW_OUTPUT_STRUCT
-struct VertexOutputStereoShadowCaster
-{
-    UNITY_VERTEX_OUTPUT_STEREO
-};
 #endif
 
 float4 TexCoordsShadowCaster(float2 texcoords)
@@ -92,23 +59,25 @@ float4 TexCoordsShadowCaster(float2 texcoords)
 // and inputting VPOS in the pixel shader, since they both map to "POSITION" semantic on
 // some platforms, and then things don't go well.
 
-void vertShadowCaster (VertexInput v
+void vertShadowCaster (VertexInputShadowCaster v
     , out float4 opos : SV_POSITION
-    #ifdef UNITY_STANDARD_USE_SHADOW_OUTPUT_STRUCT
+    #ifdef SCSS_USE_SHADOW_OUTPUT_STRUCT
     , out VertexOutputShadowCaster o
     #endif
-    #ifdef UNITY_STANDARD_USE_STEREO_SHADOW_OUTPUT_STRUCT
+    #ifdef SCSS_USE_STEREO_SHADOW_OUTPUT_STRUCT
     , out VertexOutputStereoShadowCaster os
     #endif
 )
 {
     UNITY_SETUP_INSTANCE_ID(v);
 
-    // Vertex modifications go here.
+    // Object-space vertex modifications go here.
     
-    #ifdef UNITY_STANDARD_USE_STEREO_SHADOW_OUTPUT_STRUCT
+    #ifdef SCSS_USE_STEREO_SHADOW_OUTPUT_STRUCT
+        UNITY_TRANSFER_INSTANCE_ID(v, o);
         UNITY_INITIALIZE_VERTEX_OUTPUT_STEREO(os);
     #endif
+
     TRANSFER_SHADOW_CASTER_NOPOS(o,opos)
     //TRANSFER_SHADOW_CASTER_NOPOS_LEGACY (o, opos)
 
@@ -131,23 +100,25 @@ void vertShadowCaster (VertexInput v
     
     opos = ApplyNearVertexSquishing(opos);
 
-    #if defined(UNITY_STANDARD_USE_SHADOW_UVS)
+    #if defined(SCSS_USE_SHADOW_UVS)
         o.tex = AnimateTexcoords(v.uv0);
     #endif
 }
 
 half4 fragShadowCaster (UNITY_POSITION(vpos)
-#ifdef UNITY_STANDARD_USE_SHADOW_OUTPUT_STRUCT
+#ifdef SCSS_USE_SHADOW_OUTPUT_STRUCT
     , VertexOutputShadowCaster i
 #endif
 ) : SV_Target
 {
     half alpha = Alpha(0);
-    #if defined(UNITY_STANDARD_USE_SHADOW_UVS)
-        float4 texcoords = TexCoordsShadowCaster(i.tex);
-        fixed3 albedo = Albedo(texcoords);
+    half3 albedo = 1;
+    half oneMinusReflectivity = 0;
+    #if defined(SCSS_USE_SHADOW_UVS)
+        half4 texcoords = TexCoordsShadowCaster(i.tex);
+        albedo = Albedo(texcoords);
         alpha = Alpha(texcoords);
-    #endif // #if defined(UNITY_STANDARD_USE_SHADOW_UVS)
+    #endif // #if defined(SCSS_USE_SHADOW_UVS)
 
     #if defined(ALPHAFUNCTION)
     alphaFunction(alpha);
@@ -155,16 +126,26 @@ half4 fragShadowCaster (UNITY_POSITION(vpos)
 
     applyVanishing(alpha);
 
-    /* To-do
-    #if defined(_ALPHABLEND_ON) || defined(_ALPHAPREMULTIPLY_ON)
-        #if defined(_ALPHAPREMULTIPLY_ON)
-            half outModifiedAlpha;
-            PreMultiplyAlpha(half3(0, 0, 0), alpha, SpecularSetup_ShadowGetOneMinusReflectivity(i.tex), outModifiedAlpha);
-            alpha = outModifiedAlpha;
-        #endif
+    #if defined(_SPECULAR)
+    {
+        half4 specGloss = SpecularGloss(texcoords, detailMask);
+
+        if (_UseMetallic == 1)
+        {
+            // In Metallic mode, ignore the other colour channels. 
+            specGloss = specGloss.r;
+            oneMinusReflectivity = OneMinusReflectivityFromMetallic(specGloss);
+        }
+        else 
+        {
+            // Specular energy converservation. From EnergyConservationBetweenDiffuseAndSpecular in UnityStandardUtils.cginc
+            oneMinusReflectivity = 1 - SpecularStrength(specGloss); 
+        }
+    }
     #endif
-    */
-    clip(alpha);
+    // When premultiplied mode is set, this will multiply the diffuse by the alpha component,
+    // allowing to handle transparency in physically correct way - only diffuse component gets affected by alpha
+    PreMultiplyAlpha_local (albedo, alpha, oneMinusReflectivity, /*out*/ alpha);
 
     applyAlphaClip(alpha, _Cutoff, vpos.xy, _AlphaSharp);
 

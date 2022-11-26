@@ -66,6 +66,12 @@ float3 addEmissiveDetail(float3 emission, float2 emissionDetailUV, out float alp
 	return emission;
 }
 
+float3 addEmissiveAudiolink(float3 emission, float4 audiolinkUV, inout float alpha)
+{
+	emission += EmissiveAudioLink(audiolinkUV.xy, audiolinkUV.zw);
+	return emission;
+}
+
 float4 frag(VertexOutput i, uint facing : SV_IsFrontFace
     #if defined(USING_COVERAGE_OUTPUT)
 	, out uint cov : SV_Coverage
@@ -80,9 +86,9 @@ float4 frag(VertexOutput i, uint facing : SV_IsFrontFace
 	
 	// Darken some effects on outlines. 
 	// Note that MSAA means this isn't a strictly binary thing.
-    float outlineDarken = 1-p.isOutline;
+    half outlineDarken = 1-p.isOutline;
 
-	float4 texcoords = TexCoords(i.uvPack0.xy, i.uvPack0.zw);
+	float4 texcoords = TexCoords(i.uvPack0, i.uvPack1);
 
 	// Ideally, we should pass all input to lighting functions through the 
 	// material parameter struct. But there are some things that are
@@ -92,6 +98,10 @@ float4 frag(VertexOutput i, uint facing : SV_IsFrontFace
 	initMaterial(material);
 
 	material.alpha = Alpha(texcoords.xy);
+
+	#if defined(_BACKFACE)
+	if (!facing) material.alpha = BackfaceAlpha(texcoords.xy);
+	#endif
 
     #if defined(ALPHAFUNCTION)
     alphaFunction(material.alpha);
@@ -111,6 +121,10 @@ float4 frag(VertexOutput i, uint facing : SV_IsFrontFace
 
 	material.albedo = Albedo(texcoords);
 
+	#if defined(_BACKFACE)
+	if (!facing) material.albedo = BackfaceAlbedo(texcoords);
+	#endif
+
 	#if !defined(SCSS_CROSSTONE)
 	material.tone[0] = Tonemap(texcoords.xy, material.occlusion);
 	#endif
@@ -122,13 +136,23 @@ float4 frag(VertexOutput i, uint facing : SV_IsFrontFace
 	#endif
 
 	applyDetail(texcoords, material);
+	
+	#if defined(_BACKFACE)
+	if (!facing) applyBackfaceDetail(texcoords, material);
+	#endif
+
 	applyVertexColour(i.color, p.isOutline, material);
 
+	// Masks albedo out behind emission.
 	float emissionAlpha;
-	float3 emission = Emission(texcoords.xy);
-	float2 emissionDetailUV = EmissionDetailTexCoords(i.uvPack0.xy, i.uvPack0.zw);
-	emission = addEmissiveDetail(emission, emissionDetailUV, emissionAlpha);
-	// Emissive rim. 
+
+	float4 emissionTexcoords = EmissionTexCoords(i.uvPack0, i.uvPack1);
+	float3 emission = Emission(emissionTexcoords.xy);
+	emission = addEmissiveDetail(emission, emissionTexcoords.zw, emissionAlpha);
+
+	float4 audiolinkUV = EmissiveAudioLinkTexCoords(i.uvPack0, i.uvPack1);
+	emission = addEmissiveAudiolink(emission, audiolinkUV, emissionAlpha);
+
 	emission *= outlineDarken;
 	material.emission = float4(emission, 0);
 	
@@ -153,7 +177,6 @@ float4 frag(VertexOutput i, uint facing : SV_IsFrontFace
 	#define unity_ColorSpaceDielectricSpec half4(0, 0, 0, 1)
 	#endif 
 
-
 	//if (_SpecularType != 0 )
 	#if defined(_SPECULAR)
 	{
@@ -162,10 +185,15 @@ float4 frag(VertexOutput i, uint facing : SV_IsFrontFace
 		material.specColor = specGloss.rgb;
 		material.smoothness = specGloss.a;
 
+		// This should be an option later.
+		material.specOcclusion = saturate(material.occlusion);
+
 		if (_UseMetallic == 1)
 		{
 			// In Metallic mode, ignore the other colour channels. 
-			material.specColor = material.specColor.r;
+			material.specColor = specGloss.r;
+			// Treat as a packed map. 
+			material.specOcclusion = specGloss.g;
 		}
 
 		// Because specular behaves poorly on backfaces, disable specular on outlines. 
@@ -199,7 +227,7 @@ float4 frag(VertexOutput i, uint facing : SV_IsFrontFace
     // When premultiplied mode is set, this will multiply the diffuse by the alpha component,
     // allowing to handle transparency in physically correct way - only diffuse component gets affected by alpha
     half outputAlpha;
-    material.albedo = PreMultiplyAlpha (material.albedo, material.alpha, material.oneMinusReflectivity, /*out*/ outputAlpha);
+    material.albedo = PreMultiplyAlpha_local (material.albedo, material.alpha, material.oneMinusReflectivity, /*out*/ outputAlpha);
 
     prepareMaterial(p, material);
 

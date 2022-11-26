@@ -27,12 +27,7 @@ float4 Shade4PointLightsAtten (
     ndotl += toLightY * normal.y;
     ndotl += toLightZ * normal.z;
     // correct NdotL
-    float4 corr = 0;//rsqrt(lengthSq);
-    corr.x = fastRcpSqrtNR0(lengthSq.x);
-    corr.y = fastRcpSqrtNR0(lengthSq.y);
-    corr.z = fastRcpSqrtNR0(lengthSq.z);
-    corr.w = fastRcpSqrtNR0(lengthSq.x);
-
+    float4 corr = rsqrt(lengthSq);
     ndotl = corr * (ndotl * 0.5 + 0.5); // Match with Forward for light ramp sampling
     ndotl = max (float4(0,0,0,0), ndotl);
     // attenuation
@@ -78,12 +73,20 @@ inline float4 ObjectToClipPosRelative(float3 pos)
 	matrixV._m03_m13_m23 = 0.0;
 
 	float3 posWS = mul(matrixM, float4(pos, 1.0)).xyz;
-	float3 posVS = mul(matrixV, float4(posWS, 1.0)).xyz;
+
+#if defined(STEREO_CUBEMAP_RENDER_ON)
+    float3 offset = ODSOffset(posWS, unity_HalfStereoSeparation.x);
+#else
+	float3 offset = 0;
+#endif
+
+	float3 posVS = mul(matrixV, float4(posWS+offset, 1.0)).xyz;
 
 	float4 posCS = mul(UNITY_MATRIX_P, float4(posVS, 1.0));
 
 	return posCS;
 }
+
 inline float4 WorldToClipPosRelative(float3 posWS)
 {
 	float4x4 matrixM = unity_ObjectToWorld;
@@ -119,6 +122,10 @@ VertexOutput vert(appdata_full v) {
 	uvPack0.xy = AnimateTexcoords(uvPack0.xy);
 	o.uvPack0 = uvPack0;
 	o.uvPack1 = uvPack1;
+
+	// Calculate the transformed texture coordinates so that the
+	// outline mask matches with the scale/offset of the main texture.
+	float4 postTexcoords = TexCoords(uvPack0, uvPack1);
 
 	float3 normalOS = v.normal;
 	float3 normalDir = UnityObjectToWorldNormal(v.normal);
@@ -166,7 +173,7 @@ VertexOutput vert(appdata_full v) {
 
 	#if defined(SCSS_OUTLINE)
 	#if defined(SCSS_USE_OUTLINE_TEXTURE)
-	o.extraData.x *= OutlineMask(uvPack0.xy);
+	o.extraData.x *= OutlineMask(postTexcoords.xy);
 	#endif
 
 	o.extraData.x *= _outline_width * .01; // Apply outline width and convert to cm
@@ -240,7 +247,7 @@ inline VertexOutput CalculateOutlineVertexClipPosition(VertexOutput v)
 		matrixIM._m03_m13_m23 += _WorldSpaceCameraPos.xyz;
 
 		// Calculate a world-space vertex offset we can apply in object space
-        half3 offsetOS = mul(matrixIM, outlineWidth.xxx);
+        half3 offsetOS = mul( mul(transpose((float3x3)matrixIM), (float3x3)matrixIM), outlineWidth.xxx);
 
         half3 localPosition = positionOS + normalOS * offsetOS;
 

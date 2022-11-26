@@ -259,6 +259,8 @@ Material:
     - _OutlineZPush: 0
     - _Parallax: 0.02
     - _PixelSampleMode: 0
+    - _ProximityShadowDistance: 0.1
+    - _ProximityShadowDistancePower: 1.5
     - _ReadMask: 255
     - _RenderQueueOverride: -1
     - _Roughness: 0
@@ -305,6 +307,7 @@ Material:
     - _UseInventory: 0
     - _UseMatcap: 0
     - _UseMetallic: 1
+    - _UseProximityShadow: 0
     - _UseSpecularDetailMask: 0
     - _UseSubsurfaceScattering: 0
     - _UseVanishing: 0
@@ -348,6 +351,8 @@ Material:
     - _Matcap2Tint: {r: 1, g: 1, b: 1, a: 1}
     - _Matcap3Tint: {r: 1, g: 1, b: 1, a: 1}
     - _Matcap4Tint: {r: 1, g: 1, b: 1, a: 1}
+    - _ProximityShadowBackColor: {r: 0, g: 0, b: 0, a: 0}
+    - _ProximityShadowFrontColor: {r: 0, g: 0, b: 0, a: 0}
     - _SSSCol: {r: 1, g: 1, b: 1, a: 1}
     - _ShadowMaskColor: {r: 1, g: 1, b: 1, a: 1}
     - _SpecColor: {r: 1, g: 1, b: 1, a: 1}

@@ -85,9 +85,11 @@ float rDither(float gray, float2 pos, float steps) {
 
 inline void applyAlphaClip(inout float alpha, float cutoff, float2 pos, bool sharpen)
 {
-    // If this material isn't transparent, do nothing.
-    #if defined(USING_TRANSPARENCY)
-
+    #if defined(USING_ALPHA_BLENDING)
+    static bool blendMode = true;
+    #else
+    static bool blendMode = false;
+    #endif
     // Get the amount of MSAA samples present
     #if (SHADER_TARGET > 40)
     half samplecount = GetRenderTargetSampleCount();
@@ -95,28 +97,57 @@ inline void applyAlphaClip(inout float alpha, float cutoff, float2 pos, bool sha
     half samplecount = 1; 
     #endif
 
-    pos += _SinTime.x%4;
+    float modAlpha = alpha;
+
+    // If this material isn't transparent, do nothing.
+    #if defined(USING_TRANSPARENCY)
     // Switch between dithered alpha and sharp-edge alpha.
-        if (!sharpen) {
-            // If using true alpha blending, don't dither.
-            #if ALPHA_SHOULD_DITHER_CLIP
-            alpha = (1+cutoff) * alpha - cutoff;
+        if (!sharpen) 
+        {
+            // The width of the dither changes how obvious it is,
+            // so it might be useful as a user-adjustable value.
+            // However, the visible width of the dither changes
+            // based on the brightness of the scene/material..
+            const float width = blendMode? 0.0 : 1.0;
+
+            pos += _SinTime.x%4;
+            modAlpha = (1+cutoff) * modAlpha - cutoff;
             float mask = (T(intensity(pos)));
-            //const float width = 1 / (samplecount*2-1);
-            const float width = 1.0;
-            alpha = alpha - (mask * (1-alpha) * width);
-            #endif
+            modAlpha = modAlpha - (mask * (1-modAlpha) * width);
         }
-        else {
-            alpha = ((alpha - cutoff) / max(fwidth(alpha), 0.0) + 0.5);
+        else 
+        {
+            modAlpha = ((modAlpha - cutoff) / max(fwidth(modAlpha), FLT_EPS) + 0.5);
         }
 
-        clip (alpha);
+        #if defined(USING_ALPHA_BLENDING)
+        #else
+        alpha = saturate(modAlpha);
+        #endif
+
+        clip (modAlpha > FLT_EPS? modAlpha : -1);
         // If 0, remove now.
-        alpha = saturate(alpha);
     #else
     alpha = 1.0;
     #endif
+}
+
+inline half3 PreMultiplyAlpha_local (half3 diffColor, half alpha, half oneMinusReflectivity, out half outModifiedAlpha)
+{
+    #if defined(_ALPHAPREMULTIPLY_ON)
+        // NOTE: shader relies on pre-multiply alpha-blend (_SrcBlend = One, _DstBlend = OneMinusSrcAlpha)
+
+        // Transparency 'removes' from Diffuse component
+        diffColor *= alpha;
+
+        // Reflectivity 'removes' from the rest of components, including Transparency
+        // outAlpha = 1-(1-alpha)*(1-reflectivity) = 1-(oneMinusReflectivity - alpha*oneMinusReflectivity) =
+        //          = 1-oneMinusReflectivity + alpha*oneMinusReflectivity
+        outModifiedAlpha = 1-oneMinusReflectivity + alpha*oneMinusReflectivity;
+    #else
+        outModifiedAlpha = alpha;
+    #endif
+    return diffColor;
 }
 
 inline float3 BlendNormalsPD(float3 n1, float3 n2) {
@@ -188,10 +219,13 @@ float simpleSharpen (float x, float width, float mid, const float smoothnessMode
 // texelSize is Unity _Texture_TexelSize; zw is w/h, xy is 1/wh
 float2 sharpSample( float4 texelSize , float2 p )
 {
+    // Impossible if this is in the vert/geom shader, so just do nothing.
+    #if defined(SHADER_STAGE_FRAGMENT)
 	p = p*texelSize.zw;
     float2 c = max(0.0, fwidth(p));
     p = floor(p) + saturate(frac(p) / c);
 	p = (p - 0.5)*texelSize.xy;
+    #endif
 	return p;
 }
 
@@ -232,6 +266,30 @@ inline float4 ApplyNearVertexSquishing(float4 posCS)
     #endif
 
     return posCS;
+}
+
+// MToon's implementation
+inline half3 getObjectToViewNormal(const half3 normalOS)
+{
+    return normalize(mul((half3x3)UNITY_MATRIX_IT_MV, normalOS));
+}
+
+// Source: https://qiita.com/Santarh/items/428d2e0f33852e6f37b5
+static float getScreenAspectRatio()
+{
+    // Take the position of the top-right vertice of the near plane in projection space,
+    // and convert it back to view space.
+
+    // Upper right corner, so (x, y) = (1, 1)
+    // Since we want the near plane, z is dependant on API (0: DirectX, -1: OpenGL)
+    // And w is the near clip plane itself. 
+    float4 projectionSpaceUpperRight = float4(1, 1, UNITY_NEAR_CLIP_VALUE, _ProjectionParams.y);
+
+    // Apply the inverse projection matrix...
+    float4 viewSpaceUpperRight = mul(unity_CameraInvProjection, projectionSpaceUpperRight);
+
+    // ...and the aspect ratio is width / height. 
+    return viewSpaceUpperRight.x / viewSpaceUpperRight.y;
 }
 
 //-----------------------------------------------------------------------------
@@ -585,30 +643,6 @@ float3 applyBlendMode(int blendOp, half3 a, half3 b, half t)
 float3 applyMatcap(sampler2D src, half2 matcapUV, float3 dst, float3 tint, int blendMode, float blendStrength)
 {
     return applyBlendMode(blendMode, dst, tex2D(src, matcapUV) * tint, blendStrength);
-}
-
-// Source: https://qiita.com/Santarh/items/428d2e0f33852e6f37b5
-static float getScreenAspectRatio()
-{
-    // Take the position of the top-right vertice of the near plane in projection space,
-    // and convert it back to view space.
-
-    // Upper right corner, so (x, y) = (1, 1)
-    // Since we want the near plane, z is dependant on API (0: DirectX, -1: OpenGL)
-    // And w is the near clip plane itself. 
-    float4 projectionSpaceUpperRight = float4(1, 1, UNITY_NEAR_CLIP_VALUE, _ProjectionParams.y);
-
-    // Apply the inverse projection matrix...
-    float4 viewSpaceUpperRight = mul(unity_CameraInvProjection, projectionSpaceUpperRight);
-
-    // ...and the aspect ratio is width / height. 
-    return viewSpaceUpperRight.x / viewSpaceUpperRight.y;
-}
-
-// MToon's implementation
-inline half3 getObjectToViewNormal(const half3 normalOS)
-{
-    return normalize(mul((half3x3)UNITY_MATRIX_IT_MV, normalOS));
 }
 
 // This is based on a typical calculation for tonemapping
