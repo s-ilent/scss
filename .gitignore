@@ -60,3 +60,9 @@ crashlytics-build.properties
 
 # Git files
 .mailmap
+
+# WinMerge leftovers
+*.bak
+*.bak.meta
+
+*/**/*~
