@@ -89,6 +89,7 @@ float4 frag(VertexOutput i, uint facing : SV_IsFrontFace
     half outlineDarken = 1-p.isOutline;
 
 	float4 texcoords = TexCoords(i.uvPack0, i.uvPack1);
+	float4 detailNStexcoords = DetailNormalSpecularTexCoords(i.uvPack0, i.uvPack1);
 
 	// Ideally, we should pass all input to lighting functions through the 
 	// material parameter struct. But there are some things that are
@@ -113,7 +114,8 @@ float4 frag(VertexOutput i, uint facing : SV_IsFrontFace
 
 	half detailMask = DetailMask(texcoords.xy);
 
-    half3 normalTangent = NormalInTangentSpace(texcoords, detailMask);
+	float4 normalTexcoords = float4(texcoords.xy, detailNStexcoords.xy);
+    half3 normalTangent = NormalInTangentSpace(normalTexcoords, detailMask);
     material.normalTangent = normalTangent;
 
     // Todo: Allow passing anisotropy direction
@@ -180,7 +182,7 @@ float4 frag(VertexOutput i, uint facing : SV_IsFrontFace
 	//if (_SpecularType != 0 )
 	#if defined(_SPECULAR)
 	{
-		half4 specGloss = SpecularGloss(texcoords, detailMask);
+		half4 specGloss = SpecularGloss(texcoords.xy, detailNStexcoords.zw, detailMask);
 
 		material.specColor = specGloss.rgb;
 		material.smoothness = specGloss.a;

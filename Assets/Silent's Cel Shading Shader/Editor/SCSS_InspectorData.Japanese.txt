@@ -54,7 +54,7 @@ _MatcapStrength	マットキャップの強さ	マットキャップの威力。
 _MatcapMask	マットキャップマスク	異なるカラーチャンネルの強度によって、マットキャップの強度を決定します。
 _UseSubsurfaceScattering	サブサーフェイス・スキャッタリング	布や肌に有効な光の散乱効果が得られます。
 _ThicknessMap	厚みマップ	シックネスマップ(RGB)
-_ThicknessMapPower	厚さマップパワー	厚みマップの強度を上げます。
+_ThicknessMapPower	パワー	厚みマップの強度を上げます。
 _ThicknessMapInvert	厚みの反転	厚みに使われているマップを、1で効果が出るスケールから、0で効果が出るスケールに反転させます。
 _SSSCol	色を散らす	サブサーフェイス・スキャッタリング効果に使用される色です。
 _SSSIntensity	散乱強度	表面下の散乱効果の強さ。
@@ -68,6 +68,10 @@ _DetailAlbedoMap	ディテールアルベド×2	アルベドマップをメイ�
 _DetailNormalMap	詳細 ノーマル	メインのノーマルマップに組み合わせて、ディテールを追加するノーマルマップ。
 _SpecularDetailMask	スペキュラディテールマスク	スペキュラーマップに使用するディテールパターン。
 _UVSec	セカンダリーUVソース	詳細マップに使用するUVチャンネルを選択します。
+_DetailAlbedoBlendMode	ブレンドモード	マテリアルのアルベドにディテール アルベドを適用するために使用されるブレンド モードを選択します。
+_DetailAlbedoMapScale	スケール	マテリアルにディテール アルベドをどの程度強く適用するかを調整します
+_DetailNormalMapScale	スケール	ディテールノーマルがマテリアルにどの程度強く適用されるかを調整します。
+_SpecularDetailStrength	スケール	ディテールのスペキュラがマテリアルにどの程度強く適用されるかを調整します。
 _SpecularHighlights	スペキュラハイライト	スペキュラハイライトを切り替えます。Specularが有効な場合にのみ適用されます。
 _GlossyReflections	リフレクションズ	光沢のある反射をトグルします。Specularが有効な場合のみ適用されます。
 _DiffuseGeomShadowFactor	幾何陰・遮蔽	幾何学的シャドウイング機能のパワーをコントロールします。この機能は、拡散光が斜めになったときのフォールオフを変えます。よりリアルになりますが、セルシェーディングには望ましくない場合もあります。
@@ -88,6 +92,7 @@ _EmissiveLightSenseEnd	グロー・エンド	グローが終了する閾値で�
 _UseEmissiveAudiolink	AudioLinkエミッション	AudioLink効果を有効にし、利用可能な場 合は音楽に合わせてパルスを出力します。
 _AudiolinkMaskMap	マスクマップ	AudioLinkのパルスに適用されるテクスチャで、スイープパラメータとは別にマスキングまたはカラーリングを行うことができます。
 _AudiolinkSweepMap	スイープマップ	AudioLinkのパルスの形状を定義するテクスチャです。各ピクセルの色と強さで、それぞれチャンネルと時間オフセットが決まります。
+_AudiolinkIntensity	Intensity	AudioLinkパルスの明るさを設定します。
 _alColorR	カラー（R）	AudioLinkパルスの1チャンネル目に適用されるエフェクトの色。Detail Emission MaskのRチャンネルで制御される。
 _alColorG	カラー（G）	AudioLinkパルスの2チャンネル目に適用されるエフェクトの色。Detail Emission MaskのGチャンネルで制御される。
 _alColorB	カラー（B）	AudioLinkパルスの3チャンネル目に適用されるエフェクトの色。Detail Emission MaskのBチャンネルで制御される。

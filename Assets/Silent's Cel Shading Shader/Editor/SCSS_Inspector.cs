@@ -750,9 +750,6 @@ namespace SilentCelShading.Unity
 						Vector2Property(props["_EmissionDetailParams"], Content("s_EmissionDetailScroll"));
 						Vector2PropertyZW(props["_EmissionDetailParams"], Content("s_EmissionDetailPhase"));
 				EditorGUILayout.Space();
-				ShaderProperty("_UseEmissiveLightSense");
-				ShaderProperty("_EmissiveLightSenseStart");
-				ShaderProperty("_EmissiveLightSenseEnd");
             	EditorGUI.indentLevel --;
             	EditorGUI.indentLevel --;
 			} else {
@@ -780,6 +777,7 @@ namespace SilentCelShading.Unity
 				EditorGUI.indentLevel ++;
 				editor.TextureScaleOffsetProperty(props["_AudiolinkSweepMap"]);
 				EditorGUILayout.Space();
+				ShaderProperty("_AudiolinkIntensity");
 				// AudioLink properties
 				ShaderProperty("_alColorR");
 				ShaderProperty("_alColorG");
@@ -811,6 +809,10 @@ namespace SilentCelShading.Unity
 			}
 			EditorGUILayout.Space();
 			ShaderProperty("_CustomFresnelColor");
+			EditorGUILayout.Space();
+			ShaderProperty("_UseEmissiveLightSense");
+			ShaderProperty("_EmissiveLightSenseStart");
+			ShaderProperty("_EmissiveLightSenseEnd");
 			// For some reason, this property doesn't have spacing after it
 			EditorGUILayout.Space();
 		}
@@ -1020,14 +1022,18 @@ namespace SilentCelShading.Unity
 			{
 				if (PropertyEnabled(props["_UseSubsurfaceScattering"]))
 				{
-					TexturePropertySingleLine("_ThicknessMap");
+					WithGroupHorizontal(() => {
+						TexturePropertySingleLine("_ThicknessMap");
+						ShaderProperty("_ThicknessMapInvert");
+					});
+					EditorGUI.indentLevel+=2;
 					ShaderProperty("_ThicknessMapPower");
-					ShaderProperty("_ThicknessMapInvert");
 					ShaderProperty("_SSSCol");
 					ShaderProperty("_SSSIntensity");
 					ShaderProperty("_SSSPow");
 					ShaderProperty("_SSSDist");
 					ShaderProperty("_SSSAmbient");
+					EditorGUI.indentLevel-=2;
 				}
 			}
 		}
@@ -1038,13 +1044,35 @@ namespace SilentCelShading.Unity
 			if (TogglePropertyHeader("_UseDetailMaps")){
 				if (PropertyEnabled(props["_UseDetailMaps"])) 
 				{
+
 					target.EnableKeyword("_DETAIL_MULX2");
-					TexturePropertySingleLine("_DetailAlbedoMap", "_DetailAlbedoMapScale", "_DetailAlbedoBlendMode");
-					TexturePropertySingleLine("_DetailNormalMap", "_DetailNormalMapScale");
-					TexturePropertySingleLine("_SpecularDetailMask", "_SpecularDetailStrength");
-					
+					WithGroupHorizontal(() => {
+						TexturePropertySingleLine("_DetailAlbedoMap");
+						PropertyDropdownNoLabel("_UVSec", Enum.GetNames(typeof(UVLayers)), editor);
+					});
+					EditorGUI.indentLevel+=2;
 					editor.TextureScaleOffsetProperty(props["_DetailAlbedoMap"]);
-					ShaderProperty("_UVSec");
+					PropertyDropdown("_DetailAlbedoBlendMode", Enum.GetNames(typeof(DetailAlbedoBlendMode)), editor);
+					ShaderProperty("_DetailAlbedoMapScale");
+					EditorGUI.indentLevel-=2;
+					WithGroupHorizontal(() => {
+						TexturePropertySingleLine("_DetailNormalMap");
+						PropertyDropdownNoLabel("_DetailNormalMapUVSec", Enum.GetNames(typeof(UVLayers)), editor);
+					});
+					EditorGUI.indentLevel+=2;
+					editor.TextureScaleOffsetProperty(props["_DetailNormalMap"]);
+					ShaderProperty("_DetailNormalMapScale");
+					EditorGUI.indentLevel-=2;
+
+					WithGroupHorizontal(() => {
+						TexturePropertySingleLine("_SpecularDetailMask");
+						PropertyDropdownNoLabel("_SpecularDetailMaskUVSec", Enum.GetNames(typeof(UVLayers)), editor);
+					});
+					EditorGUI.indentLevel+=2;
+					editor.TextureScaleOffsetProperty(props["_SpecularDetailMask"]);
+					ShaderProperty("_SpecularDetailStrength");
+					EditorGUI.indentLevel-=2;
+					
 				} else {
 					target.DisableKeyword("_DETAIL_MULX2");
 				}

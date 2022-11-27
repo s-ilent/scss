@@ -92,9 +92,11 @@ Shader "Silent's Cel Shading/Lightramp (Outline)"
 		_DetailAlbedoMapScale ("Detail Albedo Map Scale", Float) = 1.0
 		[Enum(DetailAlbedoBlendMode)]_DetailAlbedoBlendMode ("Detail Albedo Blend Mode", Float) = 0.0
 		_DetailNormalMap("Detail Normal Map", 2D) = "bump" {}
+        [Enum(UV0, 0, UV1, 1, UV2, 2, UV3, 3)]_DetailNormalMapUVSec("Detail Normal UV Source", Float) = 0
 		_DetailNormalMapScale("Detail Normal Map Scale", Float) = 1.0
-		_SpecularDetailMask ("Specular Detail Mask", 2D) = "white" {}
-		_SpecularDetailStrength ("Specular Detail Strength", Range(0, 1)) = 1.0
+		_SpecularDetailMask ("Detail Specular Mask", 2D) = "white" {}
+        [Enum(UV0, 0, UV1, 1, UV2, 2, UV3, 3)]_SpecularDetailMaskUVSec("Detail Specular UV Source", Float) = 0
+		_SpecularDetailStrength ("Detail Specular Strength", Range(0, 1)) = 1.0
 		[Toggle(_EMISSION)]_UseAdvancedEmission("Enable Advanced Emission", Float ) = 0.0
         [Enum(UV0, 0, UV1, 1, UV2, 2, UV3, 3)]_DetailEmissionUVSec("Detail Emission UV Source", Float) = 0
 		[Enum(DetailEmissionMode)]_EmissionDetailType("Emission Detail Type", Float) = 0
