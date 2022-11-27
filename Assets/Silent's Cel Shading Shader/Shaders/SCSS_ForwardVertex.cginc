@@ -171,6 +171,9 @@ VertexOutput vert(appdata_full v) {
 		break;
 	}
 
+	// Invert ramp softness based on popular request
+	o.extraData.y = 1-o.extraData.y;
+
 	#if defined(SCSS_OUTLINE)
 	#if defined(SCSS_USE_OUTLINE_TEXTURE)
 	o.extraData.x *= OutlineMask(postTexcoords.xy);

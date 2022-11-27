@@ -54,13 +54,13 @@ _MatcapStrength	Matcap Strength	Power of the matcap. Higher is stronger.
 _MatcapMask	Matcap Mask	Determines the strength of the matcaps by the intensity of the different colour channels.
 _UseSubsurfaceScattering	Subsurface Scattering	Enables a light scattering effect useful for cloth and skin.
 _ThicknessMap	Thickness Map	Thickness Map (RGB)
-_ThicknessMapPower	Thickness Map Power	Boosts the intensity of the thickness map.
-_ThicknessMapInvert	Invert Thickness	Inverts the map used for thickness from a scale where 1 produces an effect, to a scale where 0 produces an effect.
-_SSSCol	Scattering Color	The colour used for the subsurface scattering effect.
-_SSSIntensity	Scattering Intensity	Strength of the subsurface scattering effect.
-_SSSPow	Scattering Power	Controls the power of the scattering effect.
-_SSSDist	Scattering Distortion	Controls the level of distortion light receives when passing through the material.
-_SSSAmbient	Scattering Ambient	Controls the intensity of ambient light received from scattering.
+_ThicknessMapPower	Power	Boosts the intensity of the thickness map.
+_ThicknessMapInvert	Invert	Inverts the map used for thickness from a scale where 1 produces an effect, to a scale where 0 produces an effect.
+_SSSCol	Color	The colour used for the subsurface scattering effect.
+_SSSIntensity	Intensity	Strength of the subsurface scattering effect.
+_SSSPow	Power	Controls the power of the scattering effect.
+_SSSDist	Distortion	Controls the level of distortion light receives when passing through the material.
+_SSSAmbient	Ambient	Controls the intensity of ambient light received from scattering.
 _LightSkew	Light Skew	Skews the direction of the received lighting. The default is (1, 0.1, 1, 0), which corresponds to normal strength on the X and Z axis, while reducing the effect of the Y axis. This essentially stops you from getting those harsh lights from above or below that look so weird on cel shaded models. But that's just a default...
 _PixelSampleMode	Pixel Art Mode	Treats the main texture as pixel art. Great for retro avatars! Note: When using this, you should make sure mipmaps are Enabled and texture sampling is set to Trilinear.
 _UseDetailMaps	Detail Maps	Applies detail maps over the top of other textures for a more detailed appearance.
@@ -68,6 +68,10 @@ _DetailAlbedoMap	Detail Albedo x2	An albedo map multiplied over the main albedo 
 _DetailNormalMap	Detail Normal	A normal map combined with the main normal map to add extra detail.
 _SpecularDetailMask	Specular Detail Mask	The detail pattern to use over the specular map.
 _UVSec	Secondary UV Source	Selects which UV channel to use for detail maps.
+_DetailAlbedoBlendMode	Blend Mode	Selects the blend mode used to apply detail albedo to the material's albedo. 
+_DetailAlbedoMapScale	Scale	Adjusts how strongly the detail albedo is applied to the material.
+_DetailNormalMapScale	Scale	Adjusts how strongly the detail normal is applied to the material.
+_SpecularDetailStrength	Scale	Adjusts how strongly the detail specular is applied to the material.
 _SpecularHighlights	Specular Highlights	Toggles specular highlights. Only applicable if specular is active.
 _GlossyReflections	Reflections	Toggles glossy reflections. Only applicable if specular is active.
 _DiffuseGeomShadowFactor	Diffuse Geometric Shadowing Factor	Controls the power of the geometric shadowing function, which alters the falloff of diffuse light at glancing angles. It's more realistic, but that can be undesirable for cel shading.
@@ -88,6 +92,7 @@ _EmissiveLightSenseEnd	Glow End	The threshold at which the glow ends.  For examp
 _UseEmissiveAudiolink	Emissive AudioLink	Enables the emissive AudioLink effect, which will pulse in time to music in supported scenes. 
 _AudiolinkMaskMap	AudioLink Mask Map	A texture multiplied over the emissive AudioLink pulse to allow for masking or colouring it seperately from the sweep parameters.
 _AudiolinkSweepMap	AudioLink Sweep Map	A texture that defines the shape of the emissive AudioLink pulse. The colour and intensity of each pixel determine the channel and time offset, respectively.
+_AudiolinkIntensity	Intensity	Sets the brightness of the AudioLink pulse. 
 _alColorR	Colour (R)	The colour of the effect applied to the first channel of the AudioLink pulse. Controlled by the Detail Emission Mask's R channel.
 _alColorG	Colour (G)	The colour of the effect applied to the second channel of the AudioLink pulse. Controlled by the Detail Emission Mask's G channel.
 _alColorB	Colour (B)	The colour of the effect applied to the third channel of the AudioLink pulse. Controlled by the Detail Emission Mask's B channel.

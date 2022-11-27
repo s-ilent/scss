@@ -42,8 +42,8 @@ UNITY_DECLARE_TEX2D_NOSAMPLER(_ClippingMask); uniform half4 _ClippingMask_ST;
 
 #if defined(_DETAIL)
 UNITY_DECLARE_TEX2D(_DetailAlbedoMap); uniform half4 _DetailAlbedoMap_ST; uniform half4 _DetailAlbedoMap_TexelSize;
-UNITY_DECLARE_TEX2D_NOSAMPLER(_DetailNormalMap); uniform half4 _DetailNormalMap_ST;
-UNITY_DECLARE_TEX2D_NOSAMPLER(_SpecularDetailMask); uniform half4 _SpecularDetailMask_ST;
+UNITY_DECLARE_TEX2D_NOSAMPLER(_DetailNormalMap); uniform half4 _DetailNormalMap_ST;  uniform half4 _DetailNormalMap_TexelSize;
+UNITY_DECLARE_TEX2D_NOSAMPLER(_SpecularDetailMask); uniform half4 _SpecularDetailMask_ST; uniform half4 _SpecularDetailMask_TexelSize;
 uniform float _DetailAlbedoMapScale;
 uniform float _DetailAlbedoBlendMode;
 uniform float _DetailNormalMapScale;
@@ -133,6 +133,8 @@ uniform float _BumpScale;
 uniform float _Cutoff;
 uniform float _AlphaSharp;
 uniform float _UVSec;
+uniform float _DetailNormalMapUVSec;
+uniform float _SpecularDetailMaskUVSec;
 uniform float _AlbedoAlphaMode;
 uniform float _Tweak_Transparency;
 
@@ -580,6 +582,38 @@ float4 EmissiveAudioLinkTexCoords(float4 uvPack0, float4 uvPack1)
     return texcoord;
 }
 
+
+float4 DetailNormalSpecularTexCoords(float4 uvPack0, float4 uvPack1)
+{
+	float2 uv0 = uvPack0.xy;
+	float2 uv1 = uvPack0.zw;
+	float2 uv2 = uvPack1.xy;
+	float2 uv3 = uvPack1.zw;
+
+	float4 texcoord = uvPack0;
+#if defined(_DETAIL)
+	texcoord.xy = 
+		float2(float4(uv0.x, uv1.x, uv2.x, uv3.x)[_DetailNormalMapUVSec], 
+			   float4(uv0.y, uv1.y, uv2.y, uv3.y)[_DetailNormalMapUVSec]);
+	texcoord.xy = TRANSFORM_TEX(texcoord, _DetailNormalMap);
+	texcoord.xy = _PixelSampleMode? 
+		sharpSample(_DetailNormalMap_TexelSize * _DetailNormalMap_ST.xyxy, texcoord.xy) : texcoord.xy;
+
+#if defined(_SPECULAR) 
+	float2 detailTexcoord = 
+		float2(float4(uv0.x, uv1.x, uv2.x, uv3.x)[_SpecularDetailMaskUVSec], 
+			   float4(uv0.y, uv1.y, uv2.y, uv3.y)[_SpecularDetailMaskUVSec]);
+	detailTexcoord = TRANSFORM_TEX(detailTexcoord, _SpecularDetailMask);
+	detailTexcoord = _PixelSampleMode? 
+		sharpSample(_SpecularDetailMask_TexelSize * _SpecularDetailMask_ST.xyxy, detailTexcoord) : detailTexcoord;
+	texcoord.zw = detailTexcoord;
+#else
+	texcoord.zw = uv0; // Default we won't need
+#endif
+#endif
+	return texcoord;
+}
+
 #ifndef UNITY_SAMPLE_TEX2D_SAMPLER_LOD
 #define UNITY_SAMPLE_TEX2D_SAMPLER_LOD(tex,samplertex,coord,lod) tex.Sample (sampler##samplertex,coord,lod)
 #endif
@@ -869,7 +903,7 @@ void applyVertexColour(float4 color, float isOutline, SCSS_Input c)
 	}
 }
 
-half4 SpecularGloss(float4 texcoords, half mask)
+half4 SpecularGloss(float2 texcoords, float2 detailTexcoords, half mask)
 {
     half4 sg;
 #if defined(_SPECULAR)
@@ -885,7 +919,7 @@ half4 SpecularGloss(float4 texcoords, half mask)
 #endif
 
 #if defined(_DETAIL) 
-		float4 sdm = UNITY_SAMPLE_TEX2D_SAMPLER(_SpecularDetailMask,_DetailAlbedoMap,texcoords.zw);
+		float4 sdm = UNITY_SAMPLE_TEX2D_SAMPLER(_SpecularDetailMask,_DetailAlbedoMap,detailTexcoords.xy);
 		sg *= saturate(sdm + 1-(_SpecularDetailStrength*mask));		
 #endif
 
@@ -934,20 +968,18 @@ half4 EmissiveAudioLink(float2 maskUV, float2 sweepUV)
 
 half3 NormalInTangentSpace(float4 texcoords, half mask)
 {
-	float3 normalTangent = UnpackScaleNormal(UNITY_SAMPLE_TEX2D_SAMPLER(_BumpMap, _MainTex, TRANSFORM_TEX(texcoords.xy, _MainTex)), _BumpScale);
+	float3 normalTangent = UnpackScaleNormal(
+		UNITY_SAMPLE_TEX2D_SAMPLER(_BumpMap, _MainTex, 
+			TRANSFORM_TEX(texcoords.xy, _MainTex)), _BumpScale);
 #if defined(_DETAIL) 
-    half3 detailNormalTangent = UnpackScaleNormal(UNITY_SAMPLE_TEX2D_SAMPLER (_DetailNormalMap, _MainTex, texcoords.zw), _DetailNormalMapScale);
-    #if defined(_DETAIL_LERP)
-        normalTangent = lerp(
-            normalTangent,
-            detailNormalTangent,
-            mask);
-    #else
-        normalTangent = lerp(
-            normalTangent,
-            BlendNormalsPD(normalTangent, detailNormalTangent),
-            mask);
-    #endif
+    float3 detailNormalTangent = UnpackScaleNormal(
+    	UNITY_SAMPLE_TEX2D_SAMPLER (_DetailNormalMap, _MainTex, 
+    		texcoords.zw), _DetailNormalMapScale);
+
+    normalTangent = lerp(
+        normalTangent,
+        BlendNormalsPD(normalTangent, detailNormalTangent),
+        mask);
 #endif
 
     return normalTangent;
