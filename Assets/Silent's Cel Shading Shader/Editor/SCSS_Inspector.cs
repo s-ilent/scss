@@ -516,6 +516,20 @@ namespace SilentCelShading.Unity
 
 		protected void DrawInspectorHeader()
 		{
+			#if UNITY_2019_1_OR_NEWER
+            Rect r = EditorGUILayout.GetControlRect(true,0,EditorStyles.layerMaskField);
+				r.x -= 24.0f;
+				r.y -= 8.0f;
+				r.height = 18.0f;
+				r.width += 28.0f;
+			float maxWidth = 128.0f;
+			Rect r2 = r;
+				r2.x = r.width - maxWidth - 13.0f;
+				r2.width = maxWidth;
+			Rect r3 = r;
+				r3.x = 14.0f + 4.0f;
+				r3.width = maxWidth;
+			#else
             Rect r = EditorGUILayout.GetControlRect(true,0,EditorStyles.layerMaskField);
 				r.x -= 12.0f;
 				r.y -= 8.0f;
@@ -528,6 +542,7 @@ namespace SilentCelShading.Unity
 			Rect r3 = r;
 				r3.x = 14.0f + 4.0f;
 				r3.width = maxWidth;
+			#endif
 			GUI.Box(r, "", EditorStyles.toolbar);
 
 			GUIContent s_bakeButton;
