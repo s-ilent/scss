@@ -31,6 +31,7 @@
 #include "SCSS_Attributes.cginc"
 #include "SCSS_ForwardVertex.cginc"
 
+float4 _SpecColor;
 
 #if defined(_SPECULAR)
 /*
@@ -53,6 +54,45 @@ float4 TexCoordsShadowCaster(float2 texcoords)
         sharpSample(_MainTex_TexelSize * _MainTex_ST.xyxy, texcoord.xy) : texcoord.xy;
 
     return texcoord;
+}
+half4 SpecularGlossShadowCaster(float2 texcoords, half mask)
+{
+    half4 sg;
+#if defined(_SPECULAR)
+    sg = UNITY_SAMPLE_TEX2D_SAMPLER(_SpecGlossMap, _MainTex, texcoords.xy);
+
+    sg.a = _AlbedoAlphaMode == 1? UNITY_SAMPLE_TEX2D(_MainTex, texcoords.xy).a : sg.a;
+
+    sg.rgb *= _SpecColor * _SpecColor.a; // Use alpha as an overall multiplier
+    sg.a *= _Smoothness; // _GlossMapScale is what Standard uses for this
+#else
+    sg = _SpecColor;
+    sg.a = _AlbedoAlphaMode == 1? UNITY_SAMPLE_TEX2D(_MainTex, texcoords.xy).a : sg.a;
+#endif
+
+#if defined(_DETAIL) 
+        float4 sdm = UNITY_SAMPLE_TEX2D_SAMPLER(_SpecularDetailMask,_DetailAlbedoMap,texcoords.xy);
+        sg *= saturate(sdm + 1-(_SpecularDetailStrength*mask));     
+#endif
+
+    return sg;
+}
+
+half SpecularStrengthShadowCaster(half3 specular)
+{
+    #if (SHADER_TARGET < 30)
+        // SM2.0: instruction count limitation
+        // SM2.0: simplified SpecularStrength
+        return specular.r; // Red channel - because most metals are either monocrhome or with redish/yellowish tint
+    #else
+        return max (max (specular.r, specular.g), specular.b);
+    #endif
+}
+
+inline half OneMinusReflectivityFromMetallicShadowCaster(half metallic)
+{
+    half oneMinusDielectricSpec = unity_ColorSpaceDielectricSpec.a;
+    return oneMinusDielectricSpec - metallic * oneMinusDielectricSpec;
 }
 
 // We have to do these dances of outputting SV_POSITION separately from the vertex shader,
@@ -126,20 +166,21 @@ half4 fragShadowCaster (UNITY_POSITION(vpos)
 
     applyVanishing(alpha);
 
-    #if defined(_SPECULAR)
+    #if defined(_SPECULAR) && defined(SCSS_USE_SHADOW_UVS)
     {
-        half4 specGloss = SpecularGloss(texcoords, detailMask);
+        half detailMask = 1.0; // Dummy out for now
+        half4 specGloss = SpecularGlossShadowCaster(texcoords, detailMask);
 
         if (_UseMetallic == 1)
         {
             // In Metallic mode, ignore the other colour channels. 
             specGloss = specGloss.r;
-            oneMinusReflectivity = OneMinusReflectivityFromMetallic(specGloss);
+            oneMinusReflectivity = OneMinusReflectivityFromMetallicShadowCaster(specGloss);
         }
         else 
         {
             // Specular energy converservation. From EnergyConservationBetweenDiffuseAndSpecular in UnityStandardUtils.cginc
-            oneMinusReflectivity = 1 - SpecularStrength(specGloss); 
+            oneMinusReflectivity = 1 - SpecularStrengthShadowCaster(specGloss); 
         }
     }
     #endif
