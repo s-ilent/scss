@@ -562,22 +562,19 @@ namespace SilentCelShading.Unity
 				}
 			}
 			
-			string s_langButton = "";
 			var language = GetInspectorLanguage();
 			switch(inspectorLanguage)
 			{
 				case SystemLanguage.English:
-					s_langButton = ("English");
 					currentLanguage = InspectorLanguageSelection.English; 
 					break;
 				case SystemLanguage.Japanese:
-					s_langButton = ("日本語");
 					currentLanguage = InspectorLanguageSelection.日本語;
+					break;
+				default:
 					break;
 			}
 				
-			//(GUI.Button(r3, s_langButton, EditorStyles.toolbarDropDown))
-
 			if (WithChangeCheck(() => 
 			{
         		currentLanguage = (InspectorLanguageSelection) EditorGUI.EnumPopup(r3, currentLanguage);
@@ -745,10 +742,8 @@ namespace SilentCelShading.Unity
 				EditorGUI.indentLevel ++;
 				EditorGUI.indentLevel ++;
 				editor.TextureScaleOffsetProperty(props["_DetailEmissionMap"]);
-				// PropertyDropdown("_EmissionDetailType", Enum.GetNames(typeof(DetailEmissionMode)), editor);
-				MaterialProperty deProp;
-						Vector2Property(props["_EmissionDetailParams"], Content("s_EmissionDetailScroll"));
-						Vector2PropertyZW(props["_EmissionDetailParams"], Content("s_EmissionDetailPhase"));
+				Vector2Property(props["_EmissionDetailParams"], Content("s_EmissionDetailScroll"));
+				Vector2PropertyZW(props["_EmissionDetailParams"], Content("s_EmissionDetailPhase"));
 				EditorGUILayout.Space();
             	EditorGUI.indentLevel --;
             	EditorGUI.indentLevel --;
