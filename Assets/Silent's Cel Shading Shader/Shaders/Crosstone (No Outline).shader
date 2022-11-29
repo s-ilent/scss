@@ -366,6 +366,8 @@ Shader "Silent's Cel Shading/Crosstone"
 			
 			#pragma multi_compile_shadowcaster
 			
+			#pragma shader_feature_local _ _METALLICGLOSSMAP _SPECGLOSSMAP
+			
 			#include "SCSS_Shadows.cginc"
 
 			#pragma vertex vertShadowCaster
