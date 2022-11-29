@@ -970,7 +970,7 @@ half3 NormalInTangentSpace(float4 texcoords, half mask)
 {
 	float3 normalTangent = UnpackScaleNormal(
 		UNITY_SAMPLE_TEX2D_SAMPLER(_BumpMap, _MainTex, 
-			TRANSFORM_TEX(texcoords.xy, _MainTex)), _BumpScale);
+			texcoords.xy), _BumpScale);
 #if defined(_DETAIL) 
     float3 detailNormalTangent = UnpackScaleNormal(
     	UNITY_SAMPLE_TEX2D_SAMPLER (_DetailNormalMap, _MainTex, 
