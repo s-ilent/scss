@@ -25,8 +25,10 @@
 // as they are further away from the origin point.
 // This setting enables a system that calculates the final placement
 // of polygons on screen seperately from their world-space
-// position, partly alleviating this issue.
-#define SCSS_CAMERA_RELATIVE_VERTEX 1
+// position, partly alleviating this issue. However, it interferes
+// with some of Unity's systems that expect the result of the
+// object to world transformation to be identical between shaders. 
+//#define SCSS_CAMERA_RELATIVE_VERTEX 1
 
 // When objects reach the nearest extent of the camera's frustrum,
 // they can intersect it and clip through. In VR, this can be a 
