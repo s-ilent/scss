@@ -112,9 +112,11 @@ void vertShadowCaster (VertexInputShadowCaster v
     UNITY_SETUP_INSTANCE_ID(v);
 
     // Object-space vertex modifications go here.
+    #ifdef SCSS_USE_SHADOW_OUTPUT_STRUCT
+        UNITY_TRANSFER_INSTANCE_ID(v, o);
+    #endif
     
     #ifdef SCSS_USE_STEREO_SHADOW_OUTPUT_STRUCT
-        UNITY_TRANSFER_INSTANCE_ID(v, o);
         UNITY_INITIALIZE_VERTEX_OUTPUT_STEREO(os);
     #endif
 
@@ -151,6 +153,9 @@ half4 fragShadowCaster (UNITY_POSITION(vpos)
 #endif
 ) : SV_Target
 {
+    #ifdef SCSS_USE_SHADOW_OUTPUT_STRUCT
+    UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(i)
+    #endif
     half alpha = Alpha(0);
     half3 albedo = 1;
     half oneMinusReflectivity = 0;
