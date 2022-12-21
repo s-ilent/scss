@@ -257,6 +257,7 @@ Shader "Silent's Cel Shading/Lightramp (Outline)"
 		#pragma target 5.0
 		#pragma shader_feature _ _ALPHATEST_ON _ALPHABLEND_ON _ALPHAPREMULTIPLY_ON
         #pragma multi_compile_instancing
+        #pragma skip_variants DYNAMICLIGHTMAP_ON LIGHTMAP_ON LIGHTMAP_SHADOW_MIXING DIRLIGHTMAP_COMBINED SHADOWS_SHADOWMASK
 		
 		#define SCSS_OUTLINE
 		#define SCSS_USE_OUTLINE_TEXTURE

@@ -221,7 +221,6 @@ float4 frag(VertexOutput i, uint facing : SV_IsFrontFace
 	}
 	#endif
 
-
 	#if !defined(USING_TRANSPARENCY)
 		material.alpha = 1.0;
 	#endif

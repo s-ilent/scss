@@ -265,6 +265,7 @@ Shader "Silent's Cel Shading/Crosstone (Outline)"
 		#pragma target 5.0
 		#pragma shader_feature _ _ALPHATEST_ON _ALPHABLEND_ON _ALPHAPREMULTIPLY_ON
         #pragma multi_compile_instancing
+        #pragma skip_variants DYNAMICLIGHTMAP_ON LIGHTMAP_ON LIGHTMAP_SHADOW_MIXING DIRLIGHTMAP_COMBINED SHADOWS_SHADOWMASK
 
 		#define SCSS_CROSSTONE
 		#define SCSS_OUTLINE
