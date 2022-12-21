@@ -51,6 +51,8 @@ struct VertexOutputShadowCaster
     #if defined(SCSS_USE_SHADOW_UVS)
         float2 tex : TEXCOORD1;
     #endif
+    UNITY_VERTEX_INPUT_INSTANCE_ID
+    UNITY_VERTEX_OUTPUT_STEREO
 };
 #endif
 

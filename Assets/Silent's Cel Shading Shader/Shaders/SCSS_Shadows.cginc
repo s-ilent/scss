@@ -153,7 +153,7 @@ half4 fragShadowCaster (UNITY_POSITION(vpos)
 #endif
 ) : SV_Target
 {
-    #ifdef SCSS_USE_SHADOW_OUTPUT_STRUCT
+    #ifdef UNITY_STEREO_INSTANCING_ENABLED
     UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(i)
     #endif
     half alpha = Alpha(0);
