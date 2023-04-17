@@ -640,9 +640,19 @@ float3 applyBlendMode(int blendOp, half3 a, half3 b, half t)
     }
 }
 
-float3 applyMatcap(sampler2D src, half2 matcapUV, float3 dst, float3 tint, int blendMode, float blendStrength)
+float3 applyMatcapTint(half4 matcap, half4 tint)
 {
-    return applyBlendMode(blendMode, dst, tex2D(src, matcapUV) * tint, blendStrength);
+    // An adjustment to make matcap colour settings more useful.
+    // Tint alpha controls whether matcaps are multiplied or "screen" blended.
+    return lerp(1 - ((1 - matcap.rgb) * (1 - tint.rgb)),
+                matcap.rgb * tint.rgb,
+                tint.a);
+}
+
+float3 applyMatcap(sampler2D src, half2 matcapUV, float3 dst, float4 tint, int blendMode, float blendStrength)
+{
+    half4 matcap = tex2D(src, matcapUV);
+    return applyBlendMode(blendMode, dst, applyMatcapTint(matcap, tint), blendStrength * matcap.a);
 }
 
 // This is based on a typical calculation for tonemapping
