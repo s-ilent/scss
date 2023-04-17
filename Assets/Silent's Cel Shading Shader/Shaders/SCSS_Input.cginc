@@ -885,7 +885,7 @@ void applyBackfaceDetail(float4 texcoordsbackface, inout SCSS_Input c)
 }
 #endif // _BACKFACE
 
-void applyVertexColour(float4 color, float isOutline, SCSS_Input c)
+void applyVertexColour(float4 color, float isOutline, inout SCSS_Input c)
 {
 	switch (_VertexColorType)
 	{
