@@ -156,13 +156,14 @@ half4 fragShadowCaster (UNITY_POSITION(vpos)
     #ifdef UNITY_STEREO_INSTANCING_ENABLED
     UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(i)
     #endif
-    half alpha = Alpha(0);
+    
+    half alpha = Alpha(0, 0);
     half3 albedo = 1;
     half oneMinusReflectivity = 0;
     #if defined(SCSS_USE_SHADOW_UVS)
         half4 texcoords = TexCoordsShadowCaster(i.tex);
         albedo = Albedo(texcoords);
-        alpha = Alpha(texcoords);
+        alpha = Alpha(texcoords.xy, i.tex);
     #endif // #if defined(SCSS_USE_SHADOW_UVS)
 
     #if defined(ALPHAFUNCTION)

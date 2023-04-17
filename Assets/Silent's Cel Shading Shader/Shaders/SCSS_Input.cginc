@@ -681,13 +681,13 @@ half ClippingMask(float2 uv)
 	return saturate(alpha + _Tweak_Transparency);
 }
 
-half Alpha(float2 uv)
+half Alpha(float2 uv, float2 uv0)
 {
 	half alpha = _Color.a;
 	switch(_AlbedoAlphaMode)
 	{
 		case 0: alpha *= UNITY_SAMPLE_TEX2D(_MainTex, uv).a; break;
-		case 2: alpha *= ClippingMask(uv); break;
+		case 2: alpha *= ClippingMask(uv0); break;
 	}
 	return alpha;
 }

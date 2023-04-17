@@ -665,14 +665,12 @@ namespace SilentCelShading.Unity
 				ShaderProperty("_ShiftSaturation");
 				ShaderProperty("_ShiftValue");
 			}
+			
+			editor.TextureScaleOffsetProperty(props["_MainTex"]);
 
-			// For Standard compatibility, but not sure what the purpose is
-			if (WithChangeCheck(() => 
-			{
-				editor.TextureScaleOffsetProperty(props["_MainTex"]);
-			}))
-
-			if ((AlbedoAlphaMode)props["_AlbedoAlphaMode"].floatValue == AlbedoAlphaMode.ClippingMask)
+			MaterialProperty alphaProp;
+			if (props.TryGetValue("_AlbedoAlphaMode", out alphaProp) 
+				&& alphaProp.floatValue == (float)AlbedoAlphaMode.ClippingMask)
 			{
 				EditorGUILayout.Space();
 				TexturePropertySingleLine("_ClippingMask", "_Tweak_Transparency");

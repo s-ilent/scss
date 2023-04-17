@@ -23,9 +23,9 @@ namespace SilentCelShading.Unity
 
 		public enum AlbedoAlphaMode
 		{
-			Transparency,
-			Smoothness,
-			ClippingMask
+			Transparency = 0,
+			Smoothness = 1,
+			ClippingMask = 2
 		}
 
 		public enum SpecularType

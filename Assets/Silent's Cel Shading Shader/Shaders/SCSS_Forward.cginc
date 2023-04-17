@@ -98,7 +98,7 @@ float4 frag(VertexOutput i, uint facing : SV_IsFrontFace
 	SCSS_Input material = (SCSS_Input) 0;
 	initMaterial(material);
 
-	material.alpha = Alpha(texcoords.xy);
+	material.alpha = Alpha(texcoords.xy, i.uvPack0.xy);
 
 	#if defined(_BACKFACE)
 	if (!facing) material.alpha = BackfaceAlpha(texcoords.xy);
