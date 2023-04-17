@@ -64,6 +64,47 @@ float shEvaluateDiffuseL1Geomerics_local(float L0, float3 L1, float3 n)
 	return R0 * (a + (1.0f - a) * (p + 1.0f) * pow(q, p));
 }
 
+// Optimised version of the above by d4rkpl4y3r
+float3 ShadeSH9_Geomerics(float3 n)
+{
+    // average energy
+    //float R0 = L0;
+    // float3 R0 = { unity_SHAr.a, unity_SHAg.a, unity_SHAb.a };
+    float3 R0 = float3(unity_SHAr.w, unity_SHAg.w, unity_SHAb.w)
+     + float3(unity_SHBr.z, unity_SHBg.z, unity_SHBb.z) / 3.0;
+
+    // avg direction of incoming light
+    //float3 R1 = 0.5f * L1;
+    float3 R1r = unity_SHAr.rgb;
+    float3 R1g = unity_SHAg.rgb;
+    float3 R1b = unity_SHAb.rgb;
+
+    float3 rlenR1 = { dot(R1r,R1r), dot(R1g, R1g), dot(R1b, R1b) };
+    rlenR1 = rsqrt(rlenR1);
+
+    // directional brightness
+    //float lenR1 = length(R1);
+    float3 lenR1 = rcp(rlenR1) * .5;
+
+    // linear angle between normal and direction 0-1
+    //float q = 0.5f * (1.0f + dot(R1 / lenR1, n));
+    //float q = dot(R1 / lenR1, n) * 0.5 + 0.5;
+    //float q = dot(normalize(R1), n) * 0.5 + 0.5;
+    float3 q = { dot(R1r, n), dot(R1g, n), dot(R1b, n) };
+    q = q * rlenR1 * .5 + .5;
+    q = isnan(q) ? 1 : q;
+
+    // power for q
+    // lerps from 1 (linear) to 3 (cubic) based on directionality
+    float3 p = 1.0f + 2.0f * (lenR1 / R0);
+
+    // dynamic range constant
+    // should vary between 4 (highly directional) and 0 (ambient)
+    float3 a = (1.0f - (lenR1 / R0)) / (1.0f + (lenR1 / R0));
+
+    return max(0, R0 * (a + (1.0f - a) * (p + 1.0f) * pow(q, p)));
+}
+
 // SH Convolution Functions
 // https://github.com/lukis101/VRCUnityStuffs/tree/master/SH
 // Code adapted from https://blog.selfshadow.com/2012/01/07/righting-wrap-part-2/
@@ -176,11 +217,7 @@ inline UnityGI UnityGlobalIllumination_SCSS (UnityGIInput data, half occlusion, 
 	#if defined(SAMPLE_SH_NONLINEAR) 
 	    float3 L0 = float3(unity_SHAr.w, unity_SHAg.w, unity_SHAb.w)
         + float3(unity_SHBr.z, unity_SHBg.z, unity_SHBb.z) / 3.0;
-	    float3 nonLinearSH = float3(0,0,0); 
-	    nonLinearSH.r = shEvaluateDiffuseL1Geomerics_local(L0.r, unity_SHAr.xyz, normalWorld);
-	    nonLinearSH.g = shEvaluateDiffuseL1Geomerics_local(L0.g, unity_SHAg.xyz, normalWorld);
-	    nonLinearSH.b = shEvaluateDiffuseL1Geomerics_local(L0.b, unity_SHAb.xyz, normalWorld);
-	    nonLinearSH = max(nonLinearSH, 0);
+	    float3 nonLinearSH = ShadeSH9_Geomerics(normalWorld); 
 	    o_gi.indirect.diffuse += nonLinearSH * occlusion;
     #endif
     o_gi.indirect.specular = isReflectionProbeActive()
