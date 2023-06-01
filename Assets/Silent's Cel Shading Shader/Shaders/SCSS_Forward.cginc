@@ -27,7 +27,7 @@ void computeShadingParams (inout SCSS_ShadingParam shading, VertexOutput i, bool
 
     UNITY_LIGHT_ATTENUATION(atten, i, shading.position)
 
-	#if defined(SCSS_SCREEN_SHADOW_FILTER) && defined(USING_SHADOWS_UNITY)
+	#if defined(SCSS_SCREEN_SHADOW_FILTER) && defined(USING_SHADOWS_UNITY) && !defined(UNITY_PASS_SHADOWCASTER)
 	correctedScreenShadowsForMSAA(i._ShadowCoord, atten);
 	#endif
 
@@ -72,45 +72,25 @@ float3 addEmissiveAudiolink(float3 emission, float4 audiolinkUV, inout float alp
 	return emission;
 }
 
-float4 frag(VertexOutput i, uint facing : SV_IsFrontFace
-    #if defined(USING_COVERAGE_OUTPUT)
-	, out uint cov : SV_Coverage
-	#endif
-	) : SV_Target
+inline SCSS_Input MaterialSetup(float4 i_uvPack0, float4 i_uvPack1, 
+	float4 i_color, float4 i_extraData, float p_isOutline, uint i_facing)
 {
-    UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(i);
-
-	SCSS_ShadingParam p = (SCSS_ShadingParam) 0;
-	computeShadingParams(p, i, facing);
-	if (p.isOutline && !facing) discard;
+	SCSS_Input material = (SCSS_Input)0;
+	initMaterial(material);
 	
+	// This will need reexamination later.
+	float4 texcoords = TexCoords(i_uvPack0, i_uvPack1);
+	float4 detailNStexcoords = DetailNormalSpecularTexCoords(i_uvPack0, i_uvPack1);
+
 	// Darken some effects on outlines. 
 	// Note that MSAA means this isn't a strictly binary thing.
-    half outlineDarken = 1-p.isOutline;
+    half outlineDarken = 1-p_isOutline;
 
-	float4 texcoords = TexCoords(i.uvPack0, i.uvPack1);
-	float4 detailNStexcoords = DetailNormalSpecularTexCoords(i.uvPack0, i.uvPack1);
-
-	// Ideally, we should pass all input to lighting functions through the 
-	// material parameter struct. But there are some things that are
-	// optional. Review this at a later date...
-
-	SCSS_Input material = (SCSS_Input) 0;
-	initMaterial(material);
-
-	material.alpha = Alpha(texcoords.xy, i.uvPack0.xy);
+	material.alpha = Alpha(texcoords.xy, i_uvPack0.xy);
 
 	#if defined(_BACKFACE)
 	if (!facing) material.alpha = BackfaceAlpha(texcoords.xy);
 	#endif
-
-    #if defined(ALPHAFUNCTION)
-    alphaFunction(material.alpha);
-	#endif
-
-	applyVanishing(material.alpha);
-	
-	applyAlphaClip(material.alpha, _Cutoff, i.pos.xy, _AlphaSharp);
 
 	half detailMask = DetailMask(texcoords.xy);
 
@@ -143,24 +123,24 @@ float4 frag(VertexOutput i, uint facing : SV_IsFrontFace
 	if (!facing) applyBackfaceDetail(texcoords, material);
 	#endif
 
-	applyVertexColour(i.color, p.isOutline, material);
+	applyVertexColour(i_color, p_isOutline, material);
 
 	// Masks albedo out behind emission.
 	float emissionAlpha;
 
-	float4 emissionTexcoords = EmissionTexCoords(i.uvPack0, i.uvPack1);
+	float4 emissionTexcoords = EmissionTexCoords(i_uvPack0, i_uvPack1);
 	float3 emission = Emission(emissionTexcoords.xy);
 	emission = addEmissiveDetail(emission, emissionTexcoords.zw, emissionAlpha);
 
-	float4 audiolinkUV = EmissiveAudioLinkTexCoords(i.uvPack0, i.uvPack1);
+	float4 audiolinkUV = EmissiveAudioLinkTexCoords(i_uvPack0, i_uvPack1);
 	emission = addEmissiveAudiolink(emission, audiolinkUV, emissionAlpha);
 
 	emission *= outlineDarken;
 	material.emission = float4(emission, 0);
 	
-	material.softness = i.extraData.g;
+	material.softness = i_extraData.g;
 
-	applyOutline(p.isOutline, material);
+	applyOutline(p_isOutline, material);
 
     // Rim lighting parameters. 
 	material.rim = initialiseRimParam();
@@ -203,12 +183,12 @@ float4 frag(VertexOutput i, uint facing : SV_IsFrontFace
 		material.smoothness *= outlineDarken;
 
 		// Specular energy converservation. From EnergyConservationBetweenDiffuseAndSpecular in UnityStandardUtils.cginc
-		material.oneMinusReflectivity = 1 - SpecularStrength(material.specColor); 
+		material.oneMinusReflectivity = 1 - SpecularStrength_local(material.specColor); 
 
 		if (_UseMetallic == 1)
 		{
 			// From DiffuseAndSpecularFromMetallic
-			material.oneMinusReflectivity = OneMinusReflectivityFromMetallic(material.specColor);
+			material.oneMinusReflectivity = OneMinusReflectivityFromMetallic_local(material.specColor);
 			material.specColor = lerp (unity_ColorSpaceDielectricSpec.rgb, material.albedo, material.specColor);
 		}
 
@@ -221,18 +201,17 @@ float4 frag(VertexOutput i, uint facing : SV_IsFrontFace
 	}
 	#endif
 
-	#if !defined(USING_TRANSPARENCY)
-		material.alpha = 1.0;
-	#endif
+	return material;
+}
 
-    // When premultiplied mode is set, this will multiply the diffuse by the alpha component,
-    // allowing to handle transparency in physically correct way - only diffuse component gets affected by alpha
-    half outputAlpha;
-    material.albedo = PreMultiplyAlpha_local (material.albedo, material.alpha, material.oneMinusReflectivity, /*out*/ outputAlpha);
+#if !defined(UNITY_PASS_SHADOWCASTER)
+inline void MaterialSetupPostParams(inout SCSS_Input material, SCSS_ShadingParam p, float4 texcoords)
+{    
+	// Local light parameters. These are a bit redundant, but maybe there's a way to clean them out.
 
-    prepareMaterial(p, material);
-
-    // Local light parameters. These are a bit redundant, but maybe there's a way to clean them out.
+	// Darken some effects on outlines. 
+	// Note that MSAA means this isn't a strictly binary thing.
+    half outlineDarken = 1-p.isOutline;
 
 	SCSS_Light l = MainLight(p.position.xyz);
 	SCSS_LightParam d = initialiseLightParam(l, p);
@@ -289,9 +268,61 @@ float4 frag(VertexOutput i, uint facing : SV_IsFrontFace
 	}
 
 	material.emission.rgb += _CustomFresnelColor.xyz * (pow(rlPow4, rcp(_CustomFresnelColor.w+FLT_EPS)));
+}
+
+float4 frag(VertexOutput i, uint facing : SV_IsFrontFace
+    #if defined(USING_COVERAGE_OUTPUT)
+	, out uint cov : SV_Coverage
+	#endif
+	) : SV_Target
+{
+    UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(i);
+
+	SCSS_ShadingParam p = (SCSS_ShadingParam) 0;
+	computeShadingParams(p, i, facing);
+	if (p.isOutline && !facing) discard;
+
+	// Ideally, we should pass all input to lighting functions through the 
+	// material parameter struct. But there are some things that are
+	// optional. Review this at a later date...
+
+	// There are also some things that need to be handled after calculation
+	// of the normal parameters and etc: fresnel and matcaps. 
+
+	// Texcoords are calculated in too many places because of the slow but incomplete
+	// shift from "everything using the same as main texture" to individual selection
+	// for UV channel, and then scale/offset. 
+	float4 texcoords = TexCoords(i.uvPack0, i.uvPack1);
+	float4 detailNStexcoords = DetailNormalSpecularTexCoords(i.uvPack0, i.uvPack1);
+
+	SCSS_Input material = 
+	MaterialSetup(i.uvPack0, i.uvPack1, i.color, i.extraData, p.isOutline, facing);
+
+	#if !defined(USING_TRANSPARENCY)
+		material.alpha = 1.0;
+	#else
+	    #if defined(ALPHAFUNCTION)
+	    alphaFunction(material.alpha);
+		#endif
+
+		applyVanishing(material.alpha);
+		
+		applyAlphaClip(material.alpha, _Cutoff, i.pos.xy, _AlphaSharp, false);
+	#endif
+
+    // When premultiplied mode is set, this will multiply the diffuse by the alpha component,
+    // allowing to handle transparency in physically correct way - only diffuse component gets affected by alpha
+    half outputAlpha;
+    material.albedo = PreMultiplyAlpha_local (material.albedo, material.alpha, material.oneMinusReflectivity, /*out*/ outputAlpha);
+
+    prepareMaterial(p, material);
+
+    MaterialSetupPostParams(material, p, texcoords);
 
 	// Lighting handling
 	float3 finalColor = SCSS_ApplyLighting(material, p);
+
+	// Workaround a compiler issue when albedo is not needed but its sampler is.
 	finalColor += material.albedo * 0.00001;
 
 	finalColor = applyNearShading(finalColor, i.posWorld.xyz, facing);
@@ -315,4 +346,5 @@ float4 frag(VertexOutput i, uint facing : SV_IsFrontFace
 	return finalRGBA;
 }
 
+#endif // !UNITY_PASS_SHADOWCASTER
 #endif // SCSS_FORWARD_INCLUDED

@@ -674,9 +674,9 @@ half ClippingMask(float2 uv)
 	uv = TRANSFORM_TEX(uv, _ClippingMask);
 	// Workaround for shadow compiler error. 
 	#if defined(SCSS_SHADOWS_INCLUDED)
-	float alpha = UNITY_SAMPLE_TEX2D(_ClippingMask, uv);
+	float alpha = UNITY_SAMPLE_TEX2D(_ClippingMask, uv).r;
 	#else
-	float alpha = UNITY_SAMPLE_TEX2D_SAMPLER(_ClippingMask, _MainTex, uv);
+	float alpha = UNITY_SAMPLE_TEX2D_SAMPLER(_ClippingMask, _MainTex, uv).r;
 	#endif 
 	return saturate(alpha + _Tweak_Transparency);
 }
@@ -755,8 +755,6 @@ inline float getInventoryMask(float2 in_texcoord)
 //-----------------------------------------------------------------------------
 
 #if defined(UNITY_STANDARD_BRDF_INCLUDED)
-
-
 void getDirectIndirectLighting(float3 normal, out float3 directLighting, out float3 indirectLighting)
 {
 	directLighting   = 0.0;
@@ -796,6 +794,7 @@ void getDirectIndirectLighting(float3 normal, out float3 directLighting, out flo
         indirectLighting = saturate(indirectLighting);
     }
 }
+#endif // if UNITY_STANDARD_BRDF_INCLUDED
 
 float3 applyDetailToAlbedo(float3 albedo, float3 detail, float mask)
 {
@@ -805,10 +804,10 @@ float3 applyDetailToAlbedo(float3 albedo, float3 detail, float mask)
 	switch ( _DetailAlbedoBlendMode )
 	{
     case 0:
-    	albedo *= LerpWhiteTo (detail.rgb * unity_ColorSpaceDouble.rgb, mask);
+    	albedo *= LerpWhiteTo_local (detail.rgb * unity_ColorSpaceDouble.rgb, mask);
 		break;
     case 1:
-        albedo *= LerpWhiteTo (detail.rgb, mask);
+        albedo *= LerpWhiteTo_local (detail.rgb, mask);
 		break;
     case 2:
         albedo += detail.rgb * mask;
@@ -840,9 +839,9 @@ void applyDetail(float4 texcoords, inout SCSS_Input c)
 		 c.tone[1].col = applyMaskedHSVToAlbedo(c.tone[1].col, tintMask);
 	}
 
-	c.albedo *= LerpWhiteTo(_Color.rgb, tintMask);
-	if (_CrosstoneToneSeparation) c.tone[0].col *= LerpWhiteTo(_Color.rgb, tintMask);
-	if (_Crosstone2ndSeparation) c.tone[1].col *= LerpWhiteTo(_Color.rgb, tintMask);
+	c.albedo *= LerpWhiteTo_local(_Color.rgb, tintMask);
+	if (_CrosstoneToneSeparation) c.tone[0].col *= LerpWhiteTo_local(_Color.rgb, tintMask);
+	if (_Crosstone2ndSeparation) c.tone[1].col *= LerpWhiteTo_local(_Color.rgb, tintMask);
 
 #if defined(_DETAIL)
     half mask = DetailMask(texcoords.xy);
@@ -868,9 +867,9 @@ void applyBackfaceDetail(float4 texcoordsbackface, inout SCSS_Input c)
 		 c.tone[1].col = applyMaskedHSVToAlbedo(c.tone[1].col, tintMask);
 	}
 
-	c.albedo *= LerpWhiteTo(_ColorBackface.rgb, tintMask);
-	if (_CrosstoneToneSeparation) c.tone[0].col *= LerpWhiteTo(_ColorBackface.rgb, tintMask);
-	if (_Crosstone2ndSeparation) c.tone[1].col *= LerpWhiteTo(_ColorBackface.rgb, tintMask);
+	c.albedo *= LerpWhiteTo_local(_ColorBackface.rgb, tintMask);
+	if (_CrosstoneToneSeparation) c.tone[0].col *= LerpWhiteTo_local(_ColorBackface.rgb, tintMask);
+	if (_Crosstone2ndSeparation) c.tone[1].col *= LerpWhiteTo_local(_ColorBackface.rgb, tintMask);
 
 #if defined(_DETAIL)
     half mask = DetailMask(texcoordsbackface.xy);
@@ -968,21 +967,25 @@ half4 EmissiveAudioLink(float2 maskUV, float2 sweepUV)
 
 half3 NormalInTangentSpace(float4 texcoords, half mask)
 {
-	float3 normalTangent = UnpackScaleNormal(
-		UNITY_SAMPLE_TEX2D_SAMPLER(_BumpMap, _MainTex, 
-			texcoords.xy), _BumpScale);
-#if defined(_DETAIL) 
-    float3 detailNormalTangent = UnpackScaleNormal(
-    	UNITY_SAMPLE_TEX2D_SAMPLER (_DetailNormalMap, _MainTex, 
-    		texcoords.zw), _DetailNormalMapScale);
+	#if defined(UNITY_STANDARD_BRDF_INCLUDED)
+		float3 normalTangent = UnpackScaleNormal(
+			UNITY_SAMPLE_TEX2D_SAMPLER(_BumpMap, _MainTex, 
+				texcoords.xy), _BumpScale);
+	#if defined(_DETAIL) 
+	    float3 detailNormalTangent = UnpackScaleNormal(
+	    	UNITY_SAMPLE_TEX2D_SAMPLER (_DetailNormalMap, _MainTex, 
+	    		texcoords.zw), _DetailNormalMapScale);
 
-    normalTangent = lerp(
-        normalTangent,
-        BlendNormalsPD(normalTangent, detailNormalTangent),
-        mask);
-#endif
+	    normalTangent = lerp(
+	        normalTangent,
+	        BlendNormalsPD(normalTangent, detailNormalTangent),
+	        mask);
+	#endif
 
-    return normalTangent;
+	    return normalTangent;
+	#else
+		return float3(1, 1, 0);
+	#endif
 }
 
 #if !defined(SCSS_CROSSTONE)
@@ -1081,9 +1084,9 @@ float adjustShadeMap(float x, float y)
 
 float ShadingGradeMap (float2 uv)
 {
-	float4 tonemap = UNITY_SAMPLE_TEX2D_SAMPLER(_ShadingGradeMap, _MainTex, uv.xy);
+	float tonemap = UNITY_SAMPLE_TEX2D_SAMPLER(_ShadingGradeMap, _MainTex, uv.xy).r;
 	// Red to match UCTS
-	return adjustShadeMap(tonemap.r, _Tweak_ShadingGradeMapLevel);
+	return adjustShadeMap(tonemap, _Tweak_ShadingGradeMapLevel);
 }
 #endif
 
@@ -1159,7 +1162,5 @@ float3 applyNearShading(float3 color, float3 worldPos, bool isFrontFace)
 
     return color;
 }
-
-#endif // if UNITY_STANDARD_BRDF_INCLUDED
 
 #endif // SCSS_INPUT_INCLUDED

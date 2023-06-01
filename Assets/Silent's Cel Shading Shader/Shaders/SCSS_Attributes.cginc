@@ -40,7 +40,14 @@ struct VertexInputShadowCaster
 {
     float4 vertex   : POSITION;
     float3 normal   : NORMAL;
-    float2 uv0      : TEXCOORD0;
+    // Required for inventory
+	float2 texcoord  : TEXCOORD0;
+	#if defined(SCSS_USE_SHADOW_UVS)
+	    // float2 uv0      : TEXCOORD0;
+		float2 texcoord1 : TEXCOORD1;
+		float2 texcoord2 : TEXCOORD2;
+		float2 texcoord3 : TEXCOORD3;
+    #endif
     UNITY_VERTEX_INPUT_INSTANCE_ID
 };
 
@@ -49,10 +56,11 @@ struct VertexOutputShadowCaster
 {
     V2F_SHADOW_CASTER_NOPOS
     #if defined(SCSS_USE_SHADOW_UVS)
-        float2 tex : TEXCOORD1;
+        //float2 tex : TEXCOORD1;
+		float4 uvPack0 : TEXCOORD0;
+		float4 uvPack1 : TEXCOORD1;
     #endif
     UNITY_VERTEX_INPUT_INSTANCE_ID
-    UNITY_VERTEX_OUTPUT_STEREO
 };
 #endif
 

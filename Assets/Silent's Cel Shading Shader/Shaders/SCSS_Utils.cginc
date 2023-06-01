@@ -19,7 +19,7 @@
     #define USING_ALPHA_BLENDING
 #endif
 
-#if defined (SCSS_COVERAGE_OUTPUT) && defined (_ALPHATEST_ON)
+#if defined (SCSS_COVERAGE_OUTPUT) && defined (_ALPHATEST_ON) && !defined(SHADER_API_GLES3)
     #define USING_COVERAGE_OUTPUT
 #endif
 
@@ -65,31 +65,75 @@ float T(float z) {
 }
 
 // R dither mask
-float intensity(float2 pixel) {
-    const float a1 = 0.75487766624669276;
-    const float a2 = 0.569840290998;
-    return frac(a1 * float(pixel.x) + a2 * float(pixel.y));
+float getR2(float2 pixel) {
+    const float phi2 = pow((9. + sqrt(69.)) / 18., 1./3.) + pow((9. - sqrt(69.)) / 18., 1./3.); 
+    const float C1 = 1. - 1. / phi2;
+    const float C2 = 1. - 1. / (phi2 * phi2);
+    return frac(C1 * float(pixel.x) + C2 * float(pixel.y));
 }
 
-float rDither(float gray, float2 pos, float steps) {
+float2 getR2_2(float2 pixel) {
+    const float phi2 = pow((9. + sqrt(69.)) / 18., 1./3.) + pow((9. - sqrt(69.)) / 18., 1./3.); 
+    const float C1 = 1. - 1. / phi2;
+    const float C2 = 1. - 1. / (phi2 * phi2);
+    return float2(frac(C1 * float(pixel.x)), frac(C2 * float(pixel.y)));
+}
+
+float r2Dither(float gray, float2 pos, float steps) {
 	// pos is screen pixel position in 0-res range
     // Calculated noised gray value
-    float noised = (2./steps) * T(intensity(float2(pos.xy))) + gray - (1./steps); 
+    float noised = (2./steps) * T(getR2(float2(pos.xy))) + gray - (1./steps); 
     // Clamp to the number of gray levels we want
     return floor(steps * noised) / (steps-1.);
 }
 
 // "R2" dithering -- end
 
+// Bicubic weights
+float4 cubic_weights(float v)
+{
+    float4 n = float4(1.0, 2.0, 3.0, 4.0) - v;
+    float4 s = n * n * n;
+    float4 o;
+    o.x = s.x;
+    o.y = s.y - 4.0 * s.x;
+    o.z = s.z - 4.0 * s.y + 6.0 * s.x;
+    o.w = 6.0 - o.x - o.y - o.z;
+    return o;
+}
+
+
 #define ALPHA_SHOULD_DITHER_CLIP (defined(_ALPHATEST_ON) || defined(UNITY_PASS_SHADOWCASTER))
 
-inline void applyAlphaClip(inout float alpha, float cutoff, float2 pos, bool sharpen)
+inline void applyAlphaSharpen(inout float alpha, float cutoff)
 {
-    #if defined(USING_ALPHA_BLENDING)
-    static bool blendMode = true;
-    #else
-    static bool blendMode = false;
+    // Use an epsilon above the normal float epsilon. 
+    alpha = ((alpha - cutoff) / max(fwidth(alpha), 1e-3) + 0.5);
+}
+
+inline void applyAlphaCutoff(inout float alpha, float cutoff)
+{
+    //alpha = (alpha - (cutoff-FLT_EPS)) / (1.0 - cutoff);
+    float epsilon = max(abs(fwidth(alpha)), 1e-3);
+    //alpha = smoothstep(cutoff - epsilon, cutoff + epsilon, alpha);
+    float t = smoothstep(0.0, cutoff, alpha);
+    alpha = lerp(0.0, alpha, t);
+}
+
+inline void applyAlphaClip(inout float alpha, float cutoff, float2 pos, bool sharpen, bool forceDither)
+{
+    // If this material isn't transparent, do nothing.
+    #if !defined(USING_TRANSPARENCY)
+        alpha = 1.0;
+        return;
     #endif
+
+    #if defined(USING_ALPHA_BLENDING)
+    static bool isBlending = true;
+    #else
+    static bool isBlending = false;
+    #endif
+
     // Get the amount of MSAA samples present
     #if (SHADER_TARGET > 40)
     half samplecount = GetRenderTargetSampleCount();
@@ -99,37 +143,36 @@ inline void applyAlphaClip(inout float alpha, float cutoff, float2 pos, bool sha
 
     float modAlpha = alpha;
 
-    // If this material isn't transparent, do nothing.
-    #if defined(USING_TRANSPARENCY)
-    // Switch between dithered alpha and sharp-edge alpha.
-        if (!sharpen) 
-        {
-            // The width of the dither changes how obvious it is,
-            // so it might be useful as a user-adjustable value.
-            // However, the visible width of the dither changes
-            // based on the brightness of the scene/material..
-            const float width = blendMode? 0.0 : 1.0;
+    // Apply dithered alpha. 
+    if (sharpen) 
+    {
+        applyAlphaSharpen(modAlpha, cutoff);
+    } 
+    else
+    {
+        applyAlphaCutoff(modAlpha, cutoff);
 
+        // The width of the dither changes how obvious it is,
+        // so it might be useful as a user-adjustable value.
+        // However, the visible width of the dither changes
+        // based on the brightness of the scene/material..
+
+        if (!isBlending || forceDither)
+        {
+            // Previously, this was passed through the T function to remap it
+            // into a triangular distribution, but in practise this seems to 
+            // produce worse results. 
             pos += _SinTime.x%4;
-            modAlpha = (1+cutoff) * modAlpha - cutoff;
-            float mask = (T(intensity(pos)));
-            modAlpha = modAlpha - (mask * (1-modAlpha) * width);
+            float mask = (getR2(pos));
+            modAlpha = modAlpha + mask / samplecount;
+            modAlpha = floor(modAlpha * samplecount) / samplecount;
         }
-        else 
-        {
-            modAlpha = ((modAlpha - cutoff) / max(fwidth(modAlpha), FLT_EPS) + 0.5);
-        }
+    }
 
-        #if defined(USING_ALPHA_BLENDING)
-        #else
-        alpha = saturate(modAlpha);
-        #endif
+    // If 0, remove now.
+    clip (modAlpha > FLT_EPS? modAlpha : -1);
 
-        clip (modAlpha > FLT_EPS? modAlpha : -1);
-        // If 0, remove now.
-    #else
-    alpha = 1.0;
-    #endif
+    alpha = saturate(modAlpha); 
 }
 
 inline half3 PreMultiplyAlpha_local (half3 diffColor, half alpha, half oneMinusReflectivity, out half outModifiedAlpha)
@@ -148,6 +191,40 @@ inline half3 PreMultiplyAlpha_local (half3 diffColor, half alpha, half oneMinusR
         outModifiedAlpha = alpha;
     #endif
     return diffColor;
+}
+
+half LerpOneTo_local(half b, half t)
+{
+    half oneMinusT = 1 - t;
+    return oneMinusT + b * t;
+}
+
+half3 LerpWhiteTo_local(half3 b, half t)
+{
+    half oneMinusT = 1 - t;
+    return half3(oneMinusT, oneMinusT, oneMinusT) + b * t;
+}
+
+half SpecularStrength_local(half3 specular)
+{
+    #if (SHADER_TARGET < 30)
+        // SM2.0: instruction count limitation
+        // SM2.0: simplified SpecularStrength
+        return specular.r; // Red channel - because most metals are either monocrhome or with redish/yellowish tint
+    #else
+        return max (max (specular.r, specular.g), specular.b);
+    #endif
+}
+
+inline half OneMinusReflectivityFromMetallic_local(half metallic)
+{
+    // We'll need oneMinusReflectivity, so
+    //   1-reflectivity = 1-lerp(dielectricSpec, 1, metallic) = lerp(1-dielectricSpec, 0, metallic)
+    // store (1-dielectricSpec) in unity_ColorSpaceDielectricSpec.a, then
+    //   1-reflectivity = lerp(alpha, 0, metallic) = alpha + metallic*(0 - alpha) =
+    //                  = alpha - metallic * alpha
+    half oneMinusDielectricSpec = unity_ColorSpaceDielectricSpec.a;
+    return oneMinusDielectricSpec - metallic * oneMinusDielectricSpec;
 }
 
 inline float3 BlendNormalsPD(float3 n1, float3 n2) {
@@ -221,10 +298,11 @@ float2 sharpSample( float4 texelSize , float2 p )
 {
     // Impossible if this is in the vert/geom shader, so just do nothing.
     #if defined(SHADER_STAGE_FRAGMENT)
-	p = p*texelSize.zw;
-    float2 c = max(0.0, fwidth(p));
+    p = p*texelSize.zw;
+    float2 c = max(0.0, abs(fwidth(p)));
+    p = p + c;
     p = floor(p) + saturate(frac(p) / c);
-	p = (p - 0.5)*texelSize.xy;
+    p = (p - 0.5)*texelSize.xy;
     #endif
 	return p;
 }
@@ -249,6 +327,22 @@ float3 TransformHSV(float3 col, float h, float s, float v)
         +   (.587*v - .588*vsu - 1.05*vsw)*col.g
         +   (.114*v + .886*vsu - .203*vsw)*col.b;
     return ret;
+}
+
+// This is based on a typical calculation for tonemapping
+// scenes to screens, but in this case we want to flatten
+// and shift the image colours.
+// Lavender's the most aesthetic colour for this.
+float3 AutoToneMapping(float3 color)
+{
+    const float A = 0.7;
+    const float3 B = float3(.74, 0.6, .74); 
+    const float C = 0;
+    const float D = 1.59;
+    const float E = 0.451;
+    color = max((0.0), color - (0.004));
+    color = (color * (A * color + B)) / (color * (C * color + D) + E);
+    return color;
 }
 
 inline float4 ApplyNearVertexSquishing(float4 posCS)
@@ -293,11 +387,6 @@ static float getScreenAspectRatio()
 }
 
 //-----------------------------------------------------------------------------
-// These functions rely on data or functions not available in the shadow pass
-//-----------------------------------------------------------------------------
-
-#if defined(UNITY_STANDARD_BRDF_INCLUDED)
-//-----------------------------------------------------------------------------
 // Helper functions for roughness
 //-----------------------------------------------------------------------------
 
@@ -332,6 +421,12 @@ float clampNoV(float NoV) {
     // Neubelt and Pettineo 2013, "Crafting a Next-gen Material Pipeline for The Order: 1886"
     return max(NoV, MIN_N_DOT_V);
 }
+
+//-----------------------------------------------------------------------------
+// These functions rely on data or functions not available in the shadow pass
+//-----------------------------------------------------------------------------
+
+#if defined(UNITY_STANDARD_BRDF_INCLUDED)
 
 float IsotropicNDFFiltering(float3 normal, float roughness2) {
     // Tokuyoshi and Kaplanyan 2021, "Stable Geometric Specular Antialiasing with
@@ -533,7 +628,7 @@ float3 GetSHDirectionL1()
     // For efficiency, we only get the direction from L1.
     // Because getting it from L2 would be too hard!
     return
-        Unity_SafeNormalize((unity_SHAr.xyz + unity_SHAg.xyz + unity_SHAb.xyz));
+        normalize((unity_SHAr.xyz + unity_SHAg.xyz + unity_SHAb.xyz) + FLT_EPS);
 }
 
 float3 SimpleSH9(float3 normal)
@@ -596,8 +691,7 @@ float getGreyscaleSH(float3 normal)
     // to compress the SH result into 0-1 range.
 
     // However, for efficiency, we only get the direction from L1.
-    float3 ambientLightDirection = 
-        Unity_SafeNormalize((unity_SHAr.xyz + unity_SHAg.xyz + unity_SHAb.xyz));
+    float3 ambientLightDirection = GetSHDirectionL1();
 
     // If this causes issues, it might be worth getting the min() of those two.
     //float3 dd = float3(unity_SHAr.w, unity_SHAg.w, unity_SHAb.w);
@@ -653,22 +747,6 @@ float3 applyMatcap(sampler2D src, half2 matcapUV, float3 dst, float4 tint, int b
 {
     half4 matcap = tex2D(src, matcapUV);
     return applyBlendMode(blendMode, dst, applyMatcapTint(matcap, tint), blendStrength * matcap.a);
-}
-
-// This is based on a typical calculation for tonemapping
-// scenes to screens, but in this case we want to flatten
-// and shift the image colours.
-// Lavender's the most aesthetic colour for this.
-float3 AutoToneMapping(float3 color)
-{
-    const float A = 0.7;
-    const float3 B = float3(.74, 0.6, .74); 
-    const float C = 0;
-    const float D = 1.59;
-    const float E = 0.451;
-    color = max((0.0), color - (0.004));
-    color = (color * (A * color + B)) / (color * (C * color + D) + E);
-    return color;
 }
 
 #endif // if UNITY_STANDARD_BRDF_INCLUDED

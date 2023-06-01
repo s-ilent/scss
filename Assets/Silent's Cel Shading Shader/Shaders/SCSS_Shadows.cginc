@@ -7,6 +7,8 @@
 #include "UnityCG.cginc"
 #include "UnityShaderVariables.cginc"
 
+// In Standard, this is gated behind UNITY_USE_DITHER_MASK_FOR_ALPHABLENDED_SHADOWS but it's
+// better for us to avoid relying on unrelated project settings. 
 #if (defined(_ALPHABLEND_ON) || defined(_ALPHAPREMULTIPLY_ON))
     #define SCSS_USE_DITHER_MASK 1
 #endif
@@ -21,79 +23,19 @@
     #define SCSS_USE_SHADOW_OUTPUT_STRUCT 1
 #endif
 
-#ifdef UNITY_STEREO_INSTANCING_ENABLED
+#if defined(UNITY_STEREO_INSTANCING_ENABLED) || defined(STEREO_INSTANCING_ON)
     #define SCSS_USE_STEREO_SHADOW_OUTPUT_STRUCT 1
 #endif
+
+// This is defined somewhere deep in Standard/UnityCG. 
+float4 _SpecColor;
 
 #include "SCSS_Config.cginc"
 #include "SCSS_Utils.cginc"
 #include "SCSS_Input.cginc"
 #include "SCSS_Attributes.cginc"
+#include "SCSS_Forward.cginc"
 #include "SCSS_ForwardVertex.cginc"
-
-float4 _SpecColor;
-
-#if defined(_SPECULAR)
-/*
-half SpecularSetup_ShadowGetOneMinusReflectivity(half2 uv)
-{
-    half3 specColor = _SpecColor.rgb;
-    #ifdef _SPECGLOSSMAP
-        specColor = tex2D(_SpecGlossMap, uv).rgb;
-    #endif
-    return (1 - SpecularStrength(specColor));
-}
-*/
-#endif
-
-float4 TexCoordsShadowCaster(float2 texcoords)
-{
-    float4 texcoord;
-    texcoord.xy = TRANSFORM_TEX(texcoords, _MainTex);// Always source from uv0
-    texcoord.xy = _PixelSampleMode? 
-        sharpSample(_MainTex_TexelSize * _MainTex_ST.xyxy, texcoord.xy) : texcoord.xy;
-
-    return texcoord;
-}
-half4 SpecularGlossShadowCaster(float2 texcoords, half mask)
-{
-    half4 sg;
-#if defined(_SPECULAR)
-    sg = UNITY_SAMPLE_TEX2D_SAMPLER(_SpecGlossMap, _MainTex, texcoords.xy);
-
-    sg.a = _AlbedoAlphaMode == 1? UNITY_SAMPLE_TEX2D(_MainTex, texcoords.xy).a : sg.a;
-
-    sg.rgb *= _SpecColor * _SpecColor.a; // Use alpha as an overall multiplier
-    sg.a *= _Smoothness; // _GlossMapScale is what Standard uses for this
-#else
-    sg = _SpecColor;
-    sg.a = _AlbedoAlphaMode == 1? UNITY_SAMPLE_TEX2D(_MainTex, texcoords.xy).a : sg.a;
-#endif
-
-#if defined(_DETAIL) 
-        float4 sdm = UNITY_SAMPLE_TEX2D_SAMPLER(_SpecularDetailMask,_DetailAlbedoMap,texcoords.xy);
-        sg *= saturate(sdm + 1-(_SpecularDetailStrength*mask));     
-#endif
-
-    return sg;
-}
-
-half SpecularStrengthShadowCaster(half3 specular)
-{
-    #if (SHADER_TARGET < 30)
-        // SM2.0: instruction count limitation
-        // SM2.0: simplified SpecularStrength
-        return specular.r; // Red channel - because most metals are either monocrhome or with redish/yellowish tint
-    #else
-        return max (max (specular.r, specular.g), specular.b);
-    #endif
-}
-
-inline half OneMinusReflectivityFromMetallicShadowCaster(half metallic)
-{
-    half oneMinusDielectricSpec = unity_ColorSpaceDielectricSpec.a;
-    return oneMinusDielectricSpec - metallic * oneMinusDielectricSpec;
-}
 
 // We have to do these dances of outputting SV_POSITION separately from the vertex shader,
 // and inputting VPOS in the pixel shader, since they both map to "POSITION" semantic on
@@ -126,8 +68,9 @@ void vertShadowCaster (VertexInputShadowCaster v
     // Standard would apply texcoords here, but we need to apply them in fragment
     // due to pixel sampling mode options.
 
+
     // Simple inventory.
-    float inventoryMask = getInventoryMask(v.uv0);
+    float inventoryMask = getInventoryMask(v.texcoord.xy);
 
     // Apply the inventory mask.
     // Set the output variables based on the mask to completely remove it.
@@ -143,11 +86,16 @@ void vertShadowCaster (VertexInputShadowCaster v
     opos = ApplyNearVertexSquishing(opos);
 
     #if defined(SCSS_USE_SHADOW_UVS)
-        o.tex = AnimateTexcoords(v.uv0);
+        float4 uvPack0 = float4(v.texcoord.xy, v.texcoord1.xy);
+        float4 uvPack1 = float4(v.texcoord2.xy, v.texcoord3.xy);
+        uvPack0.xy = AnimateTexcoords(uvPack0.xy);
+        o.uvPack0 = uvPack0;
+        o.uvPack1 = uvPack1;
     #endif
 }
 
-half4 fragShadowCaster (UNITY_POSITION(vpos)
+half4 fragShadowCaster (
+    UNITY_POSITION(vpos)
 #ifdef SCSS_USE_SHADOW_OUTPUT_STRUCT
     , VertexOutputShadowCaster i
 #endif
@@ -156,45 +104,29 @@ half4 fragShadowCaster (UNITY_POSITION(vpos)
     #ifdef UNITY_STEREO_INSTANCING_ENABLED
     UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(i)
     #endif
-    
-    half alpha = Alpha(0, 0);
-    half3 albedo = 1;
-    half oneMinusReflectivity = 0;
+
+    // Setup Material, but dummy out unused elements.
+    float4 uvPack0 = 0;
+    float4 uvPack1 = 0;
     #if defined(SCSS_USE_SHADOW_UVS)
-        half4 texcoords = TexCoordsShadowCaster(i.tex);
-        albedo = Albedo(texcoords);
-        alpha = Alpha(texcoords.xy, i.tex);
-    #endif // #if defined(SCSS_USE_SHADOW_UVS)
+    uvPack0 = i.uvPack0;
+    uvPack1 = i.uvPack1;
+    #endif
+    SCSS_Input material = 
+    MaterialSetup(uvPack0, uvPack1, /* color */ 1.0, /* extraData */ 1.0, /* isOutline */ 0.0, /* facing */ true);
 
     #if defined(ALPHAFUNCTION)
-    alphaFunction(alpha);
+    alphaFunction(material.alpha);
     #endif
 
-    applyVanishing(alpha);
+    applyVanishing(material.alpha);
 
-    #if defined(_SPECULAR) && defined(SCSS_USE_SHADOW_UVS)
-    {
-        half detailMask = 1.0; // Dummy out for now
-        half4 specGloss = SpecularGlossShadowCaster(texcoords, detailMask);
-
-        if (_UseMetallic == 1)
-        {
-            // In Metallic mode, ignore the other colour channels. 
-            specGloss = specGloss.r;
-            oneMinusReflectivity = OneMinusReflectivityFromMetallicShadowCaster(specGloss);
-        }
-        else 
-        {
-            // Specular energy converservation. From EnergyConservationBetweenDiffuseAndSpecular in UnityStandardUtils.cginc
-            oneMinusReflectivity = 1 - SpecularStrengthShadowCaster(specGloss); 
-        }
-    }
-    #endif
     // When premultiplied mode is set, this will multiply the diffuse by the alpha component,
     // allowing to handle transparency in physically correct way - only diffuse component gets affected by alpha
-    PreMultiplyAlpha_local (albedo, alpha, oneMinusReflectivity, /*out*/ alpha);
+    float finalAlpha = material.alpha;
+    PreMultiplyAlpha_local (material.albedo, material.alpha, material.oneMinusReflectivity, /*out*/ finalAlpha);
 
-    applyAlphaClip(alpha, _Cutoff, vpos.xy, _AlphaSharp);
+    applyAlphaClip(finalAlpha, _Cutoff, vpos.xy, _AlphaSharp, true);
 
     SHADOW_CASTER_FRAGMENT(i) 
 }

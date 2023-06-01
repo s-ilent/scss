@@ -2,6 +2,10 @@
 #ifndef SCSS_UNITYGI_INCLUDED
 #define SCSS_UNITYGI_INCLUDED
 
+#include "UnityLightingCommon.cginc"
+#include "UnityImageBasedLighting.cginc"
+#include "UnityGlobalIllumination.cginc"
+
 // https://github.com/z3y/shaders/blob/d52e2831a82ffd7dba0a070edf6fad6b1a5d4ed3/Shaders/ShaderLibrary/EnvironmentBRDF.cginc
 // Based on z3y's implementation of Filament's indirect specular distribution
 Texture2D _DFG;
