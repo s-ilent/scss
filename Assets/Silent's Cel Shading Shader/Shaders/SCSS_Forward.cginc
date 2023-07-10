@@ -29,6 +29,7 @@ void computeShadingParams (inout SCSS_ShadingParam shading, VertexOutput i, bool
 
 	#if defined(SCSS_SCREEN_SHADOW_FILTER) && defined(USING_SHADOWS_UNITY) && !defined(UNITY_PASS_SHADOWCASTER)
 	correctedScreenShadowsForMSAA(i._ShadowCoord, atten);
+	atten *= 1.0 - screenSpaceContactShadow(_WorldSpaceLightPos0, i.posWorld.xyz, i.pos.xy);
 	#endif
 
     #if (defined(LIGHTMAP_ON) || defined(DYNAMICLIGHTMAP_ON))

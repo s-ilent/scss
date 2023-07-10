@@ -498,6 +498,96 @@ void correctedScreenShadowsForMSAA(float4 _ShadowCoord, inout float shadow)
     #endif //SHADOWS_SCREEN
 }
 
+//------------------------------------------------------------------------------
+// Screen-space Contact Shadows
+// Based on Filament - https://github.com/google/filament
+//------------------------------------------------------------------------------
+
+struct ScreenSpaceRay {
+    float3 ssRayStart;
+    float3 ssRayEnd;
+    float3 ssViewRayEnd;
+    float3 uvRayStart;
+    float3 uvRay;
+};
+
+float2 uvToRenderTargetUV(float2 uv) {
+    #if UNITY_UV_STARTS_AT_TOP
+    return float2(uv.x, 1.0 - uv.y);
+    #else
+    return uv;
+    #endif
+
+}
+
+void initScreenSpaceRay(out ScreenSpaceRay ray, float3 wsRayStart, float3 wsRayDirection, float wsRayLength) {
+    float4x4 worldToClip = UNITY_MATRIX_VP;
+    float4x4 viewToClip = UNITY_MATRIX_P;
+
+    // ray end in world space
+    float3 wsRayEnd = wsRayStart + wsRayDirection * wsRayLength;
+
+    // ray start/end in clip space (z is inverted: [1,0])
+    float4 csRayStart = mul(worldToClip, float4(wsRayStart, 1.0));
+    float4 csRayEnd = mul(worldToClip, float4(wsRayEnd, 1.0));
+    float4 csViewRayEnd = csRayStart + mul(viewToClip, float4(0.0, 0.0, wsRayLength, 0.0));
+
+    // ray start/end in screen space (z is inverted: [1,0])
+    ray.ssRayStart = csRayStart.xyz * (1.0 / csRayStart.w);
+    ray.ssRayEnd = csRayEnd.xyz * (1.0 / csRayEnd.w);
+    ray.ssViewRayEnd = csViewRayEnd.xyz * (1.0 / csViewRayEnd.w);
+
+    // convert all to uv (texture) space (z is inverted: [1,0])
+    float3 uvRayEnd = float3(ray.ssRayEnd.xy * 0.5 + 0.5, ray.ssRayEnd.z);
+    ray.uvRayStart = float3(ray.ssRayStart.xy * 0.5 + 0.5, ray.ssRayStart.z);
+    ray.uvRay = uvRayEnd - ray.uvRayStart;
+}
+
+float screenSpaceContactShadow(float3 lightDirection, float3 shading_position, 
+    float2 input_position) {
+    // cast a ray in the direction of the light
+    float occlusion = 0.0;
+
+    // These could be user adjustable, but let's keep to the minimum that works well for now.
+    int kStepCount = 16;
+    float kDistanceMax = 0.05;
+
+    ScreenSpaceRay rayData;
+    initScreenSpaceRay(rayData, shading_position, lightDirection, kDistanceMax);
+
+    // step
+    float dt = 1.0 / float(kStepCount);
+
+    // tolerance
+    float tolerance = abs(rayData.ssViewRayEnd.z - rayData.ssRayStart.z) * dt;
+
+    // dither the ray with interleaved gradient noise
+    float dither = getR2(input_position) - 0.5;
+
+    // normalized position on the ray (0 to 1)
+    float t = dt * dither + dt;
+
+    float3 ray;
+    for (int i = 0 ; i < kStepCount ; i++, t += dt) {
+        ray = rayData.uvRayStart + rayData.uvRay * t;
+        float2 sampleUV = uvToRenderTargetUV(ray.xy);
+        sampleUV = TransformStereoScreenSpaceTex( sampleUV, 1.0 );
+        float z = tex2Dlod(_CameraDepthTexture, float4(sampleUV, 0.0, 0.0)).r; 
+        float dz = z - ray.z;
+        if (abs(tolerance - dz) < tolerance) {
+            occlusion += 1.0;
+        }
+    }
+
+    occlusion = 1-saturate(0.333/occlusion);
+
+    // we fade out the contribution of contact shadows towards the edge of the screen
+    // because we don't have depth data there
+    float2 fade = max(12.0 * abs(ray.xy - 0.5) - 5.0, 0.0);
+    occlusion *= saturate(1.0 - dot(fade, fade));
+    return occlusion;
+}
+
 // RCP SQRT
 // Source: https://github.com/michaldrobot/ShaderFastLibs/blob/master/ShaderFastMathLib.h
 
