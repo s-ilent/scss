@@ -102,7 +102,7 @@ half4 fragShadowCaster (
 ) : SV_Target
 {
     // No need to set up if i does not exist
-    #ifdef UNITY_STEREO_INSTANCING_ENABLED && SCSS_USE_SHADOW_OUTPUT_STRUCT
+    #if (defined(UNITY_STEREO_INSTANCING_ENABLED) && defined(SCSS_USE_SHADOW_OUTPUT_STRUCT))
     UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(i)
     #endif
 
