@@ -102,7 +102,6 @@ float4 cubic_weights(float v)
     return o;
 }
 
-
 #define ALPHA_SHOULD_DITHER_CLIP (defined(_ALPHATEST_ON) || defined(UNITY_PASS_SHADOWCASTER))
 
 inline void applyAlphaSharpen(inout float alpha, float cutoff)
