@@ -73,7 +73,7 @@ float3 addEmissiveAudiolink(float3 emission, float4 audiolinkUV, inout float alp
 }
 
 inline SCSS_Input MaterialSetup(float4 i_uvPack0, float4 i_uvPack1, 
-	float4 i_color, float4 i_extraData, float p_isOutline, uint i_facing)
+	float4 i_color, float4 i_extraData, float p_isOutline, uint facing)
 {
 	SCSS_Input material = (SCSS_Input)0;
 	initMaterial(material);
