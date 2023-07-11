@@ -29,7 +29,8 @@ void computeShadingParams (inout SCSS_ShadingParam shading, VertexOutput i, bool
 
 	#if defined(SCSS_SCREEN_SHADOW_FILTER) && defined(USING_SHADOWS_UNITY) && !defined(UNITY_PASS_SHADOWCASTER)
 	correctedScreenShadowsForMSAA(i._ShadowCoord, atten);
-	atten *= 1.0 - screenSpaceContactShadow(_WorldSpaceLightPos0, i.posWorld.xyz, i.pos.xy);
+	float3 lightPos = UnityWorldSpaceLightDir(i.posWorld.xyz);
+	atten *= 1.0 - screenSpaceContactShadow(lightPos, i.posWorld.xyz, i.pos.xy);
 	#endif
 
     #if (defined(LIGHTMAP_ON) || defined(DYNAMICLIGHTMAP_ON))
@@ -52,7 +53,6 @@ void computeShadingParams (inout SCSS_ShadingParam shading, VertexOutput i, bool
 
 void prepareMaterial (inout SCSS_ShadingParam shading, const SCSS_Input material) {
     shading.normal = normalize(mul(shading.tangentToWorld, material.normalTangent));
-    // shading.normal = shading.geometricNormal;
     shading.NoV = clampNoV(dot(shading.normal, shading.view));
     shading.reflected = reflect(-shading.view, shading.normal);
 }
