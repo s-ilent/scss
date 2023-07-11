@@ -79,6 +79,14 @@ float2 getR2_2(float2 pixel) {
     return float2(frac(C1 * float(pixel.x)), frac(C2 * float(pixel.y)));
 }
 
+float4 getR2_RGBA(float2 pixel) {
+    float h1 = getR2(pixel);
+    float h2 = getR2(pixel+53);
+    float h3 = getR2(pixel+49);
+    float h4 = getR2(pixel+77);
+    return float4(h1, h2, h3, h4);
+}
+
 float r2Dither(float gray, float2 pos, float steps) {
 	// pos is screen pixel position in 0-res range
     // Calculated noised gray value
@@ -564,6 +572,9 @@ float screenSpaceContactShadow(float3 lightDirection, float3 shading_position,
     // dither the ray with interleaved gradient noise
     float dither = getR2(input_position) - 0.5;
 
+    float4 dither4 = getR2_RGBA(input_position + 12) - 0.5;
+    uint di = 0;
+
     // normalized position on the ray (0 to 1)
     float t = dt * dither + dt;
 
@@ -571,15 +582,20 @@ float screenSpaceContactShadow(float3 lightDirection, float3 shading_position,
     for (int i = 0 ; i < kStepCount ; i++, t += dt) {
         ray = rayData.uvRayStart + rayData.uvRay * t;
         float2 sampleUV = uvToRenderTargetUV(ray.xy);
-        sampleUV = TransformStereoScreenSpaceTex( sampleUV, 1.0 );
-        float z = tex2Dlod(_CameraDepthTexture, float4(sampleUV, 0.0, 0.0)).r; 
+        sampleUV = TransformStereoScreenSpaceTex(sampleUV, 1.0);
+        float z = tex2Dlod(_CameraDepthTexture, float4(sampleUV, 0.0, 0.0)).r;
         float dz = z - ray.z;
         if (abs(tolerance - dz) < tolerance) {
             occlusion += 1.0;
+            // try again with different dither offset
+            t = (dt * i - dt) + dt * dither4[di];
+            di++;
+            if (di>4) break;
         }
     }
 
-    occlusion = 1-saturate(0.333/occlusion);
+    // normalize by number of samples taken
+    occlusion = occlusion/(di+1);
 
     // we fade out the contribution of contact shadows towards the edge of the screen
     // because we don't have depth data there
