@@ -203,6 +203,23 @@ float3 ShadeSH9_wrappedCorrect(float3 normal, float3 conv)
     return x0 + x1 * conv.y + x2 * conv.z;
 }
 
+half3 BetterSH9 (half4 normal) {
+    float3 indirect;
+    float3 L0 = float3(unity_SHAr.w, unity_SHAg.w, unity_SHAb.w)
+     + float3(unity_SHBr.z, unity_SHBg.z, unity_SHBb.z) / 3.0;
+    indirect.r = shEvaluateDiffuseL1Geomerics_local(L0.r, unity_SHAr.xyz, normal);
+    indirect.g = shEvaluateDiffuseL1Geomerics_local(L0.g, unity_SHAg.xyz, normal);
+    indirect.b = shEvaluateDiffuseL1Geomerics_local(L0.b, unity_SHAb.xyz, normal);
+    indirect = max(0, indirect);
+    indirect += SHEvalLinearL2(normal);
+    return indirect;
+}
+
+float3 BetterSH9(float3 normal)
+{
+    return BetterSH9(float4(normal, 1));
+}
+
 bool isReflectionProbeActive()
 {
 #ifndef SHADER_TARGET_SURFACE_ANALYSIS // Required to use GetDimensions
@@ -263,23 +280,6 @@ float3 viewReflectDirection, float attenuation, float occlusion, float roughness
     ugls_en_data.reflUVW = viewReflectDirection;
     UnityGI gi = UnityGlobalIllumination_SCSS(d, occlusion, normalDirection, ugls_en_data );
     return gi;
-}
-
-half3 BetterSH9 (half4 normal) {
-	float3 indirect;
-	float3 L0 = float3(unity_SHAr.w, unity_SHAg.w, unity_SHAb.w)
-     + float3(unity_SHBr.z, unity_SHBg.z, unity_SHBb.z) / 3.0;
-	indirect.r = shEvaluateDiffuseL1Geomerics_local(L0.r, unity_SHAr.xyz, normal);
-	indirect.g = shEvaluateDiffuseL1Geomerics_local(L0.g, unity_SHAg.xyz, normal);
-	indirect.b = shEvaluateDiffuseL1Geomerics_local(L0.b, unity_SHAb.xyz, normal);
-	indirect = max(0, indirect);
-	indirect += SHEvalLinearL2(normal);
-	return indirect;
-}
-
-float3 BetterSH9(float3 normal)
-{
-    return BetterSH9(float4(normal, 1));
 }
 
 #endif // SCSS_UNITYGI_INCLUDED

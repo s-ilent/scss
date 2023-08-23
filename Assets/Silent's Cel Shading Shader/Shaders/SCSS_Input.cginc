@@ -999,27 +999,25 @@ SCSS_TonemapInput Tonemap(float2 uv, inout float occlusion)
 	SCSS_TonemapInput t = (SCSS_TonemapInput)0;
 	float4 _ShadowMask_var = UNITY_SAMPLE_TEX2D_SAMPLER(_ShadowMask, _MainTex, uv.xy);
 
-	// Occlusion
-	if (_ShadowMaskType == 0) 
+	switch (_ShadowMaskType)
 	{
-		// RGB will boost shadow range. Raising _Shadow reduces its influence.
-		// Alpha will boost light range. Raising _Shadow reduces its influence.
-		t.col = saturate(_IndirectLightingBoost+1-_ShadowMask_var.a) * _ShadowMaskColor.rgb;
-		t.bias = _ShadowMaskColor.a*_ShadowMask_var.r;
+		case 0: // Occlusion
+			// RGB will boost shadow range. Raising _Shadow reduces its influence.
+			// Alpha will boost light range. Raising _Shadow reduces its influence.
+			t.col = saturate(_IndirectLightingBoost+1-_ShadowMask_var.a) * _ShadowMaskColor.rgb;
+			t.bias = _ShadowMaskColor.a*_ShadowMask_var.r;
+			break;
+		case 1: // Tone
+			t.col = saturate(_ShadowMask_var+_IndirectLightingBoost) * _ShadowMaskColor.rgb;
+			t.bias = _ShadowMaskColor.a*_ShadowMask_var.a;
+			break;
+		case 2: // Auto-Tone
+			float3 albedo = Albedo(uv.xyxy);
+			t.col = saturate(AutoToneMapping(albedo)+_IndirectLightingBoost) * _ShadowMaskColor.rgb;
+			t.bias = _ShadowMaskColor.a*_ShadowMask_var.r;
+			break;
 	}
-	// Tone
-	if (_ShadowMaskType == 1) 
-	{
-		t.col = saturate(_ShadowMask_var+_IndirectLightingBoost) * _ShadowMaskColor.rgb;
-		t.bias = _ShadowMaskColor.a*_ShadowMask_var.a;
-	}
-	// Auto-Tone
-	if (_ShadowMaskType == 2) 
-	{
-		float3 albedo = Albedo(uv.xyxy);
-		t.col = saturate(AutoToneMapping(albedo)+_IndirectLightingBoost) * _ShadowMaskColor.rgb;
-		t.bias = _ShadowMaskColor.a*_ShadowMask_var.r;
-	}
+
 	t.bias = (1 - _Shadow) * t.bias + _Shadow;
 	occlusion = t.bias;
 	return t;
@@ -1030,28 +1028,22 @@ SCSS_TonemapInput Tonemap(float2 uv, inout float occlusion)
 // softness: 0-1 position on the light ramp on the other axis
 float3 sampleRampWithOptions(float rampPosition, half softness) 
 {
-	if (_LightRampType == 3) // No sampling
-	{
-		return saturate(rampPosition*2-1);
-	}
-	if (_LightRampType == 2) // None
-	{
-		float shadeWidth = 0.0002 * (1+softness*100);
-
-		const float shadeOffset = 0.5; 
-		float lightContribution = simpleSharpen(rampPosition, shadeWidth, shadeOffset);
-		return saturate(lightContribution);
-	}
-	if (_LightRampType == 1) // Vertical
-	{
-		float2 rampUV = float2(softness, rampPosition);
-		return tex2D(_Ramp, saturate(rampUV));
-	}
-	else // Horizontal
-	{
-		float2 rampUV = float2(rampPosition, softness);
-		return tex2D(_Ramp, saturate(rampUV));
-	}
+    float2 rampUV = float2(rampPosition, softness);
+    switch (_LightRampType)
+    {
+        case 3: // No sampling; smooth NdotL
+            return saturate(rampPosition*2-1);
+        case 2: // No texture, sharp sampling
+            float shadeWidth = 0.0002 * (1+softness*100);
+            const float shadeOffset = 0.5; 
+            float lightContribution = simpleSharpen(rampPosition, shadeWidth, shadeOffset);
+            return saturate(lightContribution);
+        case 1: // Vertical
+            rampUV = float2(softness, rampPosition);
+            return tex2D(_Ramp, saturate(rampUV));
+        default: // Horizontal
+            return tex2D(_Ramp, saturate(rampUV));
+    }
 }
 #endif
 
@@ -1110,11 +1102,11 @@ float innerOutline (VertexOutput i)
 float3 applyOutline(float3 col, float is_outline)
 {    
 	#if defined(SCSS_OUTLINE)
-	col = lerp(col, col * _outline_color.rgb, is_outline);
-    if (_OutlineMode == 2) 
-    {
-        col = lerp(col, _outline_color.rgb, is_outline);
-    }
+	float3 outlineCol = (_OutlineMode == 2) 
+	? _outline_color.rgb
+	: _outline_color.rgb * col.rgb;
+
+	col = lerp(col, outlineCol, is_outline);
     return col;
     #else
     return col;
@@ -1124,12 +1116,12 @@ float3 applyOutline(float3 col, float is_outline)
 float applyOutlineAlpha(float alpha, float is_outline)
 {    
 	#if defined(SCSS_OUTLINE)
-	alpha = lerp(alpha, alpha * _outline_color.a, is_outline);
-    if (_OutlineMode == 2) 
-    {
-        alpha = lerp(alpha, _outline_color.a, is_outline);
-    }
-    return alpha;
+	float outlineAlpha = (_OutlineMode == 2) 
+	? _outline_color.a
+	: alpha * _outline_color.a;
+
+	alpha = lerp(alpha, outlineAlpha, is_outline);
+    return alpha; 
     #else
     return alpha;
 	#endif
