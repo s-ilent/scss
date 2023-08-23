@@ -722,6 +722,7 @@ namespace SilentCelShading.Unity
 			DrawSectionHeaderArea(Content("s_detailOptions"));
 			DetailMapOptions();
 			SubsurfaceOptions();
+			ContactShadowOptions();
 		}
 
 		protected void EmissionOptions()
@@ -1043,6 +1044,19 @@ namespace SilentCelShading.Unity
 					ShaderProperty("_SSSDist");
 					ShaderProperty("_SSSAmbient");
 					EditorGUI.indentLevel-=2;
+				}
+			}
+		}
+
+
+		protected void ContactShadowOptions()
+		{ 
+            EditorGUILayout.Space();
+			if (TogglePropertyHeader("_UseContactShadows"))
+			{
+				if (PropertyEnabled(props["_UseContactShadows"]))
+				{
+					ShaderProperty("_ContactShadowDistance");
 				}
 			}
 		}

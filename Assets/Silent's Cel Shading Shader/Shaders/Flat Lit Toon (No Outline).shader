@@ -142,6 +142,9 @@ Shader "Silent's Cel Shading/Lightramp"
 		_SSSDist ("Scattering Distance", Range(0, 10)) = 1
 		_SSSAmbient ("Scattering Ambient", Range(0, 1)) = 0
 		//[Space]
+		[Toggle(_CONTACTSHADOWS)]_UseContactShadows ("Use Contact Shadows", Float) = 0
+		_ContactShadowDistance("Max Distance", Range(0.01, 0.2)) = 0.1
+		//[Space]
 		[ToggleUI]_UseAnimation ("Use Animation", Float) = 0.0
 		_AnimationSpeed ("_AnimationSpeed", Float) = 10
 		_TotalFrames ("_TotalFrames", Int) = 4
@@ -290,6 +293,7 @@ Shader "Silent's Cel Shading/Lightramp"
 			#pragma shader_feature_local _ _SUNDISK_NONE			
 			#pragma shader_feature_local _ _BACKFACE
 			#pragma shader_feature_local _ _AUDIOLINK
+			#pragma shader_feature_local _ _CONTACTSHADOWS
 			
 			#include "SCSS_Core.cginc"
 
@@ -326,6 +330,7 @@ Shader "Silent's Cel Shading/Lightramp"
 			#pragma shader_feature_local _ _GLOSSYREFLECTIONS_OFF
 			#pragma shader_feature_local _ _SUNDISK_NONE			
 			#pragma shader_feature_local _ _BACKFACE
+			#pragma shader_feature_local _ _CONTACTSHADOWS
 
 			#include "SCSS_Core.cginc"
 

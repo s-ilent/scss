@@ -29,8 +29,17 @@ void computeShadingParams (inout SCSS_ShadingParam shading, VertexOutput i, bool
 
 	#if defined(SCSS_SCREEN_SHADOW_FILTER) && defined(USING_SHADOWS_UNITY) && !defined(UNITY_PASS_SHADOWCASTER)
 	correctedScreenShadowsForMSAA(i._ShadowCoord, atten);
+	#endif
+
+	#if defined(USING_SHADOWS_UNITY) && !defined(UNITY_PASS_SHADOWCASTER)
 	float3 lightPos = UnityWorldSpaceLightDir(i.posWorld.xyz);
-	atten *= 1.0 - screenSpaceContactShadow(lightPos, i.posWorld.xyz, i.pos.xy);
+		#if defined(_CONTACTSHADOWS)
+		// Only calculate contact shadows if we're not in shadow. 
+		if (atten > 0)
+		{
+			atten *= 1.0 - screenSpaceContactShadow(lightPos, i.posWorld.xyz, i.pos.xy, _ContactShadowDistance);
+		}
+		#endif
 	#endif
 
     #if (defined(LIGHTMAP_ON) || defined(DYNAMICLIGHTMAP_ON))

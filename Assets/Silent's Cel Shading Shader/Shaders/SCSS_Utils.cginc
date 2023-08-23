@@ -550,17 +550,20 @@ void initScreenSpaceRay(out ScreenSpaceRay ray, float3 wsRayStart, float3 wsRayD
     ray.uvRay = uvRayEnd - ray.uvRayStart;
 }
 
-float screenSpaceContactShadow(float3 lightDirection, float3 shading_position, 
-    float2 input_position) {
+float screenSpaceContactShadow(float3 lightDirection, float3 shadingPosition, 
+    float2 screenPosition, float distanceMax = 0.1) {
     // cast a ray in the direction of the light
     float occlusion = 0.0;
 
     // These could be user adjustable, but let's keep to the minimum that works well for now.
-    int kStepCount = 16;
-    float kDistanceMax = 0.05;
+    const uint kStepCount = 16;
+    float kDistanceMax = distanceMax;
+
+    // Bias starting position slightly towards light to avoid artifacts
+    float3 startPos = shadingPosition;
 
     ScreenSpaceRay rayData;
-    initScreenSpaceRay(rayData, shading_position, lightDirection, kDistanceMax);
+    initScreenSpaceRay(rayData, startPos, lightDirection, kDistanceMax);
 
     // step
     float dt = 1.0 / float(kStepCount);
@@ -569,13 +572,14 @@ float screenSpaceContactShadow(float3 lightDirection, float3 shading_position,
     float tolerance = abs(rayData.ssViewRayEnd.z - rayData.ssRayStart.z) * dt;
 
     // dither the ray with interleaved gradient noise
-    float dither = getR2(input_position) - 0.5;
-
-    float4 dither4 = getR2_RGBA(input_position + 12) - 0.5;
+    float dither = interleaved_gradient(screenPosition) - 0.5;
+    float4 dither4 = getR2_RGBA(screenPosition + 12) - 0.5;
     uint di = 0;
 
     // normalized position on the ray (0 to 1)
     float t = dt * dither + dt;
+
+    float2 texelSize = _CameraDepthTexture_TexelSize.xy;
 
     float3 ray;
     for (int i = 0 ; i < kStepCount ; i++, t += dt) {
@@ -585,16 +589,15 @@ float screenSpaceContactShadow(float3 lightDirection, float3 shading_position,
         float z = tex2Dlod(_CameraDepthTexture, float4(sampleUV, 0.0, 0.0)).r;
         float dz = z - ray.z;
         if (abs(tolerance - dz) < tolerance) {
-            occlusion += 1.0;
             // try again with different dither offset
-            t = (dt * i - dt) + dt * dither4[di];
+            t = (dt * i - dt) + dt * dither4[di&3];
+            occlusion += 1.0;
             di++;
-            if (di>4) break;
         }
     }
 
-    // normalize by number of samples taken
-    occlusion = occlusion/(di+1);
+    // With retrying, we can soften areas we didn't hit enough times.
+    occlusion = saturate(occlusion/4);
 
     // we fade out the contribution of contact shadows towards the edge of the screen
     // because we don't have depth data there

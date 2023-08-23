@@ -258,6 +258,11 @@ uniform float _LightMultiplyAnimated;
 uniform float _LightClampAnimated;
 uniform float _LightAddAnimated;
 
+// Contact shadows
+#if defined(_CONTACTSHADOWS)
+uniform float _ContactShadowDistance;
+#endif
+
 //-------------------------------------------------------------------------------------
 // Input functions
 
