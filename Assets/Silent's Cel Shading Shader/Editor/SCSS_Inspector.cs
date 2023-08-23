@@ -125,6 +125,7 @@ namespace SilentCelShading.Unity
 		protected override void MaterialChanged(Material material)
 		{
 			InitialiseStyles();
+			UnbakedCheck(material);
 
 			if (!Int32.TryParse(EditorUserSettings.GetConfigValue("scss_settings_complexity_mode"), out scssSettingsComplexityMode))
 			{
@@ -1910,6 +1911,25 @@ protected Vector4? GetSerializedMaterialVector4(Material material, string propNa
 	            }
 	        }
 	    }
+
+		protected static void UnbakedCheck(Material material)
+		{
+			// Unset __Baked if the shader is not in Hidden
+			// Also, check if the shader is in a BakedShaders directory
+			if (material.GetFloat("__Baked") == 1)
+			{
+				Shader shader = material.shader;
+				string shaderFilePath = AssetDatabase.GetAssetPath(shader);
+				
+				bool isInBakedShaders = shaderFilePath.IndexOf("BakedShaders", StringComparison.OrdinalIgnoreCase) >= 0;
+				bool isInHiddenShaders = shader.name.StartsWith("Hidden/", StringComparison.OrdinalIgnoreCase);
+
+				if (!isInBakedShaders && !isInHiddenShaders)
+				{
+					ShaderOptimizer.Unlock(material);
+				}
+			}
+		}
 
 	}
 }
