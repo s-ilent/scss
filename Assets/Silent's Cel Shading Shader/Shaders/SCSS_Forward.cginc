@@ -46,8 +46,6 @@ void computeShadingParams (inout SCSS_ShadingParam shading, VertexOutput i, bool
 
     #if (defined(LIGHTMAP_ON) || defined(DYNAMICLIGHTMAP_ON))
         shading.lightmapUV = lightmapUV;
-    #else
-        shading.lightmapUV = 0;
     #endif
 }
 

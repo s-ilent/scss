@@ -272,7 +272,9 @@ struct SCSS_ShadingParam
     float NoV;                // dot(normal, view), always strictly >= MIN_N_DOT_V
 
     float2 normalizedViewportCoord;
+	#if (defined(LIGHTMAP_ON) || defined(DYNAMICLIGHTMAP_ON))
     float2 lightmapUV;
+    #endif
     float attenuation;
     float isOutline;
     float3 ambient;
@@ -363,7 +365,6 @@ void initMaterial(out SCSS_Input material)
 struct SCSS_LightParam
 {
 	half3 viewDir, halfDir, reflDir;
-	half2 rlPow4;
 	half NdotL, NdotV, LdotH, NdotH;
 	half NdotAmb;
 };
@@ -759,6 +760,10 @@ void getDirectIndirectLighting(float3 normal, out float3 directLighting, out flo
 {
 	directLighting   = 0.0;
 	indirectLighting = 0.0;
+
+	#ifndef SHADER_TARGET_GLSL
+	[call] // https://www.gamedev.net/forums/topic/682920-hlsl-switch-attributes/
+	#endif
 	switch (_LightingCalculationType)
 	{
 	case 0: // Unbiased

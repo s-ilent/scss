@@ -40,7 +40,7 @@ bool inMirror()
     return unity_CameraProjection[2][0] != 0.f || unity_CameraProjection[2][1] != 0.f;
 }
 
-float interleaved_gradient(float2 uv : SV_POSITION) : SV_Target
+float interleaved_gradient(float2 uv)
 {
 	float3 magic = float3(0.06711056, 0.00583715, 52.9829189);
 	return frac(magic.z * frac(dot(uv, magic.xy)));
@@ -306,7 +306,7 @@ float2 sharpSample( float4 texelSize , float2 p )
     // Impossible if this is in the vert/geom shader, so just do nothing.
     #if defined(SHADER_STAGE_FRAGMENT)
     p = p*texelSize.zw;
-    float2 c = max(0.0, abs(fwidth(p)));
+    float2 c = max(FLT_EPS, abs(fwidth(p)));
     p = p + c;
     p = floor(p) + saturate(frac(p) / c);
     p = (p - 0.5)*texelSize.xy;
@@ -525,7 +525,6 @@ float2 uvToRenderTargetUV(float2 uv) {
     #else
     return uv;
     #endif
-
 }
 
 void initScreenSpaceRay(out ScreenSpaceRay ray, float3 wsRayStart, float3 wsRayDirection, float wsRayLength) {
