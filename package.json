@@ -1,0 +1,17 @@
+{
+  "name": "com.s-ilent.crosstone",
+  "displayName": "Silent's Cel Shading Shader",
+  "version": "1.2.0",
+  "description": "Shaders for Unity for cel shading, designed to take Unity's lighting into account while also presenting materials in the best possible way.",
+  "gitDependencies": {},
+  "vpmDependencies": {},
+  "author": {
+    "name": "Silent",
+    "email": "silent@noemail.net",
+    "url": "https://gitlab.com/s-ilent/SCSS/"
+  },
+  "legacyFolders": {
+    "Assets\\Silent's Cel Shading Shader" : "b64121367dd7b8d4598aa2c284e6cae0"
+  },
+  "legacyFiles": {}
+}

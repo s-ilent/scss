@@ -1,0 +1,18 @@
+{
+    "name": "com.s-ilent.crosstone.Editor",
+    "rootNamespace": "",
+    "references": [
+        "com.s-ilent.crosstone"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}
