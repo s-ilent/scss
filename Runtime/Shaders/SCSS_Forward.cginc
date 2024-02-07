@@ -102,22 +102,6 @@ inline SCSS_Input MaterialSetup(SCSS_TexCoords tc,
 		if (!facing) material.alpha = BackfaceAlpha(mainUVs);
 	#endif
 
-	// Todo: Refactor this 
-	{
-		float tintMask = ColorMask(mainUVs);
-
-		if (_ToggleHueControls)
-		{
-			material.albedo = applyMaskedHSVToAlbedo(material.albedo, tintMask, _ShiftHue, _ShiftSaturation, _ShiftValue);
-			material.tone[0].col = applyMaskedHSVToAlbedo(material.tone[0].col, tintMask, _ShiftHue, _ShiftSaturation, _ShiftValue);
-			material.tone[1].col = applyMaskedHSVToAlbedo(material.tone[1].col, tintMask, _ShiftHue, _ShiftSaturation, _ShiftValue);
-		}
-
-		material.albedo *= LerpWhiteTo_local(_Color.rgb, tintMask);
-		if (_CrosstoneToneSeparation) material.tone[0].col *= LerpWhiteTo_local(_Color.rgb, tintMask);
-		if (_Crosstone2ndSeparation) material.tone[1].col *= LerpWhiteTo_local(_Color.rgb, tintMask);
-	}
-
     material.normalTangent = NormalInTangentSpace(mainUVs);
 
     // Todo: Allow passing anisotropy direction
@@ -139,6 +123,24 @@ inline SCSS_Input MaterialSetup(SCSS_TexCoords tc,
 		material.occlusion = ShadingGradeMap(mainUVs);
 	#endif
 
+	applyVertexColour(i_color.rgb, material);
+
+	// Todo: Refactor this 
+	{
+		float tintMask = ColorMask(mainUVs);
+
+		if (_ToggleHueControls)
+		{
+			material.albedo = applyMaskedHSVToAlbedo(material.albedo, tintMask, _ShiftHue, _ShiftSaturation, _ShiftValue);
+			material.tone[0].col = applyMaskedHSVToAlbedo(material.tone[0].col, tintMask, _ShiftHue, _ShiftSaturation, _ShiftValue);
+			material.tone[1].col = applyMaskedHSVToAlbedo(material.tone[1].col, tintMask, _ShiftHue, _ShiftSaturation, _ShiftValue);
+		}
+
+		material.albedo *= LerpWhiteTo_local(_Color.rgb, tintMask);
+		if (_CrosstoneToneSeparation) material.tone[0].col *= LerpWhiteTo_local(_Color.rgb, tintMask);
+		if (_Crosstone2ndSeparation) material.tone[1].col *= LerpWhiteTo_local(_Color.rgb, tintMask);
+	}
+
 	#if defined(_DETAIL)
     {
         float4 _DetailMask_var = DetailMask(tc.uv[0]);
@@ -148,8 +150,6 @@ inline SCSS_Input MaterialSetup(SCSS_TexCoords tc,
         applyDetail(material, _DetailMap4, getDetailUVs(tc.uv[_DetailMap4UV], _DetailMap4_ST), _DetailMap4Type, _DetailMap4Blend, _DetailMap4Strength * _DetailMask_var[3]);
     }
 	#endif
-
-	applyVertexColour(i_color.rgb, material);
 
 	// Masks albedo out behind emission.
 	float emissionAlpha;
