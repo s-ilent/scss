@@ -5,7 +5,7 @@
 Shaders for Unity for cel shading, designed to take Unity's lighting into account while also presenting materials in the best possible way. Featuring lots of features with good performance!
 # [Want to know how to use this shader? Here's the manual!](https://gitlab.com/s-ilent/SCSS/wikis/Manual/Setting-Overview)
 # [Can't find the Download link? Click here!](https://gitlab.com/s-ilent/SCSS/-/archive/master/SCSS-master.zip)
-* After downloading, install the shader by moving the contents of the Assets folder into your project's Assets folder.
+* After downloading, install the shader by moving the contents of the folder into your project's Packages folder.
 
 <div style="width: 5em">
 ![Suitable for shade or shine!](https://cdn.discordapp.com/attachments/414634326995763201/758184322708275220/Crosstone_proto.jpg)
@@ -52,6 +52,6 @@ Shaders for Unity for cel shading, designed to take Unity's lighting into accoun
 
 # [For more details, please check the setting overview!](https://gitlab.com/s-ilent/SCSS/wikis/Manual/Setting-Overview)
 
-Tested with Unity 2019.4.31f1.
+Tested with Unity 2022.3.6f1.
 
 For support, contact me on Discord or Twitter.

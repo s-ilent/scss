@@ -146,6 +146,7 @@ namespace SilentCelShading.Unity
 				}	
 			}		
 		}
+		
         internal static bool ButtonWithDropdownList(GUIContent content, string[] buttonNames, GenericMenu.MenuFunction2 callback) {
             var style = new GUIStyle("DropDownButton");
             var rect = GUILayoutUtility.GetRect(content, style);
