@@ -1100,13 +1100,18 @@ namespace SilentCelShading.Unity
 			WithGroupHorizontal(() => {
 				TextureColorPropertyWithColorReset(texture, uvSec);
 				PropertyDropdownNoLabel(type, Enum.GetNames(typeof(DetailMapType)), editor);
+
+				// Disable the blend mode field when the type is Normal
+				EditorGUI.BeginDisabledGroup(Property(type).floatValue == (float)DetailMapType.Normal);
 				PropertyDropdownNoLabel(blend, Enum.GetNames(typeof(DetailBlendMode)), editor);
+				EditorGUI.EndDisabledGroup();
 			});
 			TextureScaleOffsetProperty(texture);
 			EditorGUI.indentLevel+=2;
 			ShaderProperty(strength);
 			EditorGUI.indentLevel-=2;
 		}
+
 
 		protected void DetailMapOptions()
 		{ 
@@ -1120,17 +1125,16 @@ namespace SilentCelShading.Unity
 			if (isEnabled && PropertyEnabled(detailProp))
 			{
 				target.EnableKeyword("_DETAIL_MULX2");
-				{
-					TexturePropertySingleLine("_DetailAlbedoMask");
-            		EditorGUILayout.Space();
-					DrawDetailField("_DetailMap1", "_DetailMap1UV", "_DetailMap1Blend", "_DetailMap1Type", "_DetailMap1Strength");
-            		EditorGUILayout.Space();
-					DrawDetailField("_DetailMap2", "_DetailMap1UV", "_DetailMap2Blend", "_DetailMap2Type", "_DetailMap2Strength");
-            		EditorGUILayout.Space();
-					DrawDetailField("_DetailMap3", "_DetailMap1UV", "_DetailMap3Blend", "_DetailMap3Type", "_DetailMap3Strength");
-            		EditorGUILayout.Space();
-					DrawDetailField("_DetailMap4", "_DetailMap1UV", "_DetailMap4Blend", "_DetailMap4Type", "_DetailMap4Strength");
-				}
+				
+				TexturePropertySingleLine("_DetailAlbedoMask");
+            	EditorGUILayout.Space();
+				DrawDetailField("_DetailMap1", "_DetailMap1UV", "_DetailMap1Blend", "_DetailMap1Type", "_DetailMap1Strength");
+            	EditorGUILayout.Space();
+				DrawDetailField("_DetailMap2", "_DetailMap1UV", "_DetailMap2Blend", "_DetailMap2Type", "_DetailMap2Strength");
+            	EditorGUILayout.Space();
+				DrawDetailField("_DetailMap3", "_DetailMap1UV", "_DetailMap3Blend", "_DetailMap3Type", "_DetailMap3Strength");
+            	EditorGUILayout.Space();
+				DrawDetailField("_DetailMap4", "_DetailMap1UV", "_DetailMap4Blend", "_DetailMap4Type", "_DetailMap4Strength");
 			}
 			else
 			{
