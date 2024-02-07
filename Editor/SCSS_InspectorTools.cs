@@ -127,13 +127,14 @@ namespace SilentCelShading.Unity
 			char[] fieldSep = new char[] {'\t'};
 			//if (styles.Count == 0)
 			{
-					string[] guids = AssetDatabase.FindAssets("t:TextAsset SCSS_InspectorData." + inspectorLanguage);
-					if (guids.Length == 0)
-					{
-						Debug.LogWarning("SCSS: Failed to load localisation file.");
-						guids = AssetDatabase.FindAssets("t:TextAsset SCSS_InspectorData.English");
-					}
-					inspectorData = (TextAsset)AssetDatabase.LoadAssetAtPath(AssetDatabase.GUIDToAssetPath(guids[0]), typeof(TextAsset));
+				string[] guids = AssetDatabase.FindAssets("t:TextAsset SCSS_InspectorData." + inspectorLanguage);
+				if (guids.Length == 0)
+				{
+					guids = AssetDatabase.FindAssets("t:TextAsset SCSS_InspectorData.English");
+				}
+    			string assetPath = guids.Length > 0 ? AssetDatabase.GUIDToAssetPath(guids[0]) : null;
+				inspectorData = assetPath != null ? (TextAsset)AssetDatabase.LoadAssetAtPath(assetPath, typeof(TextAsset)) : null;
+				if (inspectorData == null) return;
 
 				string[] records = inspectorData.text.Split(recordSep, System.StringSplitOptions.RemoveEmptyEntries);
 				foreach (string record in records)
