@@ -118,7 +118,8 @@ half4 fragShadowCaster (
     #endif
     SCSS_TexCoords tc = initialiseTexCoords(uvPack0, uvPack1);
     SCSS_Input material = 
-    MaterialSetup(tc, /* color */ 1.0, /* extraData */ 1.0, /* isOutline */ 0.0, /* facing */ true);
+    MaterialSetup(tc, /* color */ 1.0, /* extraData */ 1.0, /* isOutline */ 0.0, /* furDensity */ 0.0,
+        /* facing */ true);
 
     #if defined(ALPHAFUNCTION)
     alphaFunction(material.alpha);

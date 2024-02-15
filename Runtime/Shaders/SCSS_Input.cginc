@@ -92,6 +92,9 @@ uniform float _UseEnergyConservation;
 uniform float _Anisotropy;
 uniform float _CelSpecularSoftness;
 uniform float _CelSpecularSteps;
+uniform float _UseIridescenceRamp;
+UNITY_DECLARE_TEX2D_NOSAMPLER(_SpecIridescenceRamp);
+uniform float4 _SpecIridescenceRamp_TexelSize;
 #else
 // Default to zero
 uniform float _SpecularType;
@@ -278,14 +281,27 @@ uniform float _ContactShadowDistance;
 // Detail masks
 UNITY_DECLARE_TEX2D_NOSAMPLER(_DetailAlbedoMask);
 #if defined(_DETAIL)
-uniform sampler2D _DetailMap1; uniform half4 _DetailMap1_ST; 
-uniform sampler2D _DetailMap2; uniform half4 _DetailMap2_ST; 
-uniform sampler2D _DetailMap3; uniform half4 _DetailMap3_ST; 
-uniform sampler2D _DetailMap4; uniform half4 _DetailMap4_ST; 
+uniform sampler2D _DetailMap1; uniform half4 _DetailMap1_ST; uniform half4 _DetailMap1_TexelSize; 
+uniform sampler2D _DetailMap2; uniform half4 _DetailMap2_ST; uniform half4 _DetailMap2_TexelSize; 
+uniform sampler2D _DetailMap3; uniform half4 _DetailMap3_ST; uniform half4 _DetailMap3_TexelSize; 
+uniform sampler2D _DetailMap4; uniform half4 _DetailMap4_ST; uniform half4 _DetailMap4_TexelSize; 
 uniform float _DetailMap1UV; uniform float _DetailMap1Type; uniform float _DetailMap1Blend; uniform float _DetailMap1Strength; 
 uniform float _DetailMap2UV; uniform float _DetailMap2Type; uniform float _DetailMap2Blend; uniform float _DetailMap2Strength; 
 uniform float _DetailMap3UV; uniform float _DetailMap3Type; uniform float _DetailMap3Blend; uniform float _DetailMap3Strength; 
 uniform float _DetailMap4UV; uniform float _DetailMap4Type; uniform float _DetailMap4Blend; uniform float _DetailMap4Strength; 
+#endif
+
+// Fur options
+#if defined(SCSS_FUR)
+uniform sampler2D _FurMask;
+UNITY_DECLARE_TEX2D_NOSAMPLER(_FurNoise); float4 _FurNoise_ST;
+UNITY_DECLARE_TEX2D_NOSAMPLER(_FurNormal);
+uniform float _FurLength;
+uniform float _FurMode;
+uniform float _FurLayerCount;
+uniform float _FurRandomization;
+uniform float _FurThickness;
+uniform float _FurGravity;
 #endif
 
 //-------------------------------------------------------------------------------------
@@ -303,14 +319,15 @@ struct SCSS_ShadingParam
 
     float2 normalizedViewportCoord;
 	#if (defined(LIGHTMAP_ON) || defined(DYNAMICLIGHTMAP_ON))
-    float2 lightmapUV;
+    	float2 lightmapUV;
     #endif
     float attenuation;
     float isOutline;
+	float furDepth;
     float3 ambient;
 
 	#if defined(VERTEXLIGHT_ON)
-	half4 vertexLight;  
+		half4 vertexLight;  
 	#endif
 };
 
@@ -550,8 +567,22 @@ float4 EmissiveAudioLinkTexCoords(SCSS_TexCoords tc)
 
 half OutlineMask(float2 uv)
 {
-	// Needs LOD, sampled in vertex function
-    return tex2Dlod(_OutlineMask, float4(uv, 0, 0)).r;
+	#if defined(SCSS_OUTLINE)
+		// Needs LOD, sampled in vertex function
+		return tex2Dlod(_OutlineMask, float4(uv, 0, 0)).r;
+	#else
+		return 0;
+	#endif
+}
+
+half FurMask(float2 uv)
+{
+	#if defined(SCSS_FUR)
+		// Needs LOD, sampled in vertex function
+    	return tex2Dlod(_FurMask, float4(uv, 0, 0)).r;
+	#else
+		return 0;
+	#endif
 }
 
 half ColorMask(float2 uv)
@@ -647,6 +678,18 @@ half Alpha(float2 uv, float2 uv0)
 	return alpha;
 }
 
+half4 Iridescence(float NoV, float rampID)
+{
+#if defined(_SPECULAR)
+	float rampIDUV = (1.0 - (floor(rampID * _SpecIridescenceRamp_TexelSize.w) + 0.5) * _SpecIridescenceRamp_TexelSize.y);
+	float2 rampUV = float2(NoV, rampIDUV);
+	// Colour multiplies specular colour, alpha attenuates albedo.
+	return UNITY_SAMPLE_TEX2D_SAMPLER(_SpecIridescenceRamp, _MainTex, rampUV);
+#else
+	return 1.0;
+#endif
+}
+
 void applyVanishing (inout float alpha) {
     const fixed3 baseWorldPos = unity_ObjectToWorld._m03_m13_m23;
     float closeDist = distance(_WorldSpaceCameraPos, baseWorldPos);
@@ -721,7 +764,7 @@ float3 applyMaskedHSVToAlbedo(float3 albedo, float mask, float shiftHue, float s
 {
 	// HSV tinting, masked by tint mask
 	float3 warpedAlbedo = TransformHSV(albedo, shiftHue, shiftSat, shiftVal);
-	return lerp(albedo, warpedAlbedo, mask);
+	return lerp(albedo, saturate(warpedAlbedo), mask);
 }
 
 half4 SpecularGloss(float2 uv)
@@ -1162,7 +1205,7 @@ void applyDetail(inout SCSS_Input c, sampler2D src, half2 detailUV, const int de
     }
 }
 
-float2 getDetailUVs(float2 uv, float4 scaleOffset)
+float2 applyScaleOffset(float2 uv, float4 scaleOffset)
 {
 	// Potential future expansion? Right now, just makes code cleaner.
 	return uv * scaleOffset.xy + scaleOffset.zw;

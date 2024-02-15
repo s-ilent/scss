@@ -1,4 +1,4 @@
-Shader "Silent's Cel Shading/Crosstone"
+Shader "Silent's Cel Shading/Crosstone (Fur)"
 {
 	Properties
 	{
@@ -21,8 +21,8 @@ Shader "Silent's Cel Shading/Crosstone"
 		//[Space]
 		[Enum(TintApplyMode)]_ToggleHueControls("Show HSV Controls", Float) = 0.0
 		_ShiftHue ("Hue Shift", Range(-180, 180)) = 0.0
-		_ShiftSaturation ("Saturation Shift", Range(0, 2)) = 1.0
-		_ShiftValue ("Value Shift", Range(0, 2)) = 1.0
+		_ShiftSaturation ("Saturation Shift", Range(0, 6)) = 1.0
+		_ShiftValue ("Value Shift", Range(0, 6)) = 1.0
 		//[Space]
 		_EmissionMap("Emission Map", 2D) = "white" {}
         [Enum(UV0, 0, UV1, 1, UV2, 2, UV3, 3)]_EmissionUVSec("Emission UV Source", Float) = 0
@@ -48,10 +48,11 @@ Shader "Silent's Cel Shading/Crosstone"
 		//[Space]
 		[Enum(OutlineMode)] _OutlineMode("Outline Mode", Float) = 0.0
 		_OutlineMask("Outline Map", 2D) = "white" {}
+		_OutlineZPush("Outline Z Push", Float) = 0.0
 		_outline_width("Outline Width", Float) = 0.1
 		_outline_color("Outline Colour", Color) = (0.5,0.5,0.5,1)
 		//[Space]
-        _FurMode("Fur Mode", Float) = 0.0
+        _FurMode("Fur Mode", Float) = 1.0
         [IntRange]_FurLayerCount("Layer Count", Range(1, 32)) = 8
         _FurMask("Fur Mask", 2D) = "white" {}
 		_FurNoise("Fur Shape Texture", 2D) = "white" {}
@@ -63,7 +64,7 @@ Shader "Silent's Cel Shading/Crosstone"
 		[Enum(AmbientFresnelType)]_UseFresnel ("Use Rim Light", Float) = 0.0
 		[HDR]_FresnelTint("Rim Light Tint", Color) = (1,1,1,1)
 		_FresnelWidth ("Rim Light Strength", Range(0, 20)) = .5
-		_FresnelStrength ("Rim LightSoftness", Range(0.01, 0.9999)) = 0.5
+		_FresnelStrength ("Rim Light Softness", Range(0.01, 0.9999)) = 0.5
 		[ToggleUI]_UseFresnelLightMask("Mask Rim Light by Light Direction", Float) = 0.0
 		_FresnelLightMask("Light Direction Mask Power", Range(1, 10)) = 1.0
 		[HDR]_FresnelTintInv("Inverse Rim Light Tint", Color) = (1,1,1,1)
@@ -105,8 +106,15 @@ Shader "Silent's Cel Shading/Crosstone"
 		[Enum(MatcapBlendModes)]_Matcap4Blend("Matcap 4 Blend Mode", Float) = 0.0
 		_Matcap4Tint("Matcap 4 Tint", Color) = (1, 1, 1, 1)
 		//[Space]
+		[Toggle(_EMISSION)]_UseAdvancedEmission("Enable Advanced Emission", Float ) = 0.0
+        [Enum(UV0, 0, UV1, 1, UV2, 2, UV3, 3)]_DetailEmissionUVSec("Detail Emission UV Source", Float) = 0
+		[Enum(DetailEmissionMode)]_EmissionDetailType("Emission Detail Type", Float) = 0
+		_DetailEmissionMap("Detail Emission Map", 2D) = "white" {}
+		[HDR]_EmissionDetailParams("Emission Detail Params", Vector) = (0,0,0,0)
+		//[Space]
 		[Toggle(_DETAIL_MULX2)]_UseDetailMaps("Enable Detail Maps", Float) = 0.0
 		_DetailAlbedoMask ("Detail Mask", 2D) = "white" {}
+
         _DetailMap1 ("Detail Map 1", 2D) = "grey" {}
         [Enum(UV0, 0, UV1, 1, UV2, 2, UV3, 3)]
         _DetailMap1UV ("Detail Map 1 UV", Float) = 0.0
@@ -115,6 +123,7 @@ Shader "Silent's Cel Shading/Crosstone"
 		[Enum(DetailBlendMode)]
         _DetailMap1Blend ("Detail Map 1 Blend Mode", Float) = 0.0
         _DetailMap1Strength ("Detail Map 1 Power", Range(0, 1)) = 1.0
+
         _DetailMap2 ("Detail Map 2", 2D) = "grey" {}
         [Enum(UV0, 0, UV1, 1, UV2, 2, UV3, 3)]
         _DetailMap2UV ("Detail Map 2 UV", Float) = 0.0
@@ -123,6 +132,7 @@ Shader "Silent's Cel Shading/Crosstone"
 		[Enum(DetailBlendMode)]
         _DetailMap2Blend ("Detail Map 2 Blend Mode", Float) = 0.0
         _DetailMap2Strength ("Detail Map 2 Power", Range(0, 1)) = 1.0
+
         _DetailMap3 ("Detail Map 3", 2D) = "grey" {}
         [Enum(UV0, 0, UV1, 1, UV2, 2, UV3, 3)]
         _DetailMap3UV ("Detail Map 3 UV", Float) = 0.0
@@ -131,6 +141,7 @@ Shader "Silent's Cel Shading/Crosstone"
 		[Enum(DetailBlendMode)]
         _DetailMap3Blend ("Detail Map 3 Blend Mode", Float) = 0.0
         _DetailMap3Strength ("Detail Map 3 Power", Range(0, 1)) = 1.0
+
         _DetailMap4 ("Detail Map 4", 2D) = "grey" {}
         [Enum(UV0, 0, UV1, 1, UV2, 2, UV3, 3)]
         _DetailMap4UV ("Detail Map 4 UV", Float) = 0.0
@@ -139,12 +150,7 @@ Shader "Silent's Cel Shading/Crosstone"
 		[Enum(DetailBlendMode)]
         _DetailMap4Blend ("Detail Map 4 Blend Mode", Float) = 0.0 
         _DetailMap4Strength ("Detail Map 4 Power", Range(0, 1)) = 1.0 
-		[Toggle(_EMISSION)]_UseAdvancedEmission("Enable Advanced Emission", Float ) = 0.0
-        [Enum(UV0, 0, UV1, 1, UV2, 2, UV3, 3)]_DetailEmissionUVSec("Detail Emission UV Source", Float) = 0
-		[Enum(DetailEmissionMode)]_EmissionDetailType("Emission Detail Type", Float) = 0
-		_DetailEmissionMap("Detail Emission Map", 2D) = "white" {}
-		[HDR]_EmissionDetailParams("Emission Detail Params", Vector) = (0,0,0,0)
-		//[Space]
+
 		[Toggle(_AUDIOLINK)]_UseEmissiveAudiolink("Enable Audiolink Emission", Float ) = 0.0
 		_AudiolinkIntensity("Audiolink Emission Intensity", Float) = 1.0
 		_AudiolinkMaskMap ("Audiolink Mask Map", 2D) = "white" {}
@@ -305,6 +311,7 @@ Shader "Silent's Cel Shading/Crosstone"
         #pragma skip_variants DYNAMICLIGHTMAP_ON LIGHTMAP_ON LIGHTMAP_SHADOW_MIXING DIRLIGHTMAP_COMBINED SHADOWS_SHADOWMASK
 
 		#define SCSS_CROSSTONE
+		#define SCSS_FUR
 		#define SCSS_COVERAGE_OUTPUT
         ENDCG
 
@@ -326,7 +333,7 @@ Shader "Silent's Cel Shading/Crosstone"
 			#pragma multi_compile_fog
 			#pragma multi_compile _ UNITY_HDR_ON
 			#pragma multi_compile _ VERTEXLIGHT_ON
-
+			
 			// Needs to be global for Unity reasons
 			#pragma shader_feature _ _EMISSION
 
@@ -335,14 +342,15 @@ Shader "Silent's Cel Shading/Crosstone"
 			#pragma shader_feature_local _ _SMOOTHNESS_TEXTURE_ALBEDO_CHANNEL_A
 			#pragma shader_feature_local _ _SPECULARHIGHLIGHTS_OFF
 			#pragma shader_feature_local _ _GLOSSYREFLECTIONS_OFF		
-			#pragma shader_feature_local _ _SUNDISK_NONE				
+			#pragma shader_feature_local _ _SUNDISK_NONE					
 			#pragma shader_feature_local _ _BACKFACE
 			#pragma shader_feature_local _ _AUDIOLINK
 			#pragma shader_feature_local _ _CONTACTSHADOWS
 			
 			#include "SCSS_Core.cginc"
 
-			#pragma vertex vert_nogeom
+			#pragma vertex vert
+			#pragma geometry geom_fur
 			#pragma fragment frag
 
 			#include "SCSS_Forward.cginc"
@@ -361,7 +369,7 @@ Shader "Silent's Cel Shading/Crosstone"
 
 			#ifndef UNITY_PASS_FORWARDADD
 			#define UNITY_PASS_FORWARDADD
-			#endif 
+			#endif
 
 			#pragma require geometry
 
@@ -374,13 +382,14 @@ Shader "Silent's Cel Shading/Crosstone"
 			#pragma shader_feature_local _ _SMOOTHNESS_TEXTURE_ALBEDO_CHANNEL_A
 			#pragma shader_feature_local _ _SPECULARHIGHLIGHTS_OFF
 			#pragma shader_feature_local _ _GLOSSYREFLECTIONS_OFF
-			#pragma shader_feature_local _ _SUNDISK_NONE			
+			#pragma shader_feature_local _ _SUNDISK_NONE						
 			#pragma shader_feature_local _ _BACKFACE
 			#pragma shader_feature_local _ _CONTACTSHADOWS
 
 			#include "SCSS_Core.cginc"
 
-			#pragma vertex vert_nogeom
+			#pragma vertex vert
+			#pragma geometry geom_fur
 			#pragma fragment frag
 
 			#include "SCSS_Forward.cginc"
@@ -395,14 +404,14 @@ Shader "Silent's Cel Shading/Crosstone"
 
             ZWrite On ZTest LEqual
             Cull[_CullMode]
-
+		
 			AlphaToMask Off
 
 			CGPROGRAM
 
 			#ifndef UNITY_PASS_SHADOWCASTER
 			#define UNITY_PASS_SHADOWCASTER
-			#endif 
+			#endif
 			
 			#pragma multi_compile_shadowcaster
 			
@@ -415,6 +424,6 @@ Shader "Silent's Cel Shading/Crosstone"
 			ENDCG
 		}
 	}
-	FallBack "Diffuse"
+	FallBack "Silent's Cel Shading/Crosstone"
 	CustomEditor "SilentCelShading.Unity.Inspector"
 }

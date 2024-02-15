@@ -19,8 +19,20 @@ void computeShadingParams (inout SCSS_ShadingParam shading, VertexOutput i, bool
     shading.normalizedViewportCoord = i.pos.xy * (0.5 / i.pos.w) + 0.5;
 
     shading.normal = (shading.geometricNormal);
-    shading.position = i.posWorld;
-    shading.view = normalize(_WorldSpaceCameraPos.xyz - i.posWorld.xyz);
+    shading.position = i.worldPos;
+    shading.view = normalize(_WorldSpaceCameraPos.xyz - i.worldPos.xyz);
+	
+	#if defined(SCSS_OUTLINE)
+    	shading.isOutline = i.extraData.x;
+	#else
+		shading.isOutline = false;
+	#endif
+
+	#if defined(SCSS_FUR)
+		shading.furDepth = i.extraData.x;
+	#else
+		shading.furDepth = false;
+	#endif
 
     #if (defined(LIGHTMAP_ON) || defined(DYNAMICLIGHTMAP_ON))
     	float2 lightmapUV = i.uvPack0.zw * unity_LightmapST.xy + unity_LightmapST.zw;
@@ -28,31 +40,37 @@ void computeShadingParams (inout SCSS_ShadingParam shading, VertexOutput i, bool
 
     UNITY_LIGHT_ATTENUATION(atten, i, shading.position)
 
+	#if defined(SCSS_FUR)
+		// Fur probably shouldn't have main light shadows when it doesn't write to the shadowcaster.
+		// But the visual artifacts are small, and outlines have the same artifacts.
+		// Maybe it should be user-controllable instead. 
+		// atten = 1.0f;
+    #endif
+
 	#if defined(SCSS_SCREEN_SHADOW_FILTER) && defined(USING_SHADOWS_UNITY) && !defined(UNITY_PASS_SHADOWCASTER)
-	correctedScreenShadowsForMSAA(i._ShadowCoord, atten);
+		correctedScreenShadowsForMSAA(i._ShadowCoord, atten);
 	#endif
 
 	#if defined(USING_SHADOWS_UNITY) && !defined(UNITY_PASS_SHADOWCASTER)
-	float3 lightPos = UnityWorldSpaceLightDir(i.posWorld.xyz);
+	float3 lightPos = UnityWorldSpaceLightDir(i.worldPos.xyz);
 		#if defined(_CONTACTSHADOWS)
 		// Only calculate contact shadows if we're not in shadow. 
 		if (atten > 0)
 		{
-			atten *= 1.0 - screenSpaceContactShadow(lightPos, i.posWorld.xyz, i.pos.xy, _ContactShadowDistance);
+			atten *= 1.0 - screenSpaceContactShadow(lightPos, i.worldPos.xyz, i.pos.xy, _ContactShadowDistance);
 		}
 		#endif
 	#endif
 
     #if (defined(LIGHTMAP_ON) || defined(DYNAMICLIGHTMAP_ON))
-    GetBakedAttenuation(atten, lightmapUV, shading.position);
+    	GetBakedAttenuation(atten, lightmapUV, shading.position);
     #endif
 
 	#if defined(VERTEXLIGHT_ON)
-	shading.vertexLight = i.vertexLight;
+		shading.vertexLight = i.vertexLight;
 	#endif
 
     shading.attenuation = atten;
-    shading.isOutline = i.extraData.x;
 
     #if (defined(LIGHTMAP_ON) || defined(DYNAMICLIGHTMAP_ON))
         shading.lightmapUV = lightmapUV;
@@ -81,15 +99,57 @@ float3 addEmissiveAudiolink(float3 emission, float4 audiolinkUV, inout float alp
 	return emission;
 }
 
+float3 gtaoMultiBounce(float visibility, const float3 albedo) {
+    // Jimenez et al. 2016, "Practical Realtime Strategies for Accurate Indirect Occlusion"
+    float3 a =  2.0404 * albedo - 0.3324;
+    float3 b = -4.7951 * albedo + 0.6417;
+    float3 c =  2.7552 * albedo + 0.6903;
+
+    return max((visibility), ((visibility * a + b) * visibility + c) * visibility);
+}
+
+float FurNoise(float2 uv)
+{
+	#if defined(SCSS_FUR)
+	return UNITY_SAMPLE_TEX2D_SAMPLER(_FurNoise, _MainTex, applyScaleOffset(uv.xy, _FurNoise_ST));
+	#else
+	return 0;
+	#endif
+}
+
+float furModulate(float x, float y)
+{
+	return (x+y) - (x*y);
+}
+
+void applyFur(inout SCSS_Input material, SCSS_TexCoords tc, float furDepth)
+{
+	#if defined(SCSS_FUR)
+	float furNoise = FurNoise(tc.uv[0]);
+	if (furDepth > 0)
+	{
+		float furFalloff = pow((1.0 - furDepth), abs(_FurThickness));
+		material.alpha = material.alpha * furNoise;
+		// Alpha sharpen is used for the cutoff, but we can use it here too.
+		applyAlphaSharpen(material.alpha, 1.0 - furFalloff);
+	}
+
+	float furAO = furModulate(furDepth, furNoise);
+	material.albedo *= gtaoMultiBounce(furAO, material.albedo);
+	if (_CrosstoneToneSeparation) material.tone[0].col *= gtaoMultiBounce(furAO, material.tone[0].col);
+	if (_Crosstone2ndSeparation) material.tone[1].col *= gtaoMultiBounce(furAO, material.tone[1].col);
+
+	#endif
+}
+
 inline SCSS_Input MaterialSetup(SCSS_TexCoords tc,
-	float4 i_color, float4 i_extraData, float p_isOutline, uint facing)
+	float4 i_color, float4 i_extraData, float p_isOutline, float p_furDepth, uint facing)
 {
 	SCSS_Input material = (SCSS_Input)0;
 	initMaterial(material);
 
 	// Note: Outline colour is part of the material data, but is set by applyVertexColour. 
 	
-	// Todo: Revamp
 	float2 mainUVs = TexCoords(tc);
 
 	// Darken some effects on outlines. 
@@ -144,10 +204,14 @@ inline SCSS_Input MaterialSetup(SCSS_TexCoords tc,
 	#if defined(_DETAIL)
     {
         float4 _DetailMask_var = DetailMask(tc.uv[0]);
-        applyDetail(material, _DetailMap1, getDetailUVs(tc.uv[_DetailMap1UV], _DetailMap1_ST), _DetailMap1Type, _DetailMap1Blend, _DetailMap1Strength * _DetailMask_var[0]);
-        applyDetail(material, _DetailMap2, getDetailUVs(tc.uv[_DetailMap2UV], _DetailMap2_ST), _DetailMap2Type, _DetailMap2Blend, _DetailMap2Strength * _DetailMask_var[1]);
-        applyDetail(material, _DetailMap3, getDetailUVs(tc.uv[_DetailMap3UV], _DetailMap3_ST), _DetailMap3Type, _DetailMap3Blend, _DetailMap3Strength * _DetailMask_var[2]);
-        applyDetail(material, _DetailMap4, getDetailUVs(tc.uv[_DetailMap4UV], _DetailMap4_ST), _DetailMap4Type, _DetailMap4Blend, _DetailMap4Strength * _DetailMask_var[3]);
+        if (any(_DetailMap1_TexelSize > 16.0)) applyDetail(material, _DetailMap1, applyScaleOffset(tc.uv[_DetailMap1UV], _DetailMap1_ST), 
+			_DetailMap1Type, _DetailMap1Blend, _DetailMap1Strength * _DetailMask_var[0]);
+        if (any(_DetailMap2_TexelSize > 16.0)) applyDetail(material, _DetailMap2, applyScaleOffset(tc.uv[_DetailMap2UV], _DetailMap2_ST), 
+			_DetailMap2Type, _DetailMap2Blend, _DetailMap2Strength * _DetailMask_var[1]);
+        if (any(_DetailMap3_TexelSize > 16.0)) applyDetail(material, _DetailMap3, applyScaleOffset(tc.uv[_DetailMap3UV], _DetailMap3_ST), 
+			_DetailMap3Type, _DetailMap3Blend, _DetailMap3Strength * _DetailMask_var[2]);
+        if (any(_DetailMap4_TexelSize > 16.0)) applyDetail(material, _DetailMap4, applyScaleOffset(tc.uv[_DetailMap4UV], _DetailMap4_ST), 
+			_DetailMap4Type, _DetailMap4Blend, _DetailMap4Strength * _DetailMask_var[3]);
     }
 	#endif
 
@@ -171,6 +235,8 @@ inline SCSS_Input MaterialSetup(SCSS_TexCoords tc,
 	material.softness = i_extraData.g;
 
 	applyOutline(p_isOutline, material);
+
+	applyFur(material, tc, p_furDepth);
 
     // Rim lighting parameters. 
 	material.rim = initialiseRimParam();
@@ -229,7 +295,7 @@ inline SCSS_Input MaterialSetup(SCSS_TexCoords tc,
 			if (_Crosstone2ndSeparation)  material.tone[1].col = material.tone[1].col * (material.oneMinusReflectivity); 
 		}
 	}
-	#endif
+	#endif // _SPECULAR
 
 	return material;
 }
@@ -248,6 +314,17 @@ inline void MaterialSetupPostParams(inout SCSS_Input material, SCSS_ShadingParam
 	// Todo
 	float3 bitangentDir = p.tangentToWorld[1].xyz;
 	float rlPow4 = Pow4(1 - p.NoV);
+
+	#if defined(_SPECULAR)
+	if (_UseIridescenceRamp)
+	{
+		float4 specIrid = Iridescence(p.NoV, 0);
+		material.specColor *= specIrid;
+		// This looks ugly 
+		material.albedo *= lerp(specIrid.a, 1.0, material.oneMinusReflectivity);
+		material.oneMinusReflectivity = OneMinusReflectivityFromMetallic_local(material.specColor);
+	};
+	#endif // _SPECULAR
 
 	// This is changed from how it works normally. This should be reevaluated based on user feedback. 
 	if (_UseFresnel)
@@ -328,7 +405,7 @@ float4 frag(VertexOutput i, uint facing : SV_IsFrontFace
 	SCSS_TexCoords mainUVs = initialiseTexCoords(i.uvPack0, i.uvPack1);
 
 	SCSS_Input material = 
-	MaterialSetup(mainUVs, i.color, i.extraData, p.isOutline, facing);
+	MaterialSetup(mainUVs, i.color, i.extraData, p.isOutline, p.furDepth, facing);
 
 	#if !defined(USING_TRANSPARENCY)
 		material.alpha = 1.0;
@@ -358,13 +435,7 @@ float4 frag(VertexOutput i, uint facing : SV_IsFrontFace
 	// Workaround a compiler issue when albedo is not needed but its sampler is.
 	finalColor += material.albedo * 0.00001;
 
-	finalColor = applyNearShading(finalColor, i.posWorld.xyz, facing);
-
-	#if 0 // TESTING
-		float3 lightPos = UnityWorldSpaceLightDir(i.posWorld.xyz);
-		finalColor = lerp(finalColor, inferno_quintic(screenSpaceContactShadow(lightPos, i.posWorld.xyz, i.pos.xy)), 0.999);
-		// finalColor = lerp(float4(1, 0, 0, 1), finalColor, p.attenuation>0);
-	#endif
+	finalColor = applyNearShading(finalColor, i.worldPos.xyz, facing);
 
     #if defined(USING_COVERAGE_OUTPUT)
 		cov = 1.0;
@@ -382,7 +453,7 @@ float4 frag(VertexOutput i, uint facing : SV_IsFrontFace
 	#endif
 
 	fixed4 finalRGBA = fixed4(finalColor, outputAlpha);
-	UNITY_APPLY_FOG(i.fogCoord, finalRGBA);
+	UNITY_APPLY_FOG(i.worldPos.w, finalRGBA);
 	return finalRGBA;
 }
 

@@ -5,11 +5,20 @@
 #include "UnityCG.cginc"
 #include "AutoLight.cginc"
 
+// Testing using a lower precision format for the vertex data. 
+// This could increase performance in situations where there is a lot of GPU load,
+// at the cost of some GPU load.
+
 #if 1
-#define v_half min16float
+#define v_half  min16float
 #define v_half2 min16float2
 #define v_half3 min16float3
 #define v_half4 min16float4
+#else
+#define v_half  half 
+#define v_half2 half2
+#define v_half3 half3
+#define v_half4 half4
 #endif
 
 struct appdata_full_local{
@@ -33,10 +42,8 @@ struct VertexOutput
 	v_half4 color : COLOR0_centroid;
 	v_half4 uvPack0 : TEXCOORD0;
 	v_half4 uvPack1 : TEXCOORD1;
-	float4 posWorld : TEXCOORD2;
+	float4 worldPos : TEXCOORD2;
     v_half4 tangentToWorldAndPackedData[3] : TEXCOORD3;    // [3x3:tangentToWorld | 1x3: outlineDir]
-
-	v_half4 vertex : VERTEX; // UnityCG macro specified name. Technically "positionOS"
 
 	#if defined(VERTEXLIGHT_ON)
 	v_half4 vertexLight : TEXCOORD6;
@@ -48,11 +55,6 @@ struct VertexOutput
 	// Note the workaround for UNITY_SHADOW_COORDS issue. 
 	#if defined(USING_SHADOWS_UNITY) && defined(UNITY_SHADOW_COORDS)
 	UNITY_SHADOW_COORDS(8)
-	#endif
-
-	// Pass-through the fog coordinates if this pass has fog.
-	#if defined(FOG_LINEAR) || defined(FOG_EXP) || defined(FOG_EXP2)
-	UNITY_FOG_COORDS(9)
 	#endif
 };
 

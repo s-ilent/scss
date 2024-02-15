@@ -96,6 +96,11 @@ namespace SilentCelShading.Unity
 			UV2 = 2,
 			UV3 = 3
 		}
+		public enum FurMode
+		{
+			None,
+			On
+		}
 
 		protected Material target;
 		protected MaterialEditor editor;
@@ -490,6 +495,7 @@ namespace SilentCelShading.Unity
 					ShadingOptions();
 					RenderingOptions();
 					OutlineOptions();
+					FurOptions();
 					EmissionOptions();
             		}
 					RuntimeLightOptions();
@@ -509,6 +515,7 @@ namespace SilentCelShading.Unity
 					ShadingOptions();
 					RenderingOptions();
 					OutlineOptions();
+					FurOptions();
 					DetailOptions();
 					EmissionOptions();
 					MiscOptions();
@@ -987,6 +994,8 @@ namespace SilentCelShading.Unity
 						default:
 						break;
 					}	
+					ShaderProperty("_UseIridescenceRamp");
+					TexturePropertySingleLine("_SpecIridescenceRamp");
 				}
 			}
 		}
@@ -1202,6 +1211,37 @@ namespace SilentCelShading.Unity
 					ShaderProperty("_OutlineZPush");
 					break;
 					case OutlineMode.None:
+					default:
+					break;
+				}	  
+			}
+		}
+		
+		protected void FurOptions()
+		{ 
+			EditorGUILayout.Space();
+			
+			MaterialProperty furProp;
+			if (props.TryGetValue("_FurMode", out furProp))
+			{
+				foreach (Material mat in PropertyDropdown("_FurMode", Enum.GetNames(typeof(FurMode)), editor))
+				{
+					SetupMaterialWithFurMode(mat, (FurMode)furProp.floatValue);
+				}
+				TogglePropertyHeader("_FurMode", false);
+
+				switch ((FurMode)furProp.floatValue)
+				{
+					case FurMode.On:
+					TexturePropertySingleLine("_FurMask");
+					ShaderProperty("_FurNoise");
+					ShaderProperty("_FurLength");
+					ShaderProperty("_FurRandomization");
+					ShaderProperty("_FurThickness");
+					ShaderProperty("_FurGravity");
+					ShaderProperty("_FurLayerCount");
+					break;
+					case FurMode.None:
 					default:
 					break;
 				}	  
@@ -1467,6 +1507,16 @@ protected Vector4? GetSerializedMaterialVector4(Material material, string propNa
 
 		protected void UpgradeDetailMaps(Material material)
 		{
+			// Only transfer details if the new details don't exist. 
+			bool newDetails = 
+			(material.GetTexture("_DetailAlbedoMask") != null) ||
+			(material.GetTexture("_DetailMap1") != null) ||
+			(material.GetTexture("_DetailMap2") != null) ||
+			(material.GetTexture("_DetailMap3") != null) ||
+			(material.GetTexture("_DetailMap4") != null);
+
+			if (newDetails) return;
+
 			bool oldDetails = 
 			(material.GetFloat("_UseDetailMaps") == 1.0) &&
 			(material.GetTexture("_DetailAlbedoMap") != null) &&
@@ -1900,6 +1950,40 @@ protected Vector4? GetSerializedMaterialVector4(Material material, string propNa
             	break;
             }
         }
+
+		protected static void SetupMaterialWithFurMode(Material material, FurMode furMode)
+		{
+			string[] oldShaderName = material.shader.name.Split('/');
+			const string furName = " (Fur)";
+			var currentlyFur = oldShaderName[oldShaderName.Length - 1].Contains(furName);
+			switch ((FurMode)furMode)
+			{
+				case FurMode.None:
+				if (currentlyFur) {
+					string[] newShaderName = oldShaderName;
+					string newSubShader = oldShaderName[oldShaderName.Length - 1].Replace(furName, "");
+					newShaderName[oldShaderName.Length - 1] = newSubShader;
+					Shader finalShader = Shader.Find(String.Join("/", newShaderName));
+					// If we can't find it, pass.
+					if (finalShader != null) {
+						material.shader = finalShader;
+					}
+				}
+				break;
+				case FurMode.On:
+				if (!currentlyFur) {
+					string[] newShaderName = oldShaderName;
+					string newSubShader = oldShaderName[oldShaderName.Length - 1] + furName;
+					newShaderName[oldShaderName.Length - 1] = newSubShader;
+					Shader finalShader = Shader.Find(String.Join("/", newShaderName));
+					// If we can't find it, pass.
+					if (finalShader != null) {
+						material.shader = finalShader;
+					}
+				}
+				break;
+			}
+		}
 
         protected static void SetupMaterialWithSpecularType(Material material, SpecularType specularType)
         {

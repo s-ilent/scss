@@ -1,4 +1,4 @@
-Shader "Silent's Cel Shading/Crosstone"
+Shader "Silent's Cel Shading/Lightramp (Fur)"
 {
 	Properties
 	{
@@ -28,26 +28,19 @@ Shader "Silent's Cel Shading/Crosstone"
         [Enum(UV0, 0, UV1, 1, UV2, 2, UV3, 3)]_EmissionUVSec("Emission UV Source", Float) = 0
 		[HDR]_EmissionColor("Emission Color", Color) = (0,0,0,1)
 		//[Space]
-        _1st_ShadeMap ("1st_ShadeMap", 2D) = "white" {}
-        _1st_ShadeColor ("1st_ShadeColor", Color) = (0,0,0,1)
-        _2nd_ShadeMap ("2nd_ShadeMap", 2D) = "white" {}
-        _2nd_ShadeColor ("2nd_ShadeColor", Color) = (0,0,0,1)
-        _ShadingGradeMap ("ShadingGradeMap", 2D) = "white" {}
-        _Tweak_ShadingGradeMapLevel ("ShadingGradeMap Adjustment", Range(-0.5, 0.5)) = 0
+		[Enum(LightRampType)]_LightRampType ("Light Ramp Type", Float) = 0.0
+		_Ramp ("Lighting Ramp", 2D) = "white" {}
 		//[Space]
-        _1st_ShadeColor_Step ("1st_ShadeColor_Step", Range(0, 1)) = 0.5
-        _1st_ShadeColor_Feather ("1st_ShadeColor_Feather", Range(0.001, 1)) = 0.01
-        _2nd_ShadeColor_Step ("2nd_ShadeColor_Step", Range(0, 1)) = 0
-        _2nd_ShadeColor_Feather ("2nd_ShadeColor_Feather", Range(0.001, 1)) = 0.01
+		[Enum(ShadowMaskType)] _ShadowMaskType ("Shadow Mask Type", Float) = 0.0
+		_ShadowMask("Shadow Mask", 2D) = "white" {} 
+		_ShadowMaskColor("Shadow Mask Color", Color) = (1,1,1,1)
+		_Shadow("Shadow Mask Power", Range(0, 1)) = 0.5
+		_ShadowLift("Shadow Offset", Range(-1, 1)) = 0.0
+		_IndirectLightingBoost("Indirect Lighting Boost", Range(0, 1)) = 0.0
 		//[Space]
-		[Enum(ToneSeparationType)]_CrosstoneToneSeparation ("Don't combine tone with albedo", Float) = 0
-		[Enum(ToneSeparationType)]_Crosstone2ndSeparation ("Don't combine 1st with 2nd tone", Float) = 0
-		//[Space]
-        _ShadowBorderColor ("Shade Border Color", Color) = (0,0,0,1)
-        _ShadowBorderRange ("Shade Border Range", Range(0, 1)) = 0
-		//[Space]
-		[Enum(OutlineMode)] _OutlineMode("Outline Mode", Float) = 0.0
+		[Enum(OutlineMode)] _OutlineMode("Outline Mode", Float) = 1.0
 		_OutlineMask("Outline Map", 2D) = "white" {}
+		_OutlineZPush("Outline Z Push", Float) = 0.0
 		_outline_width("Outline Width", Float) = 0.1
 		_outline_color("Outline Colour", Color) = (0.5,0.5,0.5,1)
 		//[Space]
@@ -63,7 +56,7 @@ Shader "Silent's Cel Shading/Crosstone"
 		[Enum(AmbientFresnelType)]_UseFresnel ("Use Rim Light", Float) = 0.0
 		[HDR]_FresnelTint("Rim Light Tint", Color) = (1,1,1,1)
 		_FresnelWidth ("Rim Light Strength", Range(0, 20)) = .5
-		_FresnelStrength ("Rim LightSoftness", Range(0.01, 0.9999)) = 0.5
+		_FresnelStrength ("Rim Light Softness",Range(0.01,0.9999)) = 0.5
 		[ToggleUI]_UseFresnelLightMask("Mask Rim Light by Light Direction", Float) = 0.0
 		_FresnelLightMask("Light Direction Mask Power", Range(1, 10)) = 1.0
 		[HDR]_FresnelTintInv("Inverse Rim Light Tint", Color) = (1,1,1,1)
@@ -303,8 +296,8 @@ Shader "Silent's Cel Shading/Crosstone"
 		#pragma shader_feature _ _ALPHATEST_ON _ALPHABLEND_ON _ALPHAPREMULTIPLY_ON
         #pragma multi_compile_instancing
         #pragma skip_variants DYNAMICLIGHTMAP_ON LIGHTMAP_ON LIGHTMAP_SHADOW_MIXING DIRLIGHTMAP_COMBINED SHADOWS_SHADOWMASK
-
-		#define SCSS_CROSSTONE
+		
+		#define SCSS_FUR
 		#define SCSS_COVERAGE_OUTPUT
         ENDCG
 
@@ -335,14 +328,15 @@ Shader "Silent's Cel Shading/Crosstone"
 			#pragma shader_feature_local _ _SMOOTHNESS_TEXTURE_ALBEDO_CHANNEL_A
 			#pragma shader_feature_local _ _SPECULARHIGHLIGHTS_OFF
 			#pragma shader_feature_local _ _GLOSSYREFLECTIONS_OFF		
-			#pragma shader_feature_local _ _SUNDISK_NONE				
+			#pragma shader_feature_local _ _SUNDISK_NONE		
 			#pragma shader_feature_local _ _BACKFACE
 			#pragma shader_feature_local _ _AUDIOLINK
 			#pragma shader_feature_local _ _CONTACTSHADOWS
 			
 			#include "SCSS_Core.cginc"
 
-			#pragma vertex vert_nogeom
+			#pragma vertex vert
+			#pragma geometry geom_fur
 			#pragma fragment frag
 
 			#include "SCSS_Forward.cginc"
@@ -368,7 +362,7 @@ Shader "Silent's Cel Shading/Crosstone"
 			#pragma multi_compile_fwdadd_fullshadows
 			#pragma multi_compile_fog
 			#pragma multi_compile _ UNITY_HDR_ON
-
+			
 			#pragma shader_feature_local _ _DETAIL_MULX2
 			#pragma shader_feature_local _ _METALLICGLOSSMAP _SPECGLOSSMAP
 			#pragma shader_feature_local _ _SMOOTHNESS_TEXTURE_ALBEDO_CHANNEL_A
@@ -380,7 +374,8 @@ Shader "Silent's Cel Shading/Crosstone"
 
 			#include "SCSS_Core.cginc"
 
-			#pragma vertex vert_nogeom
+			#pragma vertex vert
+			#pragma geometry geom_fur
 			#pragma fragment frag
 
 			#include "SCSS_Forward.cginc"
@@ -415,6 +410,6 @@ Shader "Silent's Cel Shading/Crosstone"
 			ENDCG
 		}
 	}
-	FallBack "Diffuse"
+	FallBack "Silent's Cel Shading/Lightramp"
 	CustomEditor "SilentCelShading.Unity.Inspector"
 }

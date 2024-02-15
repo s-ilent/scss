@@ -21,8 +21,8 @@ Shader "Silent's Cel Shading/Crosstone (Outline)"
 		//[Space]
 		[Enum(TintApplyMode)]_ToggleHueControls("Show HSV Controls", Float) = 0.0
 		_ShiftHue ("Hue Shift", Range(-180, 180)) = 0.0
-		_ShiftSaturation ("Saturation Shift", Range(0, 2)) = 1.0
-		_ShiftValue ("Value Shift", Range(0, 2)) = 1.0
+		_ShiftSaturation ("Saturation Shift", Range(0, 6)) = 1.0
+		_ShiftValue ("Value Shift", Range(0, 6)) = 1.0
 		//[Space]
 		_EmissionMap("Emission Map", 2D) = "white" {}
         [Enum(UV0, 0, UV1, 1, UV2, 2, UV3, 3)]_EmissionUVSec("Emission UV Source", Float) = 0
@@ -52,6 +52,15 @@ Shader "Silent's Cel Shading/Crosstone (Outline)"
 		_outline_width("Outline Width", Float) = 0.1
 		_outline_color("Outline Colour", Color) = (0.5,0.5,0.5,1)
 		//[Space]
+        _FurMode("Fur Mode", Float) = 0.0
+        [IntRange]_FurLayerCount("Layer Count", Range(1, 32)) = 8
+        _FurMask("Fur Mask", 2D) = "white" {}
+		_FurNoise("Fur Shape Texture", 2D) = "white" {}
+		_FurLength("Length", Float) = 1.0
+		_FurRandomization("Randomization", Float) = 0.5
+		[Gamma]_FurThickness("Thickness", Range(0, 2)) = 1.0
+		_FurGravity("Gravity", Range(-0.99, 0.99)) = 1.0
+		//[Space]
 		[Enum(AmbientFresnelType)]_UseFresnel ("Use Rim Light", Float) = 0.0
 		[HDR]_FresnelTint("Rim Light Tint", Color) = (1,1,1,1)
 		_FresnelWidth ("Rim Light Strength", Range(0, 20)) = .5
@@ -71,6 +80,8 @@ Shader "Silent's Cel Shading/Crosstone (Outline)"
 		_CelSpecularSoftness ("Softness", Range(1, 0)) = 0.02
 		_CelSpecularSteps("Steps", Range(1, 4)) = 1
 		_Anisotropy("Anisotropy", Range(-1,1)) = 0.8
+		[ToggleUI]_UseIridescenceRamp ("Iridescent Specular", Float) = 0.0
+		_SpecIridescenceRamp ("Iridescence Ramp", 2D) = "white" {}
 		//[Space]
 		[Enum(MatcapType)]_UseMatcap ("Matcap Type", Float) = 0.0
 		_MatcapMask("Matcap Mask", 2D) = "white" {}
