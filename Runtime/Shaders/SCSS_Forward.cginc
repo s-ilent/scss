@@ -57,7 +57,7 @@ void computeShadingParams (inout SCSS_ShadingParam shading, VertexOutput i, bool
 		// Only calculate contact shadows if we're not in shadow. 
 		if (atten > 0)
 		{
-			atten *= 1.0 - screenSpaceContactShadow(lightPos, i.worldPos.xyz, i.pos.xy, _ContactShadowDistance);
+			atten *= 1.0 - screenSpaceContactShadow(lightPos, i.worldPos.xyz, i.pos.xy, _ContactShadowDistance, _ContactShadowSteps);
 		}
 		#endif
 	#endif

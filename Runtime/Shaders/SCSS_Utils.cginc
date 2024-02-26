@@ -562,12 +562,12 @@ void initScreenSpaceRay(out ScreenSpaceRay ray, float3 wsRayStart, float3 wsRayD
 }
 
 float screenSpaceContactShadow(float3 lightDirection, float3 shadingPosition, 
-    float2 screenPosition, float distanceMax = 0.1) {
+    float2 screenPosition, float distanceMax = 0.1, uint kStepCount = 8) {
     // cast a ray in the direction of the light
     float occlusion = 0.0;
 
     // These could be user adjustable, but let's keep to the minimum that works well for now.
-    const uint kStepCount = 16;
+    // const uint kStepCount = 8;
     float kDistanceMax = distanceMax;
 
     // Bias starting position slightly towards light to avoid artifacts

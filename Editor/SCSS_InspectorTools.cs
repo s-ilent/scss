@@ -146,28 +146,6 @@ namespace SilentCelShading.Unity
 				}	
 			}		
 		}
-		
-        internal static bool ButtonWithDropdownList(GUIContent content, string[] buttonNames, GenericMenu.MenuFunction2 callback) {
-            var style = new GUIStyle("DropDownButton");
-            var rect = GUILayoutUtility.GetRect(content, style);
-
-            var dropDownRect = rect;
-            const float kDropDownButtonWidth = 20f;
-            dropDownRect.xMin = dropDownRect.xMax - kDropDownButtonWidth;
-
-            if (Event.current.type == EventType.MouseDown && dropDownRect.Contains(Event.current.mousePosition)) {
-                var menu = new GenericMenu();
-                for (int i = 0; i != buttonNames.Length; i++)
-                    menu.AddItem(new GUIContent(buttonNames[i]), false, callback, i);
-
-                menu.DropDown(rect);
-                Event.current.Use();
-
-                return false;
-            }
-
-            return GUI.Button(rect, content, style);
-        }
 
 		// Selectable languages 
 		public enum InspectorLanguageSelection
@@ -198,7 +176,6 @@ namespace SilentCelShading.Unity
 
 		}
 		
-
 		public static void DrawInspectorLanguageDropdown()
 		{
 			InspectorLanguageSelection selectedLanguage = InspectorLanguageSelection.English;
@@ -213,7 +190,6 @@ namespace SilentCelShading.Unity
 					break;
 			}
 
-			
 			if (WithChangeCheck(() => 
 			{
             	selectedLanguage = (InspectorLanguageSelection)EditorGUILayout.EnumPopup("Language", selectedLanguage);
@@ -222,6 +198,28 @@ namespace SilentCelShading.Unity
 				UpdateInspectorLanguage(selectedLanguage);
 			}
 		}
+		
+        internal static bool ButtonWithDropdownList(GUIContent content, string[] buttonNames, GenericMenu.MenuFunction2 callback) {
+            var style = new GUIStyle("DropDownButton");
+            var rect = GUILayoutUtility.GetRect(content, style);
+
+            var dropDownRect = rect;
+            const float kDropDownButtonWidth = 20f;
+            dropDownRect.xMin = dropDownRect.xMax - kDropDownButtonWidth;
+
+            if (Event.current.type == EventType.MouseDown && dropDownRect.Contains(Event.current.mousePosition)) {
+                var menu = new GenericMenu();
+                for (int i = 0; i != buttonNames.Length; i++)
+                    menu.AddItem(new GUIContent(buttonNames[i]), false, callback, i);
+
+                menu.DropDown(rect);
+                Event.current.Use();
+
+                return false;
+            }
+
+            return GUI.Button(rect, content, style);
+        }
 
         public static void WithGroupVertical(Action action)
         {
@@ -302,5 +300,18 @@ namespace SilentCelShading.Unity
 			return new Material[0];
 
 		}
+		
+		protected float? GetSerializedMaterialFloat(Material material, string propName)
+		{
+			float? floatVal = new SerializedObject(material).FindProperty("m_SavedProperties.m_Floats." + propName).floatValue;
+			return floatVal;
+		}
+
+		protected Vector4? GetSerializedMaterialVector4(Material material, string propName)
+		{
+			Vector4? colorVal = new SerializedObject(material).FindProperty("m_SavedProperties.m_Colors." + propName).colorValue;
+			return colorVal;
+		}
+
     }
 }

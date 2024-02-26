@@ -192,9 +192,8 @@ VertexOutput vert(appdata_full_local v) {
 		o.extraData = float4(1.0, 0.0, 1.0, 1.0); 
 		o.extraData.x = v.color.a;
 		break;
-
-		// 0, Colour
-		default:
+		
+		default: // Colour
 		o.color = v.color;
 		o.extraData = float4(0.0, 0.0, 1.0, 1.0); 
 		o.extraData.x = v.color.a;
@@ -444,6 +443,7 @@ inline VertexOutput CalculateFurPosition(VertexOutput v, float furLength, int la
 [instance(32)] // Max layers is 32
 void geom_fur(triangle VertexOutput IN[3], inout TriangleStream<VertexOutput> tristream, uint instanceID : SV_GSInstanceID)
 {
+	if ((IN[0].color.a + IN[1].color.a + IN[2].color.a) <= 0) return;
 	// LOD scaling
 	const float lodScale = 1.0;
 	float layerCountScale = saturate(lodScale / (distance(IN[0].worldPos,_WorldSpaceCameraPos) )); 

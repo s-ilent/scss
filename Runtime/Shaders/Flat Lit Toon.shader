@@ -50,7 +50,7 @@ Shader "Silent's Cel Shading/Lightramp (Outline)"
 		_FurNoise("Fur Shape Texture", 2D) = "white" {}
 		_FurLength("Length", Float) = 1.0
 		_FurRandomization("Randomization", Float) = 0.5
-		[Gamma]_FurThickness("Thickness", Range(0, 2)) = 1.0
+		[Gamma]_FurThickness("Thickness", Range(0.01, 2)) = 1.0
 		_FurGravity("Gravity", Range(-0.99, 0.99)) = 1.0
 		//[Space]
 		[Enum(AmbientFresnelType)]_UseFresnel ("Use Rim Light", Float) = 0.0
@@ -180,6 +180,7 @@ Shader "Silent's Cel Shading/Lightramp (Outline)"
 		//[Space]
 		[Toggle(_CONTACTSHADOWS)]_UseContactShadows ("Use Contact Shadows", Float) = 0
 		_ContactShadowDistance("Max Distance", Range(0.01, 0.2)) = 0.1
+		[IntRange]_ContactShadowSteps("Steps", Range(2, 32)) = 8
 		//[Space]
 		[ToggleUI]_UseAnimation ("Use Animation", Float) = 0.0
 		_AnimationSpeed ("_AnimationSpeed", Float) = 10

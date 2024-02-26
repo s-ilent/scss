@@ -276,6 +276,7 @@ uniform float _LightAddAnimated;
 // Contact shadows
 #if defined(_CONTACTSHADOWS)
 uniform float _ContactShadowDistance;
+uniform uint _ContactShadowSteps;
 #endif
 
 // Detail masks
@@ -945,13 +946,14 @@ void applyVertexColour(float3 color, inout SCSS_Input c)
 		break;
 		
 		// Outline Color
-		case 1: 
+		// color is color (passed from vertex)
+		// Additional Data/Ignore
+		// color is white (reset from vertex)
+		default: 
 		c.outlineCol.rgb = color * _outline_color;
 		c.outlineCol.a = _outline_color.a;
 		break;
 
-		// Additional Data/Ignore
-		// Do nothing
 	}
 }
 
