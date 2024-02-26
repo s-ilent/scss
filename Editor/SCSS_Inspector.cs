@@ -1777,9 +1777,17 @@ namespace SilentCelShading.Unity
 				bool isInBakedShaders = shaderFilePath.IndexOf("BakedShaders", StringComparison.OrdinalIgnoreCase) >= 0;
 				bool isInHiddenShaders = shader.name.StartsWith("Hidden/", StringComparison.OrdinalIgnoreCase);
 
-				if (!isInBakedShaders || !isInHiddenShaders)
+				if (isInBakedShaders || isInHiddenShaders)
 				{
+					// Gracefully unlock it. 
 					ShaderOptimizer.Unlock(material);
+					material.SetFloat("__Baked", 0.0f);
+				}
+				else
+				{
+					// The shader has __Baked set, but is not using a baked shader.
+					// Just remove the flag.
+					material.SetFloat("__Baked", 0.0f);
 				}
 			}
 		}
