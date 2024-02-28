@@ -13,15 +13,22 @@ public class MaterialPropertyHandler
 {
     private Dictionary<string, MaterialProperty> props = new Dictionary<string, MaterialProperty>();
     private MaterialEditor editor;
+    
 
-    public MaterialPropertyHandler(MaterialProperty[] matProps, MaterialEditor materialEditor)
+    public void Refresh(MaterialProperty[] matProps, MaterialEditor materialEditor)
     {
+        // When the shader is changed, some properties won't be in props...
         this.editor = materialEditor;
         foreach (MaterialProperty prop in matProps)
         {
             //props[prop.name] = editor.target.FindProperty(prop.name, matProps, false);
             props[prop.name] = prop;
         }
+    }
+
+    public MaterialPropertyHandler(MaterialProperty[] matProps, MaterialEditor materialEditor)
+    {
+        Refresh(matProps, materialEditor);
     }
 
     //-------------------------------------------------------------------------
@@ -57,15 +64,19 @@ public class MaterialPropertyHandler
 		if (!styles.TryGetValue(i, out style))
 		{
 			style = new GUIContent(i);
+            styles[i] = style;  // Add the new GUIContent to the dictionary
 		}
 
 		if (props.TryGetValue(i, out prop))
 		{
 			editor.ShaderProperty(prop, style);
 			return true;
-		} else {
+		} 
+        else 
+        {
 			DisabledLabel(style);
 		}
+
 		return false;
 	}
 

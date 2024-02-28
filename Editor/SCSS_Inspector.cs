@@ -94,6 +94,7 @@ namespace SilentCelShading.Unity
 		public MaterialType lightType;
 		public MaterialGeomType geomType;
 		public bool isBaked;
+		public bool needsRefresh = true;
 
     //-------------------------------------------------------------------------
     // GUI stuff
@@ -212,132 +213,21 @@ namespace SilentCelShading.Unity
 
 			base.MaterialChanged(material);
 		}
-		
-
-		[Flags]
-		public enum Options
-		{
-			MainOptions = 1 << 0,
-			ShadingOptions = 1 << 1,
-			RenderingOptions = 1 << 2,
-			OutlineOptions = 1 << 3,
-			FurOptions = 1 << 4,
-			EmissionOptions = 1 << 5,
-			BackfaceOptions = 1 << 6,
-			DetailOptions = 1 << 7,
-			MiscOptions = 1 << 8,
-			RuntimeLightOptions = 1 << 9,
-			InventoryOptions = 1 << 10,
-			ManualButtonArea = 1 << 11,
-			AdvancedOptions = 1 << 12
-		}
-
-		public Options GetOptionsForComplexity(SettingsComplexityMode mode)
-		{
-			Options options = 0;
-			switch (mode)
-			{
-				case SettingsComplexityMode.Simple:
-					options = Options.MainOptions | Options.ShadingOptions | Options.EmissionOptions | Options.OutlineOptions;
-					break;
-				case SettingsComplexityMode.Normal:
-					options = Options.MainOptions | Options.ShadingOptions | Options.RenderingOptions | Options.OutlineOptions | Options.FurOptions | Options.EmissionOptions | Options.RuntimeLightOptions | Options.InventoryOptions | Options.AdvancedOptions;
-					break;
-				case SettingsComplexityMode.Complex:
-					options = (Options)~0; // All options are included in the Complex mode
-					break;
-			}
-			return options;
-		}
-
-		public Options GetActiveOptions()
-		{
-			Options activeOptions = 0;
-			// Todo: Check each option and if it's active, add it to activeOptions
-			// For example:
-			// if (IsOptionActive("MainOptions")) activeOptions |= Options.MainOptions;
-			return activeOptions;
-		}
-
-		public void ExecuteOption(Options option)
-		{
-			switch (option)
-			{
-				case Options.MainOptions:
-					DisabledGUIIfBaked(() => MainOptions());
-					break;
-				case Options.ShadingOptions:
-					DisabledGUIIfBaked(() => ShadingOptions());
-					break;
-				case Options.RenderingOptions:
-					DisabledGUIIfBaked(() => RenderingOptions());
-					break;
-				case Options.OutlineOptions:
-					DisabledGUIIfBaked(() => OutlineOptions());
-					break;
-				case Options.FurOptions:
-					DisabledGUIIfBaked(() => FurOptions());
-					break;
-				case Options.EmissionOptions:
-					DisabledGUIIfBaked(() => EmissionOptions());
-					break;
-				case Options.BackfaceOptions:
-					DisabledGUIIfBaked(() => BackfaceOptions());
-					break;
-				case Options.DetailOptions:
-					DisabledGUIIfBaked(() => DetailOptions());
-					break;
-				case Options.MiscOptions:
-					DisabledGUIIfBaked(() => MiscOptions());
-					break;
-				case Options.RuntimeLightOptions:
-					RuntimeLightOptions();
-					break;
-				case Options.InventoryOptions:
-					InventoryOptions();
-					break;
-				case Options.ManualButtonArea:
-					ManualButtonArea();
-					break;
-				case Options.AdvancedOptions:
-					DisabledGUIIfBaked(() => AdvancedOptions());
-					break;
-				default:
-					throw new ArgumentOutOfRangeException(nameof(option), option, null);
-			}
-		}
-
-		public void RenderOptions(SettingsComplexityMode mode)
-		{
-			Options complexityOptions = GetOptionsForComplexity(mode);
-			Options activeOptions = GetActiveOptions();
-			Options optionsToRender = complexityOptions | activeOptions;
-
-			foreach (Options option in Enum.GetValues(typeof(Options)))
-			{
-				if ((optionsToRender & option) == option)
-				{
-					using (new EditorGUI.DisabledScope(isBaked == true))
-					{
-						// Call the corresponding method for the option
-						ExecuteOption(option);
-					}
-				}
-			}
-		}
 
 		public override void OnGUI(MaterialEditor materialEditor, MaterialProperty[] matProps)
 		{ 
-			this.target = materialEditor.target as Material;
-			this.editor = materialEditor;
-			Material material = this.target;
+			target = materialEditor.target as Material;
+			editor = materialEditor;
 
-			if (this.ph == null || materialEditor != this.editor)
+			if (needsRefresh || ph == null || materialEditor != editor)
 			{
-        		this.ph = new MaterialPropertyHandler(matProps, this.editor);
+        		ph = new MaterialPropertyHandler(matProps, editor);
+				needsRefresh = false;
 			}
-			
-			CheckShaderType(material);
+
+			// This only checks a single material target, but that's okay because you can't select
+			// more than one shader type at the same time.
+			CheckShaderType(this.target);
 
 			DrawInspectorHeader();
 
@@ -507,6 +397,119 @@ namespace SilentCelShading.Unity
 			}
 			**/ 
 			EditorGUILayout.LabelField("", EditorStyles.label); // Spacing only
+		}
+		
+
+		[Flags]
+		public enum Options
+		{
+			MainOptions = 1 << 0,
+			ShadingOptions = 1 << 1,
+			RenderingOptions = 1 << 2,
+			OutlineOptions = 1 << 3,
+			FurOptions = 1 << 4,
+			EmissionOptions = 1 << 5,
+			BackfaceOptions = 1 << 6,
+			DetailOptions = 1 << 7,
+			MiscOptions = 1 << 8,
+			RuntimeLightOptions = 1 << 9,
+			InventoryOptions = 1 << 10,
+			ManualButtonArea = 1 << 11,
+			AdvancedOptions = 1 << 12
+		}
+
+		public Options GetOptionsForComplexity(SettingsComplexityMode mode)
+		{
+			Options options = 0;
+			switch (mode)
+			{
+				case SettingsComplexityMode.Simple:
+					options = Options.MainOptions | Options.ShadingOptions | Options.EmissionOptions | Options.OutlineOptions;
+					break;
+				case SettingsComplexityMode.Normal:
+					options = Options.MainOptions | Options.ShadingOptions | Options.RenderingOptions | Options.OutlineOptions | Options.FurOptions | Options.EmissionOptions | Options.RuntimeLightOptions | Options.InventoryOptions | Options.AdvancedOptions;
+					break;
+				case SettingsComplexityMode.Complex:
+					options = (Options)~0; // All options are included in the Complex mode
+					break;
+			}
+			return options;
+		}
+
+		public Options GetActiveOptions()
+		{
+			Options activeOptions = 0;
+			// Todo: Check each option and if it's active, add it to activeOptions
+			// For example:
+			// if (IsOptionActive("MainOptions")) activeOptions |= Options.MainOptions;
+			return activeOptions;
+		}
+
+		public void ExecuteOption(Options option)
+		{
+			switch (option)
+			{
+				case Options.MainOptions:
+					DisabledGUIIfBaked(() => MainOptions());
+					break;
+				case Options.ShadingOptions:
+					DisabledGUIIfBaked(() => ShadingOptions());
+					break;
+				case Options.RenderingOptions:
+					DisabledGUIIfBaked(() => RenderingOptions());
+					break;
+				case Options.OutlineOptions:
+					DisabledGUIIfBaked(() => OutlineOptions());
+					break;
+				case Options.FurOptions:
+					DisabledGUIIfBaked(() => FurOptions());
+					break;
+				case Options.EmissionOptions:
+					DisabledGUIIfBaked(() => EmissionOptions());
+					break;
+				case Options.BackfaceOptions:
+					DisabledGUIIfBaked(() => BackfaceOptions());
+					break;
+				case Options.DetailOptions:
+					DisabledGUIIfBaked(() => DetailOptions());
+					break;
+				case Options.MiscOptions:
+					DisabledGUIIfBaked(() => MiscOptions());
+					break;
+				case Options.RuntimeLightOptions:
+					RuntimeLightOptions();
+					break;
+				case Options.InventoryOptions:
+					InventoryOptions();
+					break;
+				case Options.ManualButtonArea:
+					ManualButtonArea();
+					break;
+				case Options.AdvancedOptions:
+					DisabledGUIIfBaked(() => AdvancedOptions());
+					break;
+				default:
+					throw new ArgumentOutOfRangeException(nameof(option), option, null);
+			}
+		}
+
+		public void RenderOptions(SettingsComplexityMode mode)
+		{
+			Options complexityOptions = GetOptionsForComplexity(mode);
+			Options activeOptions = GetActiveOptions();
+			Options optionsToRender = complexityOptions | activeOptions;
+
+			foreach (Options option in Enum.GetValues(typeof(Options)))
+			{
+				if ((optionsToRender & option) == option)
+				{
+					using (new EditorGUI.DisabledScope(isBaked == true))
+					{
+						// Call the corresponding method for the option
+						ExecuteOption(option);
+					}
+				}
+			}
 		}
 		
 		protected void MainOptions()
@@ -707,7 +710,8 @@ namespace SilentCelShading.Unity
 			EditorGUILayout.Space();
 			
 			ph.ShaderProperty("_LightRampType");
-            if ((LightRampType)ph.Property("_LightRampType").floatValue != LightRampType.None) 
+			MaterialProperty lrProp = ph.Property("_LightRampType");
+			if (lrProp != null && (LightRampType)lrProp.floatValue != LightRampType.None)
             {
                 WithGroupHorizontal(() => 
 				{
@@ -723,9 +727,8 @@ namespace SilentCelShading.Unity
             
             EditorGUILayout.Space();
 
-            ph.TexturePropertySingleLine("_ShadowMask", "_ShadowMaskColor");
-
             ph.ShaderProperty("_ShadowMaskType");
+            ph.TexturePropertySingleLine("_ShadowMask", "_ShadowMaskColor");
             ph.ShaderProperty("_Shadow");
         }
 
@@ -1323,7 +1326,13 @@ namespace SilentCelShading.Unity
 
         public override void AssignNewShaderToMaterial(Material material, Shader oldShader, Shader newShader)
         {
+			// Refresh the material property handler. However, because we don't have the material properties array,
+			// and writing the code to make one seems like too much work, just set a flag and have OnGUI do it.
+			needsRefresh = true;
+
 			// Use nullable types for Color and float, because Texture is nullable.
+			// However, note that SetTexture happily accepts null and will treat that as a command to clear the texture.
+			// Randomly wiping texture assignments is generally not liked by users. 
 			Dictionary<string, Color?> tColor = new Dictionary<string, Color?>();
 			Dictionary<string, float?> tFloat = new Dictionary<string, float?>();
 			Dictionary<string, Texture> tTexture = new Dictionary<string, Texture>();
@@ -1333,7 +1342,8 @@ namespace SilentCelShading.Unity
             float? cullMode = GetFloatProperty(material, "_Cull");
 			
 			// Register properties that already exist but may be overridden.
-			string[] colorProps = {
+			List<string> colorProps = new List<string>
+			{
 				"_EmissionColor",
 				"_FresnelTint",
 				"_FresnelTintInv",
@@ -1342,15 +1352,10 @@ namespace SilentCelShading.Unity
 				"_SpecColor"
 			};
 
-			string[] floatProps = {
-				"_1st_ShadeColor_Feather",
-				"_1st_ShadeColor_Step",
-				"_2nd_ShadeColor_Feather",
-				"_2nd_ShadeColor_Step",
+			List<string> floatProps = new List<string>
+			{
 				"_BumpScale",
 				"_CelSpecularSoftness",
-				"_Crosstone2ndSeparation",
-				"_CrosstoneToneSeparation",
 				"_FresnelLightMask",
 				"_FresnelStrength",
 				"_FresnelStrengthInv",
@@ -1366,18 +1371,39 @@ namespace SilentCelShading.Unity
 				"_UseFresnelLightMask",
 				"_UseMatcap"
 			};
+			
+			List<string> floatPropsCrosstone = new List<string>
+			{
+				"_1st_ShadeColor_Feather",
+				"_1st_ShadeColor_Step",
+				"_2nd_ShadeColor_Feather",
+				"_2nd_ShadeColor_Step",
+				"_Crosstone2ndSeparation",
+				"_CrosstoneToneSeparation",
+			};
 
-			string[] textureProps = {
-				"_1st_ShadeMap",
-				"_2nd_ShadeMap",
+			List<string> textureProps = new List<string>
+			{
 				"_BumpMap",
 				"_EmissionMap",
 				"_Matcap1",
 				"_MatcapMask",
 				"_OutlineMask",
 				"_SpecGlossMap",
-				"_SpecularDetailMask"
 			};
+
+			List<string> texturePropsCrosstone = new List<string>
+			{
+				"_1st_ShadeMap",
+				"_2nd_ShadeMap",
+				"_ShadingGradeMap",
+			};
+			
+			// Todo: Nothing Lightramp here because we don't transfer from any shaders that use ramps.
+			List<string> emptyList = new List<string> {};
+
+			floatProps.AddRange(newShader.name.Contains("Crosstone") ? floatPropsCrosstone : emptyList );
+			textureProps.AddRange(newShader.name.Contains("Crosstone") ? texturePropsCrosstone : emptyList );
 
 			foreach (string p in colorProps) { tColor[p] = GetColorProperty(material, p); };
 			foreach (string p in floatProps) { tFloat[p] = GetFloatProperty(material, p); };
@@ -1448,7 +1474,11 @@ namespace SilentCelShading.Unity
 					if (highColorTex) 
 					{ 
 						tTexture["_SpecGlossMap"] = highColorTex;
-						tTexture["_SpecularDetailMask"] = highColorMask; 
+						// Setup specular detail mask in slot 3
+						tTexture["_DetailMap3"] = highColorMask; 
+						tFloat["_DetailMap3Type"] = 2.0f; // Specular
+						tFloat["_DetailMap3Blend"] = 0.0f; // Default blend mode
+						tFloat["_DetailMap3Strength"] = 1.0f;
 					} else { 
 						tTexture["_SpecGlossMap"] = highColorMask; 
 					};
@@ -1614,7 +1644,13 @@ namespace SilentCelShading.Unity
 			// Assign gathered properties. 
 			foreach (KeyValuePair<string, Color?> e in tColor)    { SetColorProperty(material, e.Key, e.Value); };
 			foreach (KeyValuePair<string, float?> e in tFloat)    { SetFloatProperty(material, e.Key, e.Value); };
-			foreach (KeyValuePair<string, Texture> e in tTexture) { material.SetTexture(e.Key, e.Value); };
+
+			// SetTexture can clear textures, while Set...Property will only set if not null. 
+			foreach (KeyValuePair<string, Texture> e in tTexture) 
+			{ 
+				if (e.Value == null) continue;
+				material.SetTexture(e.Key, e.Value); 
+			};
 
 			SetIntProperty(material, "_Stencil", stencilReference);
 			SetIntProperty(material, "_StencilComp", stencilComparison);
