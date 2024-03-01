@@ -57,7 +57,7 @@ Shader "Silent's Cel Shading/Crosstone (Fur)"
         _FurMask("Fur Mask", 2D) = "white" {}
 		_FurNoise("Fur Shape Texture", 2D) = "white" {}
 		_FurLength("Length", Float) = 1.0
-		_FurRandomization("Randomization", Float) = 0.5
+		_FurRandomization("Randomization", Float) = 0.0
 		[Gamma]_FurThickness("Thickness", Range(0.01, 2)) = 1.0
 		_FurGravity("Gravity", Range(-0.99, 0.99)) = 1.0
 		//[Space]
