@@ -418,8 +418,8 @@ void geom(triangle VertexOutput IN[3], inout TriangleStream<VertexOutput> tristr
 
 float3 randomPointForFur(float2 seed1, float2 seed2)
 {
-	float u1 = getR2(seed1);
-	float u2 = getR2(seed2);
+	float u1 = hashR2_2D(seed1);
+	float u2 = hashR2_2D(seed2);
 	float theta = 2.0 * UNITY_PI * u1;
 	float phi = acos(2.0 * u2 - 1.0);
 	return float3(sin(phi) * cos(theta), sin(phi) * sin(theta), cos(phi));
@@ -433,7 +433,8 @@ inline VertexOutput CalculateFurPosition(VertexOutput v, float furLength, int la
 	const half3 normalOS = float3(v.tangentToWorldAndPackedData[0][3], v.tangentToWorldAndPackedData[1][3], v.tangentToWorldAndPackedData[2][3]);
 	
 	v.pos.xyz = v.pos + normalOS * furLengthCm;
-	v.pos.xyz += randomPointForFur(v.uvPack0.xy * 100, v.uvPack0.yz * 100) * _FurRandomization * furLengthCm;
+	// Todo: Finish randomization. 
+	v.pos.xyz += randomPointForFur(v.uvPack0.xy, v.uvPack0.yz) * _FurRandomization * furLengthCm;
 	v.pos.y -= _FurGravity * furLengthCm;
 
 	return v;

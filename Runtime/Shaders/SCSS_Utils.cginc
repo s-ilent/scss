@@ -88,6 +88,16 @@ float4 getR2_RGBA(float2 pixel) {
     return float4(h1, h2, h3, h4);
 }
 
+float hashR2_2D( float2 fragCoord ) {
+    return frac( 1.0e4 * sin( 17.0*fragCoord.x + 0.1*fragCoord.y ) *
+    ( 0.1 + abs( sin( 13.0*fragCoord.y + fragCoord.x )))
+    );
+}
+
+float hashR2_3D( float3 fragCoord ) {
+    return hashR2_2D( float2( hashR2_2D( fragCoord.xy ), fragCoord.z ) );
+}
+
 float r2Dither(float gray, float2 pos, float steps) {
 	// pos is screen pixel position in 0-res range
     // Calculated noised gray value
