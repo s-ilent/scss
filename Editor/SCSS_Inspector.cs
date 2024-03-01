@@ -577,7 +577,6 @@ namespace SilentCelShading.Unity
 		{ 
 			EditorGUILayout.Space();
 			DrawSectionHeaderArea(ph.Content("s_renderingOptions"));
-
 			SpecularOptions();
 			RimlightOptions();
 			MatcapOptions();
@@ -958,11 +957,11 @@ namespace SilentCelShading.Unity
             	EditorGUILayout.Space();
 				DrawDetailField("_DetailMap1", "_DetailMap1UV", "_DetailMap1Blend", "_DetailMap1Type", "_DetailMap1Strength");
             	EditorGUILayout.Space();
-				DrawDetailField("_DetailMap2", "_DetailMap1UV", "_DetailMap2Blend", "_DetailMap2Type", "_DetailMap2Strength");
+				DrawDetailField("_DetailMap2", "_DetailMap2UV", "_DetailMap2Blend", "_DetailMap2Type", "_DetailMap2Strength");
             	EditorGUILayout.Space();
-				DrawDetailField("_DetailMap3", "_DetailMap1UV", "_DetailMap3Blend", "_DetailMap3Type", "_DetailMap3Strength");
+				DrawDetailField("_DetailMap3", "_DetailMap3UV", "_DetailMap3Blend", "_DetailMap3Type", "_DetailMap3Strength");
             	EditorGUILayout.Space();
-				DrawDetailField("_DetailMap4", "_DetailMap1UV", "_DetailMap4Blend", "_DetailMap4Type", "_DetailMap4Strength");
+				DrawDetailField("_DetailMap4", "_DetailMap4UV", "_DetailMap4Blend", "_DetailMap4Type", "_DetailMap4Strength");
 			}
 			else
 			{
