@@ -222,7 +222,7 @@ namespace SilentCelShading.Unity
 			if (needsRefresh || ph == null || materialEditor != editor)
 			{
         		ph = new MaterialPropertyHandler(matProps, editor);
-				needsRefresh = false;
+				needsRefresh = true;
 			}
 
 			// This only checks a single material target, but that's okay because you can't select
