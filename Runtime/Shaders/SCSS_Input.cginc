@@ -755,6 +755,9 @@ half Alpha(float2 uv, float2 uv0)
 		case 0: alpha *= UNITY_SAMPLE_TEX2D(_MainTex, uv).a; break;
 		case 2: alpha *= ClippingMask(uv0); break;
 	}
+	// Bugfix for Unity's bad BC7 texture encoding that makes opaque areas slightly transparent
+	const float alphaFix = 1.0 / ((255.0 - 8.0)/255.0);
+	alpha = saturate(alpha * alphaFix);
 	return alpha;
 }
 
