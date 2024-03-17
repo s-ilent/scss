@@ -21,12 +21,9 @@ Shader "Silent's Cel Shading/Lightramp (Outline)"
 		//[Space]
 		[Enum(TintApplyMode)]_ToggleHueControls("Show HSV Controls", Float) = 0.0
 		_ShiftHue ("Hue Shift", Range(-180, 180)) = 0.0
-		_ShiftSaturation ("Saturation Shift", Range(0, 2)) = 1.0
-		_ShiftValue ("Value Shift", Range(0, 2)) = 1.0
+		_ShiftSaturation ("Saturation Shift", Range(0, 6)) = 1.0
+		_ShiftValue ("Value Shift", Range(0, 6)) = 1.0
 		//[Space]
-		_EmissionMap("Emission Map", 2D) = "white" {}
-        [Enum(UV0, 0, UV1, 1, UV2, 2, UV3, 3)]_EmissionUVSec("Emission UV Source", Float) = 0
-		[HDR]_EmissionColor("Emission Color", Color) = (0,0,0,1)
 		//[Space]
 		[Enum(LightRampType)]_LightRampType ("Light Ramp Type", Float) = 0.0
 		_Ramp ("Lighting Ramp", 2D) = "white" {}
@@ -56,7 +53,7 @@ Shader "Silent's Cel Shading/Lightramp (Outline)"
 		[Enum(AmbientFresnelType)]_UseFresnel ("Use Rim Light", Float) = 0.0
 		[HDR]_FresnelTint("Rim Light Tint", Color) = (1,1,1,1)
 		_FresnelWidth ("Rim Light Strength", Range(0, 20)) = .5
-		_FresnelStrength ("Rim Light Softness",Range(0.01,0.9999)) = 0.5
+		_FresnelStrength ("Rim Light Softness", Range(0.01, 0.9999)) = 0.5
 		[ToggleUI]_UseFresnelLightMask("Mask Rim Light by Light Direction", Float) = 0.0
 		_FresnelLightMask("Light Direction Mask Power", Range(1, 10)) = 1.0
 		[HDR]_FresnelTintInv("Inverse Rim Light Tint", Color) = (1,1,1,1)
@@ -72,7 +69,6 @@ Shader "Silent's Cel Shading/Lightramp (Outline)"
 		_CelSpecularSoftness ("Softness", Range(1, 0)) = 0.02
 		_CelSpecularSteps("Steps", Range(1, 4)) = 1
 		_Anisotropy("Anisotropy", Range(-1,1)) = 0.8
-		[ToggleUI]_UseIridescenceRamp ("Iridescent Specular", Float) = 0.0
 		_SpecIridescenceRamp ("Iridescence Ramp", 2D) = "white" {}
 		//[Space]
 		[Enum(MatcapType)]_UseMatcap ("Matcap Type", Float) = 0.0
@@ -97,9 +93,42 @@ Shader "Silent's Cel Shading/Lightramp (Outline)"
 		_Matcap4Strength("Matcap 4 Strength", Range(0, 2)) = 1.0
 		[Enum(MatcapBlendModes)]_Matcap4Blend("Matcap 4 Blend Mode", Float) = 0.0
 		_Matcap4Tint("Matcap 4 Tint", Color) = (1, 1, 1, 1)
+
+		//[Space]
+		//[Toggle(_EMISSION)]
+		_EmissionMap("Emission Map", 2D) = "white" {}
+		[Enum(Additive, 0, Mask, 1)]_EmissionMode("Emission Mode", Float) = 0.0
+        [Enum(UV0, 0, UV1, 1, UV2, 2, UV3, 3)]_EmissionUVSec("Emission UV Source", Float) = 0
+		[HDR]_EmissionColor("Emission Color", Color) = (0,0,0,1)
+		//[Space]
+		_DetailEmissionMap("Detail Emission Map", 2D) = "white" {}
+        [Enum(UV0, 0, UV1, 1, UV2, 2, UV3, 3)]_DetailEmissionUVSec("Detail Emission UV Source", Float) = 0
+		[Enum(DetailEmissionMode)]_EmissionDetailType("Emission Detail Type", Float) = 0
+		[HDR]_EmissionDetailParams("Emission Detail Params", Vector) = (0,0,0,0)
+		
+		//[Space]
+		//[Toggle(_EMISSION_2ND)]
+		_EmissionMap2nd("2nd Emission Map", 2D) = "white" {}
+		[Enum(Additive, 0, Mask, 1)]_EmissionMode2nd("2nd Emission Mode", Float) = 0.0
+        [Enum(UV0, 0, UV1, 1, UV2, 2, UV3, 3)]_EmissionUVSec2nd("2nd Emission UV Source", Float) = 0
+		[HDR]_EmissionColor2nd("2nd Emission Color", Color) = (0,0,0,1)
+		//[Space]
+		_DetailEmissionMap2nd("2nd Detail Emission Map", 2D) = "white" {}
+        [Enum(UV0, 0, UV1, 1, UV2, 2, UV3, 3)]_DetailEmissionUVSec2nd("2nd Detail Emission UV Source", Float) = 0
+		[HDR]_EmissionDetailParams2nd("2nd Emission Detail Params", Vector) = (0,0,0,0)
+		//[Space]
+		_EmissionRimPower2nd("2nd Emission Rim Power", Float) = 0.0
+		
+		//[Space]
+		[ToggleUI]_UseEmissiveLightSense ("Use Light-sensing Emission", Float) = 0.0
+		_EmissiveLightSenseStart("Light Threshold Start", Range(0, 1)) = 1.0
+		_EmissiveLightSenseEnd("Light Threshold End", Range(0, 1)) = 0.0
+		_EmissionRimPower("Emission Rim Power", Float) = 0.0
+
 		//[Space]
 		[Toggle(_DETAIL_MULX2)]_UseDetailMaps("Enable Detail Maps", Float) = 0.0
 		_DetailAlbedoMask ("Detail Mask", 2D) = "white" {}
+
         _DetailMap1 ("Detail Map 1", 2D) = "grey" {}
         [Enum(UV0, 0, UV1, 1, UV2, 2, UV3, 3)]
         _DetailMap1UV ("Detail Map 1 UV", Float) = 0.0
@@ -108,6 +137,7 @@ Shader "Silent's Cel Shading/Lightramp (Outline)"
 		[Enum(DetailBlendMode)]
         _DetailMap1Blend ("Detail Map 1 Blend Mode", Float) = 0.0
         _DetailMap1Strength ("Detail Map 1 Power", Range(0, 1)) = 1.0
+
         _DetailMap2 ("Detail Map 2", 2D) = "grey" {}
         [Enum(UV0, 0, UV1, 1, UV2, 2, UV3, 3)]
         _DetailMap2UV ("Detail Map 2 UV", Float) = 0.0
@@ -116,6 +146,7 @@ Shader "Silent's Cel Shading/Lightramp (Outline)"
 		[Enum(DetailBlendMode)]
         _DetailMap2Blend ("Detail Map 2 Blend Mode", Float) = 0.0
         _DetailMap2Strength ("Detail Map 2 Power", Range(0, 1)) = 1.0
+
         _DetailMap3 ("Detail Map 3", 2D) = "grey" {}
         [Enum(UV0, 0, UV1, 1, UV2, 2, UV3, 3)]
         _DetailMap3UV ("Detail Map 3 UV", Float) = 0.0
@@ -124,6 +155,7 @@ Shader "Silent's Cel Shading/Lightramp (Outline)"
 		[Enum(DetailBlendMode)]
         _DetailMap3Blend ("Detail Map 3 Blend Mode", Float) = 0.0
         _DetailMap3Strength ("Detail Map 3 Power", Range(0, 1)) = 1.0
+
         _DetailMap4 ("Detail Map 4", 2D) = "grey" {}
         [Enum(UV0, 0, UV1, 1, UV2, 2, UV3, 3)]
         _DetailMap4UV ("Detail Map 4 UV", Float) = 0.0
@@ -132,12 +164,7 @@ Shader "Silent's Cel Shading/Lightramp (Outline)"
 		[Enum(DetailBlendMode)]
         _DetailMap4Blend ("Detail Map 4 Blend Mode", Float) = 0.0 
         _DetailMap4Strength ("Detail Map 4 Power", Range(0, 1)) = 1.0 
-		[Toggle(_EMISSION)]_UseAdvancedEmission("Enable Advanced Emission", Float ) = 0.0
-        [Enum(UV0, 0, UV1, 1, UV2, 2, UV3, 3)]_DetailEmissionUVSec("Detail Emission UV Source", Float) = 0
-		[Enum(DetailEmissionMode)]_EmissionDetailType("Emission Detail Type", Float) = 0
-		_DetailEmissionMap("Detail Emission Map", 2D) = "white" {}
-		[HDR]_EmissionDetailParams("Emission Detail Params", Vector) = (0,0,0,0)
-		//[Space]
+
 		[Toggle(_AUDIOLINK)]_UseEmissiveAudiolink("Enable Audiolink Emission", Float ) = 0.0
 		_AudiolinkIntensity("Audiolink Emission Intensity", Float) = 1.0
 		_AudiolinkMaskMap ("Audiolink Mask Map", 2D) = "white" {}
@@ -199,12 +226,9 @@ Shader "Silent's Cel Shading/Lightramp (Outline)"
 		_ProximityShadowFrontColor("Shadow Color (front)", Color) = (0,0,0,1)
 		_ProximityShadowBackColor("Shadow Color (back)", Color) = (0,0,0,1)
 		//[Space]
-		[ToggleUI]_UseEmissiveLightSense ("Use Light-sensing Emission", Float) = 0.0
-		_EmissiveLightSenseStart("Light Threshold Start", Range(0, 1)) = 1.0
-		_EmissiveLightSenseEnd("Light Threshold End", Range(0, 1)) = 0.0
-		//[Space]
 		[ToggleUI]_UseInventory("Use Inventory", Float) = 0.0
 		_InventoryStride("Inventory Stride", Int) = 1
+		[Enum(UV0, 0, UV1, 1, UV2, 2, UV3, 3)]_InventoryUVSec("Inventory UV Source", Float) = 0
 		[ToggleUI]_InventoryItem01Animated("Toggle Item 1", Float) = 1.0
 		[ToggleUI]_InventoryItem02Animated("Toggle Item 2", Float) = 1.0
 		[ToggleUI]_InventoryItem03Animated("Toggle Item 3", Float) = 1.0
@@ -227,7 +251,6 @@ Shader "Silent's Cel Shading/Lightramp (Outline)"
 		_LightAddAnimated("Boost outgoing light", Range(0, 1)) = 0.0
 		//[Space]
 		[ToggleUI]_AlbedoAlphaMode("Albedo Alpha Mode", Float) = 0.0
-		[HDR]_CustomFresnelColor("Emissive Fresnel Color", Color) = (0,0,0,1)
 		[ToggleUI]_PixelSampleMode("Sharp Sampling Mode", Float) = 0.0
 		//[Space]
 		[Enum(LightingCalculationType)] _LightingCalculationType ("Lighting Calculation Type", Float) = 0.0
@@ -324,6 +347,7 @@ Shader "Silent's Cel Shading/Lightramp (Outline)"
 
 			// Needs to be global for Unity reasons
 			#pragma shader_feature _ _EMISSION
+			#pragma shader_feature_local _ _EMISSION_2ND
 
 			#pragma shader_feature_local _ _DETAIL_MULX2
 			#pragma shader_feature_local _ _METALLICGLOSSMAP _SPECGLOSSMAP

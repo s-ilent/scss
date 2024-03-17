@@ -24,10 +24,6 @@ Shader "Silent's Cel Shading/Crosstone (Outline)"
 		_ShiftSaturation ("Saturation Shift", Range(0, 6)) = 1.0
 		_ShiftValue ("Value Shift", Range(0, 6)) = 1.0
 		//[Space]
-		_EmissionMap("Emission Map", 2D) = "white" {}
-        [Enum(UV0, 0, UV1, 1, UV2, 2, UV3, 3)]_EmissionUVSec("Emission UV Source", Float) = 0
-		[HDR]_EmissionColor("Emission Color", Color) = (0,0,0,1)
-		//[Space]
         _1st_ShadeMap ("1st_ShadeMap", 2D) = "white" {}
         _1st_ShadeColor ("1st_ShadeColor", Color) = (0,0,0,1)
         _2nd_ShadeMap ("2nd_ShadeMap", 2D) = "white" {}
@@ -80,7 +76,6 @@ Shader "Silent's Cel Shading/Crosstone (Outline)"
 		_CelSpecularSoftness ("Softness", Range(1, 0)) = 0.02
 		_CelSpecularSteps("Steps", Range(1, 4)) = 1
 		_Anisotropy("Anisotropy", Range(-1,1)) = 0.8
-		[ToggleUI]_UseIridescenceRamp ("Iridescent Specular", Float) = 0.0
 		_SpecIridescenceRamp ("Iridescence Ramp", 2D) = "white" {}
 		//[Space]
 		[Enum(MatcapType)]_UseMatcap ("Matcap Type", Float) = 0.0
@@ -105,12 +100,38 @@ Shader "Silent's Cel Shading/Crosstone (Outline)"
 		_Matcap4Strength("Matcap 4 Strength", Range(0, 2)) = 1.0
 		[Enum(MatcapBlendModes)]_Matcap4Blend("Matcap 4 Blend Mode", Float) = 0.0
 		_Matcap4Tint("Matcap 4 Tint", Color) = (1, 1, 1, 1)
+
 		//[Space]
-		[Toggle(_EMISSION)]_UseAdvancedEmission("Enable Advanced Emission", Float ) = 0.0
+		//[Toggle(_EMISSION)]
+		_EmissionMap("Emission Map", 2D) = "white" {}
+		[Enum(Additive, 0, Mask, 1)]_EmissionMode("Emission Mode", Float) = 0.0
+        [Enum(UV0, 0, UV1, 1, UV2, 2, UV3, 3)]_EmissionUVSec("Emission UV Source", Float) = 0
+		[HDR]_EmissionColor("Emission Color", Color) = (0,0,0,1)
+		//[Space]
+		_DetailEmissionMap("Detail Emission Map", 2D) = "white" {}
         [Enum(UV0, 0, UV1, 1, UV2, 2, UV3, 3)]_DetailEmissionUVSec("Detail Emission UV Source", Float) = 0
 		[Enum(DetailEmissionMode)]_EmissionDetailType("Emission Detail Type", Float) = 0
-		_DetailEmissionMap("Detail Emission Map", 2D) = "white" {}
 		[HDR]_EmissionDetailParams("Emission Detail Params", Vector) = (0,0,0,0)
+		
+		//[Space]
+		//[Toggle(_EMISSION_2ND)]
+		_EmissionMap2nd("2nd Emission Map", 2D) = "white" {}
+		[Enum(Additive, 0, Mask, 1)]_EmissionMode2nd("2nd Emission Mode", Float) = 0.0
+        [Enum(UV0, 0, UV1, 1, UV2, 2, UV3, 3)]_EmissionUVSec2nd("2nd Emission UV Source", Float) = 0
+		[HDR]_EmissionColor2nd("2nd Emission Color", Color) = (0,0,0,1)
+		//[Space]
+		_DetailEmissionMap2nd("2nd Detail Emission Map", 2D) = "white" {}
+        [Enum(UV0, 0, UV1, 1, UV2, 2, UV3, 3)]_DetailEmissionUVSec2nd("2nd Detail Emission UV Source", Float) = 0
+		[HDR]_EmissionDetailParams2nd("2nd Emission Detail Params", Vector) = (0,0,0,0)
+		//[Space]
+		_EmissionRimPower2nd("2nd Emission Rim Power", Float) = 0.0
+		
+		//[Space]
+		[ToggleUI]_UseEmissiveLightSense ("Use Light-sensing Emission", Float) = 0.0
+		_EmissiveLightSenseStart("Light Threshold Start", Range(0, 1)) = 1.0
+		_EmissiveLightSenseEnd("Light Threshold End", Range(0, 1)) = 0.0
+		_EmissionRimPower("Emission Rim Power", Float) = 0.0
+
 		//[Space]
 		[Toggle(_DETAIL_MULX2)]_UseDetailMaps("Enable Detail Maps", Float) = 0.0
 		_DetailAlbedoMask ("Detail Mask", 2D) = "white" {}
@@ -212,12 +233,9 @@ Shader "Silent's Cel Shading/Crosstone (Outline)"
 		_ProximityShadowFrontColor("Shadow Color (front)", Color) = (0,0,0,1)
 		_ProximityShadowBackColor("Shadow Color (back)", Color) = (0,0,0,1)
 		//[Space]
-		[ToggleUI]_UseEmissiveLightSense ("Use Light-sensing Emission", Float) = 0.0
-		_EmissiveLightSenseStart("Light Threshold Start", Range(0, 1)) = 1.0
-		_EmissiveLightSenseEnd("Light Threshold End", Range(0, 1)) = 0.0
-		//[Space]
 		[ToggleUI]_UseInventory("Use Inventory", Float) = 0.0
 		_InventoryStride("Inventory Stride", Int) = 1
+		[Enum(UV0, 0, UV1, 1, UV2, 2, UV3, 3)]_InventoryUVSec("Inventory UV Source", Float) = 0
 		[ToggleUI]_InventoryItem01Animated("Toggle Item 1", Float) = 1.0
 		[ToggleUI]_InventoryItem02Animated("Toggle Item 2", Float) = 1.0
 		[ToggleUI]_InventoryItem03Animated("Toggle Item 3", Float) = 1.0
@@ -240,7 +258,6 @@ Shader "Silent's Cel Shading/Crosstone (Outline)"
 		_LightAddAnimated("Boost outgoing light", Range(0, 1)) = 0.0
 		//[Space]
 		[ToggleUI]_AlbedoAlphaMode("Albedo Alpha Mode", Float) = 0.0
-		[HDR]_CustomFresnelColor("Emissive Fresnel Color", Color) = (0,0,0,1)
 		[ToggleUI]_PixelSampleMode("Sharp Sampling Mode", Float) = 0.0
 		//[Space]
 		[Enum(LightingCalculationType)] _LightingCalculationType ("Lighting Calculation Type", Float) = 0.0
@@ -338,6 +355,7 @@ Shader "Silent's Cel Shading/Crosstone (Outline)"
 			
 			// Needs to be global for Unity reasons
 			#pragma shader_feature _ _EMISSION
+			#pragma shader_feature_local _ _EMISSION_2ND
 
 			#pragma shader_feature_local _ _DETAIL_MULX2
 			#pragma shader_feature_local _ _METALLICGLOSSMAP _SPECGLOSSMAP

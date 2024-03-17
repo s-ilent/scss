@@ -592,8 +592,11 @@ float3 SCSS_ApplyLighting(SCSS_Input c, SCSS_ShadingParam p)
 	float glowModifier = smoothstep(_EmissiveLightSenseStart, _EmissiveLightSenseEnd, dot(effectLightShadow, sRGB_Luminance));
 	if (_UseEmissiveLightSense) c.emission *= glowModifier;
 	#endif
+
+	#if defined(UNITY_PASS_FORWARDBASE)
 	//finalColor = lerp(finalColor, c.emission, c.emission.a);
 	finalColor += c.emission;
+	#endif
 
 	return finalColor;
 }

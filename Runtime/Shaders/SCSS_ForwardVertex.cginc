@@ -132,8 +132,6 @@ VertexOutput vert(appdata_full_local v) {
 	o.uvPack0 = uvPack0;
 	o.uvPack1 = uvPack1;
 
-	// Calculate the transformed texture coordinates so that the
-	// outline mask matches with the scale/offset of the main texture.
 	SCSS_TexCoords postTexcoords = initialiseTexCoords(uvPack0, uvPack1);
 
 	// Object-space normal from vertex
@@ -205,7 +203,10 @@ VertexOutput vert(appdata_full_local v) {
 
 	#if defined(SCSS_OUTLINE)
 	#if defined(SCSS_USE_OUTLINE_TEXTURE)
-	o.extraData.x *= OutlineMask(postTexcoords.uv[0]);
+	// Calculate the transformed texture coordinates so that the
+	// outline mask matches with the scale/offset of the main texture.
+	float2 outlineUVs = TRANSFORM_TEX(postTexcoords.uv[0], _MainTex);
+	o.extraData.x *= OutlineMask(outlineUVs);
 	#endif
 
 	o.extraData.x *= _outline_width * .01; // Apply outline width and convert to cm
@@ -225,7 +226,8 @@ VertexOutput vert(appdata_full_local v) {
 	// Todo: Does extraData.xz still need to be cleared? 
 
     // Simple inventory handling.
-    float inventoryMask = getInventoryMask(v.texcoord);
+	float2 inventoryTexcoord = postTexcoords.uv[_InventoryUVSec];
+    float inventoryMask = getInventoryMask(inventoryTexcoord);
 
 	// Apply the inventory mask.
     // Set the output variables based on the mask to completely remove it.

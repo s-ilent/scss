@@ -11,12 +11,16 @@ _ShiftSaturation	Saturation Shift	Shifts the level of saturation in the main tex
 _ShiftValue	Luma Shift	Shifts the brightness of the main texture and tone.
 _BumpMap	Normal Map	Normal map (RGB), which adjusts the direction of the surface normals.
 _EmissionMap	Emission Map	Emission map (RGB), which controls emitted light that isn't affected by lighting.
-_UseAdvancedEmission	Advanced Emission	Applies additional effects to the emission map.
 _DetailEmissionMap	Emission Detail Mask	An additional texture multiplied against the main emission map. This allows adding additional detail patterns to the emissive texture.
 _DetailEmissionUVSec	UV Source	Selects which UV channel to use for detail emission.
+_EmissionRimPower	Emission Rim Power	When above zero, applies an effect to the emission which darkens it at glancing angles. When below zero, the emission will only be visible at glancing angles. This can be used for a fluroescence effect. 
 _EmissionDetailParams	Emission Detail Parameters	XY: Scrolling speed, ZW: Phase
 s_EmissionDetailScroll	Scroll	Sets the scrolling speed for the emission detail texture.
 s_EmissionDetailPhase	Phase/Pulse	Sets the phase of the emission detail texture. X controls the pulsing speed, and Y controls the phase. The higher the phase, the shorter the interval between repetitions.
+_EmissionMap2nd	2nd Emission Map	Second emission map (RGB), which controls emitted light that isn't affected by lighting.
+_EmissionDetailParams2nd	2nd Emission Detail Parameters	XY: Scrolling speed, ZW: Phase
+_DetailEmissionMap2nd	2nd Emission Detail Mask	An additional texture multiplied against the main 2nd emission map. This allows adding additional detail patterns to the emissive texture.
+_EmissionRimPower2nd	2nd Emission Rim Power	When above zero, applies an effect to the emission which darkens it at glancing angles. When below zero, the emission will only be visible at glancing angles. This can be used for a fluroescence effect. 
 _SpecGlossMap	Specular Map	Specular Map (RGBA, RGB: Specular/Metalness, A: Smoothness)
 _SpecularType	Specular Style	Allows you to set whether specular is active, and what kind of specular to use if so.
 _Smoothness	Smoothness	The smoothness of the material. The specular map's alpha channel is used for this, with this slider being a multiplier.
@@ -172,6 +176,7 @@ _ContactShadowDistance	Shadow Spread	The maximum size contact shadows are allowe
 _ContactShadowSteps	Shadow Steps	Sets the quality of contact shadows. At higher number of steps, more calculations will be performed, leading to more accurate shadows. However, this comes with a performance cost. 
 _UseInventory	Inventory	Enables the inventory system. When enabled, the UV coordinates of the model are used to hide parts of the mesh. Every X units, where X is the inventory stride, the vertices assigned those UV coordinates are placed into a seperate item slot, and can be enabled or disabled using the toggles. The first slot, containing the 0-1 range, is always displayed.
 _InventoryStride	Inventory Stride	Sets the spacing between item slots. By default, this is 10, which means that if a vertex's UVs are 10 units away from the origin, they will be considered a seperate item slot.
+_InventoryUVSec	Inventory UV Source	Sets the UV channel used for the inventory system. This is useful if you have a mesh where the UV unwrapping doesn't fit neatly into a UV square, and can dedicate a second UV channel to indicating the item ID. 
 _Stencil	Stencil Test	Raising this enables reading or writing a stencil. When set, contains calue to compare against (if Comparison is anything but Always) and/or the value to be written to the buffer (if wither Pass, Fail or ZFail is set to Replace)
 _StencilComp	Comparison	The operation to be performed when reading the stencil value.
 _StencilOp	Operation	The operation to be performed when the stencil test passes.

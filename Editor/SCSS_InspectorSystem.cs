@@ -106,7 +106,7 @@ public class MaterialPropertyHandler
     {
 		MaterialProperty prop = Property(i);
 		GUIContent style = Content(i);
-        // CCan't return Rect as Editor function does not support it.
+        // Can't return Rect as Editor function does not support it.
 		if (prop != null) 
 		{
             editor.TextureScaleOffsetProperty(prop);
@@ -302,15 +302,7 @@ public class MaterialPropertyHandler
         GUIContent name = Content(contentName);
         if (property != null && name != null)
         {
-            EditorGUI.BeginChangeCheck();
-            Vector2 vector2 = EditorGUILayout.Vector2Field(name, new Vector2(property.vectorValue[index1], property.vectorValue[index2]), null);
-            if (EditorGUI.EndChangeCheck())
-            {
-                Vector4 vector4 = property.vectorValue;
-                vector4[index1] = vector2.x;
-                vector4[index2] = vector2.y;
-                property.vectorValue = vector4;
-            }
+            Vector2Property(property, name, index1, index2);
         }
     }
 

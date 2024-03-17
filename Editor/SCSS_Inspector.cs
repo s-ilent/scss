@@ -47,11 +47,6 @@ namespace SilentCelShading.Unity
 			Specular, Metalness
 		}
 
-		public enum DetailEmissionMode
-		{
-			Phase, AudioLink
-		}
-
 		public enum DetailMapType
 		{
 			Albedo = 0,  Normal = 1, Specular = 2
@@ -73,6 +68,10 @@ namespace SilentCelShading.Unity
 		public enum FurMode
 		{
 			None = 0, On = 1
+		}
+		public enum EmissionMode
+		{
+			Additive = 0, Mask = 1
 		}
 
 		protected Material target;
@@ -596,42 +595,119 @@ namespace SilentCelShading.Unity
 			EditorGUILayout.Space();
 			DrawSectionHeaderArea(ph.Content("s_emissionOptions"));
 			EditorGUILayout.Space();
-			MaterialProperty emissionMapProp = ph.Property("_EmissionMap");
-			WithGroupHorizontal(() => {
-				if (emissionMapProp != null) 
-				{
-					bool hadEmissionTexture = emissionMapProp.textureValue != null;
-					ph.TexturePropertyWithHDRColor("_EmissionMap", "_EmissionColor");
-					// If texture was assigned and color was black set color to white
-					float brightness = ph.Property("_EmissionColor").colorValue.maxColorComponent;
-					if (emissionMapProp.textureValue != null && !hadEmissionTexture && brightness <= 0f)
-						ph.Property("_EmissionColor").colorValue = Color.white;
-
-					ph.PropertyDropdownNoLabel("_EmissionUVSec", Enum.GetNames(typeof(UVLayers)), editor);
-				}
-			});
-			ph.TextureScaleOffsetProperty("_EmissionMap");
-			EditorGUILayout.Space();
-
-			if (ph.ShaderProperty("_UseAdvancedEmission") && ph.PropertyEnabled("_UseAdvancedEmission"))
 			{
-				target.EnableKeyword("_EMISSION");
+				MaterialProperty emissionMapProp = ph.Property("_EmissionMap");
+				WithGroupHorizontal(() => {
+					if (emissionMapProp != null) 
+					{
+						bool hadEmissionTexture = emissionMapProp.textureValue != null;
+						ph.TexturePropertyWithHDRColor("_EmissionMap", "_EmissionColor");
+						// If texture was assigned and color was black set color to white
+						float brightness = ph.Property("_EmissionColor").colorValue.maxColorComponent;
+						if (emissionMapProp.textureValue != null && !hadEmissionTexture && brightness <= 0f)
+							ph.Property("_EmissionColor").colorValue = Color.white;
+
+						ph.PropertyDropdownNoLabel("_EmissionUVSec", Enum.GetNames(typeof(UVLayers)), editor);
+						ph.PropertyDropdownNoLabel("_EmissionMode", Enum.GetNames(typeof(EmissionMode)), editor);
+					}
+				});
+
+				bool hasEmissionMapSet = (emissionMapProp != null && emissionMapProp.textureValue != null);
+				// Hide scale/offset when emission map is not present
+				if (hasEmissionMapSet)
+				{
+					ph.TextureScaleOffsetProperty("_EmissionMap");
+				} 
+
+				MaterialProperty detailEmissionMapProp = ph.Property("_DetailEmissionMap");
+
 				WithGroupHorizontal(() => {
 					ph.TexturePropertySingleLine("_DetailEmissionMap");
 					ph.PropertyDropdownNoLabel("_DetailEmissionUVSec", Enum.GetNames(typeof(UVLayers)), editor);
 				});
-				EditorGUI.indentLevel ++;
-				EditorGUI.indentLevel ++;
-				ph.TextureScaleOffsetProperty("_DetailEmissionMap");
-				ph.Vector2Property("_EmissionDetailParams", "s_EmissionDetailScroll", 0, 1);
-				ph.Vector2Property("_EmissionDetailParams", "s_EmissionDetailPhase", 2, 3);
-				EditorGUILayout.Space();
-            	EditorGUI.indentLevel --;
-            	EditorGUI.indentLevel --;
-			} else {
-				target.DisableKeyword("_EMISSION");
+
+				bool hasDetailEmissionMapSet = (detailEmissionMapProp != null && detailEmissionMapProp.textureValue != null);
+
+				if (hasDetailEmissionMapSet)
+				{
+					EditorGUI.indentLevel ++;
+					EditorGUI.indentLevel ++;
+					ph.TextureScaleOffsetProperty("_DetailEmissionMap");
+					ph.Vector2Property("_EmissionDetailParams", "s_EmissionDetailScroll", 0, 1);
+					ph.Vector2Property("_EmissionDetailParams", "s_EmissionDetailPhase", 2, 3);
+					EditorGUI.indentLevel --;
+					EditorGUI.indentLevel --;
+				}
+
+				ph.ShaderProperty("_EmissionRimPower");
+
+				if (hasEmissionMapSet || hasDetailEmissionMapSet)
+				{
+					target.EnableKeyword("_EMISSION");
+				} else {
+					target.DisableKeyword("_EMISSION");
+				}
 			}
+
 			EditorGUILayout.Space();
+
+			{
+				MaterialProperty emissionMapProp = ph.Property("_EmissionMap2nd");
+				WithGroupHorizontal(() => {
+					if (emissionMapProp != null) 
+					{
+						bool hadEmissionTexture = emissionMapProp.textureValue != null;
+						ph.TexturePropertyWithHDRColor("_EmissionMap2nd", "_EmissionColor2nd");
+						// If texture was assigned and color was black set color to white
+						float brightness = ph.Property("_EmissionColor2nd").colorValue.maxColorComponent;
+						if (emissionMapProp.textureValue != null && !hadEmissionTexture && brightness <= 0f)
+							ph.Property("_EmissionColor2nd").colorValue = Color.white;
+
+						ph.PropertyDropdownNoLabel("_EmissionUVSec2nd", Enum.GetNames(typeof(UVLayers)), editor);
+						ph.PropertyDropdownNoLabel("_EmissionMode2nd", Enum.GetNames(typeof(EmissionMode)), editor);
+					}
+				});
+
+				bool hasEmissionMapSet = (emissionMapProp != null && emissionMapProp.textureValue != null);
+				// Hide scale/offset when emission map is not present
+				if (hasEmissionMapSet)
+				{
+					ph.TextureScaleOffsetProperty("_EmissionMap2nd");
+				} 
+
+				MaterialProperty detailEmissionMapProp = ph.Property("_DetailEmissionMap2nd");
+
+				WithGroupHorizontal(() => {
+					ph.TexturePropertySingleLine("_DetailEmissionMap2nd");
+					ph.PropertyDropdownNoLabel("_DetailEmissionUVSec2nd", Enum.GetNames(typeof(UVLayers)), editor);
+				});
+
+				bool hasDetailEmissionMapSet = (detailEmissionMapProp != null && detailEmissionMapProp.textureValue != null);
+
+				if (hasDetailEmissionMapSet)
+				{
+					EditorGUI.indentLevel ++;
+					EditorGUI.indentLevel ++;
+					ph.TextureScaleOffsetProperty("_DetailEmissionMap2nd");
+					ph.Vector2Property("_EmissionDetailParams2nd", "s_EmissionDetailScroll", 0, 1);
+					ph.Vector2Property("_EmissionDetailParams2nd", "s_EmissionDetailPhase", 2, 3);
+					EditorGUI.indentLevel --;
+					EditorGUI.indentLevel --;
+				}
+
+				ph.ShaderProperty("_EmissionRimPower2nd");
+
+				if (hasEmissionMapSet || hasDetailEmissionMapSet)
+				{
+					target.EnableKeyword("_EMISSION_2ND");
+				} else {
+					target.DisableKeyword("_EMISSION_2ND");
+				}
+			}
+
+			EditorGUILayout.Space();
+
+			// Now we repeat it all again for secondary emission (emission 2nd)
 			
 			if (ph.ShaderProperty("_UseEmissiveAudiolink") && ph.PropertyEnabled("_UseEmissiveAudiolink"))
 			{
@@ -684,11 +760,17 @@ namespace SilentCelShading.Unity
 				target.DisableKeyword("_AUDIOLINK");
 			}
 			EditorGUILayout.Space();
-			ph.ShaderProperty("_CustomFresnelColor");
-			EditorGUILayout.Space();
-			ph.ShaderProperty("_UseEmissiveLightSense");
-			ph.ShaderProperty("_EmissiveLightSenseStart");
-			ph.ShaderProperty("_EmissiveLightSenseEnd");
+
+			// Currently, light sensitivity can only be done to both at once on the shader side.
+			if (ph.ShaderProperty("_UseEmissiveLightSense") && ph.PropertyEnabled("_UseEmissiveLightSense"))
+			{
+				EditorGUI.indentLevel ++;
+				EditorGUI.indentLevel ++;
+				ph.ShaderProperty("_EmissiveLightSenseStart");
+				ph.ShaderProperty("_EmissiveLightSenseEnd");
+				EditorGUI.indentLevel --;
+				EditorGUI.indentLevel --;
+			}
 			// For some reason, this property doesn't have spacing after it
 			EditorGUILayout.Space();
 		}
@@ -811,7 +893,6 @@ namespace SilentCelShading.Unity
 						default:
 						break;
 					}	
-					ph.ShaderProperty("_UseIridescenceRamp");
 					ph.TexturePropertySingleLine("_SpecIridescenceRamp");
 				}
 			}
@@ -1119,6 +1200,7 @@ namespace SilentCelShading.Unity
 				{
 					ph.TogglePropertyHeader("_UseInventory");
 					if (PropertyEnabled(invProp)) ph.ShaderProperty("_InventoryStride");
+					if (PropertyEnabled(invProp)) ph.ShaderProperty("_InventoryUVSec");
 				}
 				if (PropertyEnabled(invProp))
 				{

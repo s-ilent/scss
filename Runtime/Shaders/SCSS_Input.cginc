@@ -38,8 +38,6 @@
 UNITY_DECLARE_TEX2D(_MainTex); uniform half4 _MainTex_ST; uniform half4 _MainTex_TexelSize;
 UNITY_DECLARE_TEX2D_NOSAMPLER(_ColorMask); uniform half4 _ColorMask_ST;
 UNITY_DECLARE_TEX2D_NOSAMPLER(_BumpMap); uniform half4 _BumpMap_ST;
-UNITY_DECLARE_TEX2D_NOSAMPLER(_EmissionMap); uniform half4 _EmissionMap_ST; uniform half4 _EmissionMap_TexelSize;
-uniform half _EmissionUVSec;
 
 #if defined(_BACKFACE)
 UNITY_DECLARE_TEX2D(_MainTexBackface); // Texel size assumed same as _MainTex.
@@ -52,16 +50,33 @@ UNITY_DECLARE_TEX2D(_ClippingMask); uniform half4 _ClippingMask_ST;
 UNITY_DECLARE_TEX2D_NOSAMPLER(_ClippingMask); uniform half4 _ClippingMask_ST;
 #endif
 
-
+uniform float4 _EmissionColor;
+uniform float _EmissionRimPower;
+uniform float4 _EmissionColor2nd;
+uniform float _EmissionRimPower2nd;
 
 #if defined(_EMISSION)
-uniform float _EmissionDetailType;
-uniform float _DetailEmissionUVSec;
+UNITY_DECLARE_TEX2D_NOSAMPLER(_EmissionMap); uniform half4 _EmissionMap_ST; uniform half4 _EmissionMap_TexelSize;
+uniform half _EmissionMode;
+uniform half _EmissionUVSec;
 UNITY_DECLARE_TEX2D(_DetailEmissionMap); uniform half4 _DetailEmissionMap_ST; uniform half4 _DetailEmissionMap_TexelSize;
+uniform float _DetailEmissionUVSec;
 uniform float4 _EmissionDetailParams;
 uniform float _UseEmissiveLightSense;
 uniform float _EmissiveLightSenseStart;
 uniform float _EmissiveLightSenseEnd;
+#endif
+
+#if defined(_EMISSION_2ND)
+UNITY_DECLARE_TEX2D_NOSAMPLER(_EmissionMap2nd); uniform half4 _EmissionMap2nd_ST; uniform half4 _EmissionMap2nd_TexelSize;
+uniform half _EmissionMode2nd;
+uniform half _EmissionUVSec2nd;
+UNITY_DECLARE_TEX2D(_DetailEmissionMap2nd); uniform half4 _DetailEmissionMap2nd_ST; uniform half4 _DetailEmissionMap2nd_TexelSize;
+uniform float _DetailEmissionUVSec2nd;
+uniform float4 _EmissionDetailParams2nd;
+uniform float _UseEmissiveLightSense2nd;
+uniform float _EmissiveLightSenseStart2nd;
+uniform float _EmissiveLightSenseEnd2nd;
 #endif
 
 #if defined(_AUDIOLINK)
@@ -92,7 +107,6 @@ uniform float _UseEnergyConservation;
 uniform float _Anisotropy;
 uniform float _CelSpecularSoftness;
 uniform float _CelSpecularSteps;
-uniform float _UseIridescenceRamp;
 UNITY_DECLARE_TEX2D_NOSAMPLER(_SpecIridescenceRamp);
 uniform float4 _SpecIridescenceRamp_TexelSize;
 #else
@@ -155,8 +169,6 @@ uniform float _ToggleHueControls;
 uniform float _ShiftHue;
 uniform float _ShiftSaturation;
 uniform float _ShiftValue;
-
-uniform float4 _EmissionColor;
 
 uniform float _UseFresnel;
 uniform float _UseFresnelLightMask;
@@ -248,6 +260,7 @@ uniform float4 _ProximityShadowBackColor;
 
 // Inventory 
 uniform fixed _UseInventory;
+uniform fixed _InventoryUVSec;
 #if (defined(SHADER_STAGE_VERTEX) || defined(SHADER_STAGE_GEOMETRY))
 uniform float _InventoryStride;
 uniform fixed _InventoryItem01Animated;
@@ -528,22 +541,39 @@ float2 TexCoords(SCSS_TexCoords tc)
 
 float4 EmissionTexCoords(SCSS_TexCoords tc)
 {
-	float4 texcoord;
+	float4 texcoord = 0;
+#if defined(_EMISSION) 
 	texcoord.xy = tc.uv[_EmissionUVSec];
 	texcoord.xy = TRANSFORM_TEX(texcoord, _EmissionMap);
 	texcoord.xy = _PixelSampleMode? 
 		sharpSample(_EmissionMap_TexelSize * _EmissionMap_ST.xyxy, texcoord.xy) : texcoord.xy;
 
-#if defined(_EMISSION) 
+	// Should we skip this if detail texture doesn't exist?
 	float2 detailTexcoord = tc.uv[_DetailEmissionUVSec];
 	detailTexcoord = TRANSFORM_TEX(detailTexcoord, _DetailEmissionMap);
 	detailTexcoord = _PixelSampleMode? 
 		sharpSample(_DetailEmissionMap_TexelSize * _DetailEmissionMap_ST.xyxy, detailTexcoord) : detailTexcoord;
 	texcoord.zw = detailTexcoord;
-#else
-	texcoord.zw = tc.uv[0]; // Default we won't need
 #endif
+	return texcoord;
+}
 
+float4 EmissionTexCoords2nd(SCSS_TexCoords tc)
+{
+	float4 texcoord = 0;
+#if defined(_EMISSION_2ND) 
+	texcoord.xy = tc.uv[_EmissionUVSec2nd];
+	texcoord.xy = TRANSFORM_TEX(texcoord, _EmissionMap2nd);
+	texcoord.xy = _PixelSampleMode? 
+		sharpSample(_EmissionMap2nd_TexelSize * _EmissionMap2nd_ST.xyxy, texcoord.xy) : texcoord.xy;
+
+	// Should we skip this if detail texture doesn't exist?
+	float2 detailTexcoord = tc.uv[_DetailEmissionUVSec2nd];
+	detailTexcoord = TRANSFORM_TEX(detailTexcoord, _DetailEmissionMap2nd);
+	detailTexcoord = _PixelSampleMode? 
+		sharpSample(_DetailEmissionMap2nd_TexelSize * _DetailEmissionMap2nd_ST.xyxy, detailTexcoord) : detailTexcoord;
+	texcoord.zw = detailTexcoord;
+#endif
 	return texcoord;
 }
 
@@ -653,7 +683,56 @@ half3 Albedo(float2 uv)
 
 half3 Emission(float2 uv)
 {
+#if defined(_EMISSION) 
     return UNITY_SAMPLE_TEX2D_SAMPLER(_EmissionMap, _MainTex, uv*_EmissionMap_ST.xy+_EmissionMap_ST.zw).rgb;
+#else
+	return 1.0f;
+#endif
+}
+
+half4 EmissionDetail(float2 uv)
+{
+#if defined(_EMISSION)
+	if (dot(_DetailEmissionMap_TexelSize.zw, 1.0) > 4.0)
+	{
+		uv += _EmissionDetailParams.xy * _Time.y;
+		half4 ed = UNITY_SAMPLE_TEX2D_SAMPLER(_DetailEmissionMap, _DetailEmissionMap, uv);
+		if (_EmissionDetailParams.z != 0)
+		{
+			float s = dot((0.5 * sin(ed.rgb * _EmissionDetailParams.w + _Time.y * _EmissionDetailParams.z))+0.5, 1.0/3.0);
+			ed.rgb = s;
+		}
+		return ed;
+	}
+#endif
+	return 1;
+}
+
+half3 Emission2nd(float2 uv)
+{
+#if defined(_EMISSION_2ND) 
+    return UNITY_SAMPLE_TEX2D_SAMPLER(_EmissionMap2nd, _MainTex, uv*_EmissionMap2nd_ST.xy+_EmissionMap2nd_ST.zw).rgb;
+#else
+	return 1.0f;
+#endif
+}
+
+half4 EmissionDetail2nd(float2 uv)
+{
+#if defined(_EMISSION_2ND)
+	if (any(_DetailEmissionMap2nd_TexelSize.zw > 4.0))
+	{
+		uv += _EmissionDetailParams2nd.xy * _Time.y;
+		half4 ed = UNITY_SAMPLE_TEX2D_SAMPLER(_DetailEmissionMap2nd, _DetailEmissionMap2nd, uv);
+		if (_EmissionDetailParams2nd.z != 0)
+		{
+			float s = dot((0.5 * sin(ed.rgb * _EmissionDetailParams2nd.w + _Time.y * _EmissionDetailParams2nd.z))+0.5, 1.0/3.0);
+			ed.rgb = s;
+		}
+		return ed;
+	}
+#endif
+	return 1;
 }
 
 half ClippingMask(float2 uv)
@@ -682,13 +761,15 @@ half Alpha(float2 uv, float2 uv0)
 half4 Iridescence(float NoV, float rampID)
 {
 #if defined(_SPECULAR)
+	if (any(_SpecIridescenceRamp_TexelSize.zw > 6.0))
+	{
 	float rampIDUV = (1.0 - (floor(rampID * _SpecIridescenceRamp_TexelSize.w) + 0.5) * _SpecIridescenceRamp_TexelSize.y);
 	float2 rampUV = float2(NoV, rampIDUV);
 	// Colour multiplies specular colour, alpha attenuates albedo.
 	return UNITY_SAMPLE_TEX2D_SAMPLER(_SpecIridescenceRamp, _MainTex, rampUV);
-#else
-	return 1.0;
+	}
 #endif
+	return 1.0;
 }
 
 void applyVanishing (inout float alpha) {
@@ -783,24 +864,6 @@ half4 SpecularGloss(float2 uv)
     sg.a = _AlbedoAlphaMode == 1? UNITY_SAMPLE_TEX2D(_MainTex, uv).a : sg.a;
 #endif
     return sg;
-}
-
-half4 EmissionDetail(float2 uv)
-{
-#if defined(_EMISSION) 
-	//if (_EmissionDetailType == 0) // Pulse
-	{
-		uv += _EmissionDetailParams.xy * _Time.y;
-		half4 ed = UNITY_SAMPLE_TEX2D_SAMPLER(_DetailEmissionMap, _DetailEmissionMap, uv);
-		if (_EmissionDetailParams.z != 0)
-		{
-			float s = (sin(ed.r * _EmissionDetailParams.w + _Time.y * _EmissionDetailParams.z))+1;
-			ed.rgb = s;
-		}
-		return ed;
-	}
-#endif
-	return 1;
 }
 
 half4 EmissiveAudioLink(float2 maskUV, float2 sweepUV)

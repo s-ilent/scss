@@ -85,22 +85,6 @@ void prepareMaterial (inout SCSS_ShadingParam shading, const SCSS_Input material
     shading.reflected = reflect(-shading.view, shading.normal);
 }
 
-float3 addEmissiveDetail(float3 emission, float2 emissionDetailUV, out float alpha)
-{
-	float4 emissionDetail = EmissionDetail(emissionDetailUV);
-
-	alpha = emissionDetail.w;
-	emission = emissionDetail.rgb * emission * _EmissionColor.rgb;
-
-	return emission;
-}
-
-float3 addEmissiveAudiolink(float3 emission, float4 audiolinkUV, inout float alpha)
-{
-	emission += EmissiveAudioLink(audiolinkUV.xy, audiolinkUV.zw);
-	return emission;
-}
-
 float3 gtaoMultiBounce(float visibility, const float3 albedo) {
     // Jimenez et al. 2016, "Practical Realtime Strategies for Accurate Indirect Occlusion"
     float3 a =  2.0404 * albedo - 0.3324;
@@ -216,23 +200,6 @@ inline SCSS_Input MaterialSetup(SCSS_TexCoords tc,
 			_DetailMap4Type, _DetailMap4Blend, _DetailMap4Strength * _DetailMask_var[3]);
     }
 	#endif
-
-	// Masks albedo out behind emission.
-	float emissionAlpha;
-
-	float4 emissionTexcoords = EmissionTexCoords(tc);
-	float3 emission = Emission(emissionTexcoords.xy);
-	
-	// Apply mask mode to emission
-	emission = true? emission * material.albedo : emission;
-
-	emission = addEmissiveDetail(emission, emissionTexcoords.zw, emissionAlpha);
-
-	float4 audiolinkUV = EmissiveAudioLinkTexCoords(tc);
-	emission = addEmissiveAudiolink(emission, audiolinkUV, emissionAlpha);
-
-	emission *= outlineDarken;
-	material.emission = float4(emission, 0);
 	
 	material.softness = i_extraData.g;
 
@@ -313,16 +280,16 @@ inline void MaterialSetupPostParams(inout SCSS_Input material, SCSS_ShadingParam
 
 	SCSS_Light l = MainLight(p.position.xyz);
 	SCSS_LightParam d = initialiseLightParam(l, p);
-	// Todo
+
+	// Todo: Clean this up
 	float3 bitangentDir = p.tangentToWorld[1].xyz;
 	float rlPow4 = Pow4(1 - p.NoV);
 
 	#if defined(_SPECULAR)
-	if (_UseIridescenceRamp)
 	{
 		float4 specIrid = Iridescence(p.NoV, 0);
 		material.specColor *= specIrid;
-		// This looks ugly 
+		// This looks ugly, but it's useful
 		material.albedo *= lerp(specIrid.a, 1.0, material.oneMinusReflectivity);
 		material.oneMinusReflectivity = OneMinusReflectivityFromMetallic_local(material.specColor);
 	};
@@ -376,7 +343,62 @@ inline void MaterialSetupPostParams(inout SCSS_Input material, SCSS_ShadingParam
 		material.albedo = applyMatcap(_Matcap4, matcapUV, material.albedo, _Matcap4Tint, _Matcap4Blend, _Matcap4Strength * _MatcapMask_var.a);
 	}
 
-	material.emission.rgb += _CustomFresnelColor.xyz * (pow(rlPow4, rcp(_CustomFresnelColor.w+FLT_EPS)));
+	#if defined(_EMISSION)
+	{
+		// Masks albedo out behind emission.
+		float emissionAlpha;
+
+		float4 emissionTexcoords = EmissionTexCoords(tc);
+		float3 emission = Emission(emissionTexcoords.xy);
+		
+		// Apply mask mode to emission
+		emission = _EmissionMode? emission * material.albedo : emission;
+
+		float4 emissionDetail = EmissionDetail(emissionTexcoords.zw);
+
+		emission = emissionDetail.rgb * emission * _EmissionColor.rgb;
+		
+		float rimModifier = _EmissionRimPower < 0? 1.0 - pow(d.NdotV, -_EmissionRimPower) : pow(d.NdotV, _EmissionRimPower);
+
+		emission *= outlineDarken * rimModifier;
+		material.emission = float4(emission, 0);
+	}
+	#else
+		float rimModifier = _EmissionRimPower < 0? 1.0 - pow(d.NdotV, -_EmissionRimPower) : pow(d.NdotV, _EmissionRimPower);
+		material.emission.rgb += _EmissionColor.rgb * rimModifier;
+	#endif // _EMISSION
+	#if defined(_EMISSION_2ND)
+	{
+		// Masks albedo out behind emission.
+		float emissionAlpha;
+
+		float4 emissionTexcoords = EmissionTexCoords2nd(tc);
+		float3 emission = Emission2nd(emissionTexcoords.xy);
+		
+		// Apply mask mode to emission
+		emission = _EmissionMode2nd? emission * material.albedo : emission;
+
+		float4 emissionDetail = EmissionDetail2nd(emissionTexcoords.zw);
+
+		emission = emissionDetail.rgb * emission * _EmissionColor2nd.rgb;
+		
+		float rimModifier = _EmissionRimPower2nd < 0? 1.0 - pow(d.NdotV, -_EmissionRimPower2nd) : pow(d.NdotV, _EmissionRimPower2nd);
+
+		emission *= outlineDarken * rimModifier;
+		material.emission += float4(emission, 0);
+	}
+	#else
+		float rimModifier2 = _EmissionRimPower2nd < 0? 1.0 - pow(d.NdotV, -_EmissionRimPower2nd) : pow(d.NdotV, _EmissionRimPower2nd);
+		material.emission.rgb +=  _EmissionColor2nd.rgb * rimModifier2;
+	#endif // _EMISSION_2ND
+
+	#if defined(_AUDIOLINK)
+	{
+		float4 audiolinkUV = EmissiveAudioLinkTexCoords(tc);
+		material.emission += EmissiveAudioLink(audiolinkUV.xy, audiolinkUV.zw);
+	}
+	#endif // _AUDIOLINK
+	
 }
 
 float4 frag(VertexOutput i, uint facing : SV_IsFrontFace
