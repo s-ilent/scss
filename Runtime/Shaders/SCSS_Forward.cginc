@@ -358,13 +358,13 @@ inline void MaterialSetupPostParams(inout SCSS_Input material, SCSS_ShadingParam
 
 		emission = emissionDetail.rgb * emission * _EmissionColor.rgb;
 		
-		float rimModifier = _EmissionRimPower < 0? 1.0 - pow(d.NdotV, -_EmissionRimPower) : pow(d.NdotV, _EmissionRimPower);
+		float rimModifier = applyEmissionRim(_EmissionRimPower, d.NdotV);
 
 		emission *= outlineDarken * rimModifier;
 		material.emission = float4(emission, 0);
 	}
 	#else
-		float rimModifier = _EmissionRimPower < 0? 1.0 - pow(d.NdotV, -_EmissionRimPower) : pow(d.NdotV, _EmissionRimPower);
+		float rimModifier = applyEmissionRim(_EmissionRimPower, d.NdotV);
 		material.emission.rgb += _EmissionColor.rgb * rimModifier;
 	#endif // _EMISSION
 	#if defined(_EMISSION_2ND)
@@ -382,14 +382,14 @@ inline void MaterialSetupPostParams(inout SCSS_Input material, SCSS_ShadingParam
 
 		emission = emissionDetail.rgb * emission * _EmissionColor2nd.rgb;
 		
-		float rimModifier = _EmissionRimPower2nd < 0? 1.0 - pow(d.NdotV, -_EmissionRimPower2nd) : pow(d.NdotV, _EmissionRimPower2nd);
+		float rimModifier = applyEmissionRim(_EmissionRimPower2nd, d.NdotV);
 
 		emission *= outlineDarken * rimModifier;
 		material.emission += float4(emission, 0);
 	}
 	#else
-		float rimModifier2 = _EmissionRimPower2nd < 0? 1.0 - pow(d.NdotV, -_EmissionRimPower2nd) : pow(d.NdotV, _EmissionRimPower2nd);
-		material.emission.rgb +=  _EmissionColor2nd.rgb * rimModifier2;
+		float rimModifier2 = applyEmissionRim(_EmissionRimPower2nd, d.NdotV);
+		material.emission.rgb += _EmissionColor2nd.rgb * rimModifier2;
 	#endif // _EMISSION_2ND
 
 	#if defined(_AUDIOLINK)

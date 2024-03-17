@@ -888,6 +888,16 @@ half4 EmissiveAudioLink(float2 maskUV, float2 sweepUV)
 	return col;
 }
 
+float applyEmissionRim(float power, float NdotV)
+{
+	float absPower = abs(power);
+	if (absPower > 0.0001)
+	{
+		return power < 0.0001 ? 1.0 - pow(NdotV, absPower) : pow(NdotV, absPower);
+	}
+	return 1.0;
+}
+
 half3 NormalInTangentSpace(float2 uv)
 {
 	#if defined(UNITY_STANDARD_BRDF_INCLUDED)
