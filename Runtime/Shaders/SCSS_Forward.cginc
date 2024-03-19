@@ -59,6 +59,7 @@ void computeShadingParams (inout SCSS_ShadingParam shading, VertexOutput i, bool
 		{
 			float contactShadows = screenSpaceContactShadow(lightPos, i.worldPos.xyz, i.pos.xy, _ContactShadowDistance, _ContactShadowSteps);
 			contactShadows = 1.0 - contactShadows;
+			contactShadows = _LightShadowData.r + contactShadows * (1-_LightShadowData.r);
 			atten *= contactShadows * contactShadows;
 		}
 		#endif
