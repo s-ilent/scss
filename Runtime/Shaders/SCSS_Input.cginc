@@ -52,12 +52,14 @@ UNITY_DECLARE_TEX2D_NOSAMPLER(_ClippingMask); uniform half4 _ClippingMask_ST;
 
 uniform float4 _EmissionColor;
 uniform float _EmissionRimPower;
+uniform half _EmissionMode;
 uniform float4 _EmissionColor2nd;
 uniform float _EmissionRimPower2nd;
+uniform half _EmissionMode2nd;
+
 
 #if defined(_EMISSION)
 UNITY_DECLARE_TEX2D_NOSAMPLER(_EmissionMap); uniform half4 _EmissionMap_ST; uniform half4 _EmissionMap_TexelSize;
-uniform half _EmissionMode;
 uniform half _EmissionUVSec;
 UNITY_DECLARE_TEX2D(_DetailEmissionMap); uniform half4 _DetailEmissionMap_ST; uniform half4 _DetailEmissionMap_TexelSize;
 uniform float _DetailEmissionUVSec;
@@ -69,7 +71,6 @@ uniform float _EmissiveLightSenseEnd;
 
 #if defined(_EMISSION_2ND)
 UNITY_DECLARE_TEX2D_NOSAMPLER(_EmissionMap2nd); uniform half4 _EmissionMap2nd_ST; uniform half4 _EmissionMap2nd_TexelSize;
-uniform half _EmissionMode2nd;
 uniform half _EmissionUVSec2nd;
 UNITY_DECLARE_TEX2D(_DetailEmissionMap2nd); uniform half4 _DetailEmissionMap2nd_ST; uniform half4 _DetailEmissionMap2nd_TexelSize;
 uniform float _DetailEmissionUVSec2nd;
@@ -705,7 +706,7 @@ half4 EmissionDetail(float2 uv)
 		return ed;
 	}
 #endif
-	return 1;
+	return 1.0f;
 }
 
 half3 Emission2nd(float2 uv)
@@ -732,7 +733,7 @@ half4 EmissionDetail2nd(float2 uv)
 		return ed;
 	}
 #endif
-	return 1;
+	return 1.0f;
 }
 
 half ClippingMask(float2 uv)

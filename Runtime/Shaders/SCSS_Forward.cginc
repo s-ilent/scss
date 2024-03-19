@@ -285,6 +285,47 @@ inline void MaterialSetupPostParams(inout SCSS_Input material, SCSS_ShadingParam
 	float3 bitangentDir = p.tangentToWorld[1].xyz;
 	float rlPow4 = Pow4(1 - p.NoV);
 
+	{
+		float4 emissionTexcoords = EmissionTexCoords(tc);
+		float3 emission = Emission(emissionTexcoords.xy);
+		
+		// Apply mask mode to emission
+		emission = _EmissionMode? emission * material.albedo : emission;
+
+		float4 emissionDetail = EmissionDetail(emissionTexcoords.zw);
+
+		emission = emissionDetail.rgb * emission * _EmissionColor.rgb;
+		
+		float rimModifier = applyEmissionRim(_EmissionRimPower, d.NdotV);
+
+		emission *= outlineDarken * rimModifier;
+		material.emission = float4(emission, 0);
+	}
+	
+	{
+		float4 emissionTexcoords = EmissionTexCoords2nd(tc);
+		float3 emission = Emission2nd(emissionTexcoords.xy);
+		
+		// Apply mask mode to emission
+		emission = _EmissionMode2nd? emission * material.albedo : emission;
+
+		float4 emissionDetail = EmissionDetail2nd(emissionTexcoords.zw);
+
+		emission = emissionDetail.rgb * emission * _EmissionColor2nd.rgb;
+		
+		float rimModifier = applyEmissionRim(_EmissionRimPower2nd, d.NdotV);
+
+		emission *= outlineDarken * rimModifier;
+		material.emission += float4(emission, 0);
+	}
+
+	#if defined(_AUDIOLINK)
+	{
+		float4 audiolinkUV = EmissiveAudioLinkTexCoords(tc);
+		material.emission += EmissiveAudioLink(audiolinkUV.xy, audiolinkUV.zw);
+	}
+	#endif // _AUDIOLINK
+
 	#if defined(_SPECULAR)
 	{
 		float4 specIrid = Iridescence(p.NoV, 0);
@@ -341,64 +382,7 @@ inline void MaterialSetupPostParams(inout SCSS_Input material, SCSS_ShadingParam
 		material.albedo = applyMatcap(_Matcap2, matcapUV, material.albedo, _Matcap2Tint, _Matcap2Blend, _Matcap2Strength * _MatcapMask_var.g);
 		material.albedo = applyMatcap(_Matcap3, matcapUV, material.albedo, _Matcap3Tint, _Matcap3Blend, _Matcap3Strength * _MatcapMask_var.b);
 		material.albedo = applyMatcap(_Matcap4, matcapUV, material.albedo, _Matcap4Tint, _Matcap4Blend, _Matcap4Strength * _MatcapMask_var.a);
-	}
-
-	#if defined(_EMISSION)
-	{
-		// Masks albedo out behind emission.
-		float emissionAlpha;
-
-		float4 emissionTexcoords = EmissionTexCoords(tc);
-		float3 emission = Emission(emissionTexcoords.xy);
-		
-		// Apply mask mode to emission
-		emission = _EmissionMode? emission * material.albedo : emission;
-
-		float4 emissionDetail = EmissionDetail(emissionTexcoords.zw);
-
-		emission = emissionDetail.rgb * emission * _EmissionColor.rgb;
-		
-		float rimModifier = applyEmissionRim(_EmissionRimPower, d.NdotV);
-
-		emission *= outlineDarken * rimModifier;
-		material.emission = float4(emission, 0);
-	}
-	#else
-		float rimModifier = applyEmissionRim(_EmissionRimPower, d.NdotV);
-		material.emission.rgb += _EmissionColor.rgb * rimModifier;
-	#endif // _EMISSION
-	#if defined(_EMISSION_2ND)
-	{
-		// Masks albedo out behind emission.
-		float emissionAlpha;
-
-		float4 emissionTexcoords = EmissionTexCoords2nd(tc);
-		float3 emission = Emission2nd(emissionTexcoords.xy);
-		
-		// Apply mask mode to emission
-		emission = _EmissionMode2nd? emission * material.albedo : emission;
-
-		float4 emissionDetail = EmissionDetail2nd(emissionTexcoords.zw);
-
-		emission = emissionDetail.rgb * emission * _EmissionColor2nd.rgb;
-		
-		float rimModifier = applyEmissionRim(_EmissionRimPower2nd, d.NdotV);
-
-		emission *= outlineDarken * rimModifier;
-		material.emission += float4(emission, 0);
-	}
-	#else
-		float rimModifier2 = applyEmissionRim(_EmissionRimPower2nd, d.NdotV);
-		material.emission.rgb += _EmissionColor2nd.rgb * rimModifier2;
-	#endif // _EMISSION_2ND
-
-	#if defined(_AUDIOLINK)
-	{
-		float4 audiolinkUV = EmissiveAudioLinkTexCoords(tc);
-		material.emission += EmissiveAudioLink(audiolinkUV.xy, audiolinkUV.zw);
-	}
-	#endif // _AUDIOLINK
-	
+	}	
 }
 
 float4 frag(VertexOutput i, uint facing : SV_IsFrontFace
@@ -457,7 +441,7 @@ float4 frag(VertexOutput i, uint facing : SV_IsFrontFace
 	float3 finalColor = SCSS_ApplyLighting(material, p);
 
 	// Workaround a compiler issue when albedo is not needed but its sampler is.
-	finalColor += material.albedo * 0.00001;
+	finalColor += material.albedo * FLT_EPS;
 
 	finalColor = applyNearShading(finalColor, i.worldPos.xyz, facing);
 

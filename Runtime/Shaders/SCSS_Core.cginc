@@ -499,7 +499,6 @@ float3 SCSS_ApplyLighting(SCSS_Input c, SCSS_ShadingParam p)
 	SCSS_Light l = MainLight(p.position.xyz);
 	SCSS_LightParam d = initialiseLightParam(l, p);
 
-
 	#if defined(_METALLICGLOSSMAP)
 	// Perceptual roughness transformation. Without this, roughness handling is wrong.
 	float perceptualRoughness = SmoothnessToPerceptualRoughness(c.smoothness);
