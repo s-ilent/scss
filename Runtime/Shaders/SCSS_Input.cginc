@@ -896,7 +896,9 @@ float applyEmissionRim(float power, float NdotV)
 	float absPower = abs(power);
 	if (absPower > 0.0001)
 	{
-		return power < 0.0001 ? 1.0 - pow(NdotV, absPower) : pow(NdotV, absPower);
+		// d.NdotV is not guaranteed to be positive, so clamp it here. 
+		float rimMask = saturate(pow(max(abs(NdotV), float(FLT_EPS)), absPower));
+		return power < 0.0 ? 1.0 - rimMask : rimMask;
 	}
 	return 1.0;
 }
