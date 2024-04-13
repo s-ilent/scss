@@ -1279,9 +1279,9 @@ void applyDetail(inout SCSS_Input c, sampler2D src, half2 detailUV, const int de
             c.normalTangent = BlendNormalsPD(c.normalTangent, detailMap.xyz);
             break; 
         case 2: // Specular
-			blendStrength *=  detailMap.b;
-            c.specColor = applyDetailBlendMode(blendMode, c.specColor, detailMap.r, blendStrength);
+            c.specColor = applyDetailBlendMode(blendMode, c.specColor, detailMap.rgb, blendStrength);
             c.smoothness = applyDetailBlendMode(blendMode, c.smoothness, detailMap.a, blendStrength);
+			c.oneMinusReflectivity = OneMinusReflectivityFromMetallic_local(c.specColor);
             break; 
     }
 }

@@ -188,19 +188,8 @@ inline SCSS_Input MaterialSetup(SCSS_TexCoords tc,
 		if (_Crosstone2ndSeparation) material.tone[1].col *= LerpWhiteTo_local(_Color.rgb, tintMask);
 	}
 
-	#if defined(_DETAIL)
-    {
-        float4 _DetailMask_var = DetailMask(tc.uv[0]);
-        if (any(_DetailMap1_TexelSize > 16.0)) applyDetail(material, _DetailMap1, applyScaleOffset(tc.uv[_DetailMap1UV], _DetailMap1_ST), 
-			_DetailMap1Type, _DetailMap1Blend, _DetailMap1Strength * _DetailMask_var[0]);
-        if (any(_DetailMap2_TexelSize > 16.0)) applyDetail(material, _DetailMap2, applyScaleOffset(tc.uv[_DetailMap2UV], _DetailMap2_ST), 
-			_DetailMap2Type, _DetailMap2Blend, _DetailMap2Strength * _DetailMask_var[1]);
-        if (any(_DetailMap3_TexelSize > 16.0)) applyDetail(material, _DetailMap3, applyScaleOffset(tc.uv[_DetailMap3UV], _DetailMap3_ST), 
-			_DetailMap3Type, _DetailMap3Blend, _DetailMap3Strength * _DetailMask_var[2]);
-        if (any(_DetailMap4_TexelSize > 16.0)) applyDetail(material, _DetailMap4, applyScaleOffset(tc.uv[_DetailMap4UV], _DetailMap4_ST), 
-			_DetailMap4Type, _DetailMap4Blend, _DetailMap4Strength * _DetailMask_var[3]);
-    }
-	#endif
+	// Scattering parameters
+	material.thickness = Thickness(mainUVs);
 	
 	material.softness = i_extraData.g;
 
@@ -213,9 +202,6 @@ inline SCSS_Input MaterialSetup(SCSS_TexCoords tc,
 	material.rim.alpha *= RimMask(mainUVs);
 	material.rim.invAlpha *= RimMask(mainUVs);
 	material.rim.tint *= outlineDarken;
-
-	// Scattering parameters
-	material.thickness = Thickness(mainUVs);
 
 	// Specular variable setup
 
@@ -266,6 +252,20 @@ inline SCSS_Input MaterialSetup(SCSS_TexCoords tc,
 		}
 	}
 	#endif // _SPECULAR
+
+	#if defined(_DETAIL)
+    {
+        float4 _DetailMask_var = DetailMask(tc.uv[0]);
+        if (any(_DetailMap1_TexelSize > 16.0)) applyDetail(material, _DetailMap1, applyScaleOffset(tc.uv[_DetailMap1UV], _DetailMap1_ST), 
+			_DetailMap1Type, _DetailMap1Blend, _DetailMap1Strength * _DetailMask_var[0]);
+        if (any(_DetailMap2_TexelSize > 16.0)) applyDetail(material, _DetailMap2, applyScaleOffset(tc.uv[_DetailMap2UV], _DetailMap2_ST), 
+			_DetailMap2Type, _DetailMap2Blend, _DetailMap2Strength * _DetailMask_var[1]);
+        if (any(_DetailMap3_TexelSize > 16.0)) applyDetail(material, _DetailMap3, applyScaleOffset(tc.uv[_DetailMap3UV], _DetailMap3_ST), 
+			_DetailMap3Type, _DetailMap3Blend, _DetailMap3Strength * _DetailMask_var[2]);
+        if (any(_DetailMap4_TexelSize > 16.0)) applyDetail(material, _DetailMap4, applyScaleOffset(tc.uv[_DetailMap4UV], _DetailMap4_ST), 
+			_DetailMap4Type, _DetailMap4Blend, _DetailMap4Strength * _DetailMask_var[3]);
+    }
+	#endif
 
 	return material;
 }
