@@ -255,13 +255,14 @@ VertexOutput vert_nogeom(appdata_full_local v) {
 	o = vert(v);
 
 	o.pos = ObjectToClipPos(o.pos);
-	o.pos = ApplyNearVertexSquishing(o.pos);
-	
-	UNITY_TRANSFER_SHADOW(o, v.texcoord1);
 
 #if defined(FOG_LINEAR) || defined(FOG_EXP) || defined(FOG_EXP2)
 	UNITY_TRANSFER_FOG_COMBINED_WITH_WORLD_POS(o, o.pos);
 #endif
+
+	o.pos = ApplyNearVertexSquishing(o.pos);
+	
+	UNITY_TRANSFER_SHADOW(o, v.texcoord1);
 
 	o.extraData.x = false;
 	return o;
@@ -363,6 +364,7 @@ void geom(triangle VertexOutput IN[3], inout TriangleStream<VertexOutput> tristr
 
 			o.extraData.x = false;
 			ObjectToClipAndTransferData(o);
+
 			o.pos = ApplyNearVertexSquishing(o.pos);
 
 			tristream.Append(o);
@@ -382,13 +384,12 @@ void geom(triangle VertexOutput IN[3], inout TriangleStream<VertexOutput> tristr
 	    		UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(o); 
 
 				o = CalculateOutlineVertexClipPosition(o);
-				o.pos = ApplyOutlineZBias(o.pos, o.extraData.z);
-				o.pos = ApplyNearVertexSquishing(o.pos);
-				o.extraData.x = true;
-
 				#if defined(FOG_LINEAR) || defined(FOG_EXP) || defined(FOG_EXP2)
 					UNITY_TRANSFER_FOG_COMBINED_WITH_WORLD_POS(o, o.pos);
 				#endif
+				o.pos = ApplyOutlineZBias(o.pos, o.extraData.z);
+				o.pos = ApplyNearVertexSquishing(o.pos);
+				o.extraData.x = true;
 
 				tristream.Append(o);
 			}
