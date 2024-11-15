@@ -73,6 +73,10 @@ namespace SilentCelShading.Unity
 		{
 			Additive = 0, Mask = 1
 		}
+		public enum SDFMode
+		{
+			None = 0, SingleChannel = 1, DualChannel = 2
+		}
 
 		protected Material target;
 		protected MaterialEditor editor;
@@ -843,6 +847,8 @@ namespace SilentCelShading.Unity
             EditorGUILayout.Space();
 
 			ph.TexturePropertySingleLine("_ShadingGradeMap", "_Tweak_ShadingGradeMapLevel");
+			ph.ShaderProperty("_SDFMode");
+			ph.ShaderProperty("_SDFSmoothness");
 		}
 
 		protected void SpecularOptions()

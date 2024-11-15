@@ -6,7 +6,7 @@
 #include "AutoLight.cginc"
 
 // Testing using a lower precision format for the vertex data. 
-// This could increase performance in situations where there is a lot of GPU load,
+// This could increase performance in situations where there is a lot of GPU load,`
 // at the cost of some GPU load.
 
 #if 1
@@ -21,7 +21,8 @@
 #define v_half4 half4
 #endif
 
-struct appdata_full_local{
+struct appdata_full_local
+{
     v_half4 vertex : POSITION;
     v_half4 tangent : TANGENT;
     v_half3 normal : NORMAL;
@@ -30,6 +31,7 @@ struct appdata_full_local{
     v_half4 texcoord2 : TEXCOORD2;
     v_half4 texcoord3 : TEXCOORD3;
     v_half4 color : COLOR;
+	uint vid : SV_VertexID;
     UNITY_VERTEX_INPUT_INSTANCE_ID
 };
 

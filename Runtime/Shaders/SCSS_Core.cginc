@@ -9,8 +9,9 @@
 #include "SCSS_Config.cginc"
 #include "SCSS_UnityGI.cginc"
 #include "SCSS_Utils.cginc"
-#include "SCSS_Input.cginc"
 #include "SCSS_Attributes.cginc"
+#include "SCSS_Input.cginc"
+#include "SCSS_Lighting.cginc"
 
 #if defined(_SUBSURFACE)
 //SSS method from GDC 2011 conference by Colin Barre-Bresebois & Marc Bouchard and modified by Xiexe
@@ -28,56 +29,45 @@ float3 getSubsurfaceScatteringLight (SCSS_Light l, float3 normalDirection, float
 }
 #endif
 
-#if defined(SCSS_CROSSTONE)
-float3 sampleCrossToneLighting(inout float remappedLight, SCSS_TonemapInput tone0, SCSS_TonemapInput tone1, float3 albedo)
-{
+float3 sampleCrossToneLighting(inout float remappedLight, SCSS_CrosstoneData data, float3 albedo) {
 	// A three-tiered tone system.
 	// Input remappedLight is potentially affected by occlusion map.
+    half factorBorder = saturate(simpleSharpen(remappedLight, data.tone0.width + data.shadowBorderRange, data.tone0.offset));
+    half factor0 = saturate(simpleSharpen(remappedLight, data.tone0.width, data.tone0.offset));
+    half factor1 = saturate(simpleSharpen(remappedLight, data.tone1.width, data.tone1.offset));
 
-	// Todo: clean this up, compatibility hacks
-	half factorBorder = saturate(simpleSharpen(remappedLight, tone0.width + _ShadowBorderRange, tone0.offset));
-
-	half factor0 = saturate(simpleSharpen(remappedLight, tone0.width, tone0.offset));
-	half factor1 = saturate(simpleSharpen(remappedLight, tone1.width, tone1.offset));
-
-	float3 final;
+    float3 final;
 
 	// 2nd separation determines whether 1st and 2nd shading tones are combined.
-	if (_Crosstone2ndSeparation == 0) 	tone1.col = tone1.col * tone0.col;
-	// if (_Crosstone2ndSeparation == 1) 	tone1.col = tone1.col; // Just here for completeness
-	
+    if (data.crosstone2ndSeparation == 0) data.tone1.col = data.tone1.col * data.tone0.col;
+
 	// Either way, the result is interpolated against tone 0 by the 2nd factor.
-	final = lerp(tone1.col, tone0.col, factor1);
+    final = lerp(data.tone1.col, data.tone0.col, factor1);
 
 	// Tone separation determines whether albedo and 1st shading tones are combined.
-	if (_CrosstoneToneSeparation == 0) 	final = final*albedo;
-	// if (_CrosstoneToneSeparation == 1) 	final = final; // Just here for completeness
-	
-	final = lerp(final, albedo, factorBorder*_ShadowBorderColor);
+    if (data.crosstoneToneSeparation == 0) final = final * albedo;
 
-	final = lerp(final, albedo, factor0);
+    final = lerp(final, albedo, factorBorder * data.shadowBorderColor);
+    final = lerp(final, albedo, factor0);
 
-	remappedLight = factor0;
-	
-	return final;
+    remappedLight = factor0;
+    
+    return final;
 }
-#endif
 
-#if !defined(SCSS_CROSSTONE)
-float applyShadowLift(float baseLight, float occlusion)
+float applyShadowLift(float baseLight, float occlusion, float shadowLift) 
 {
-	baseLight *= occlusion;
-	baseLight = _ShadowLift + baseLight * (1-_ShadowLift);
-	return baseLight;
+    baseLight *= occlusion;
+    baseLight = shadowLift + baseLight * (1 - shadowLift);
+    return baseLight;
 }
 
-float applyShadowLift(float4 baseLight, float occlusion)
+float applyShadowLift(float4 baseLight, float occlusion, float shadowLift) 
 {
-	baseLight *= occlusion;
-	baseLight = _ShadowLift + baseLight * (1-_ShadowLift);
-	return baseLight;
+    baseLight *= occlusion;
+    baseLight = shadowLift + baseLight * (1 - shadowLift);
+    return baseLight;
 }
-#endif
 
 float getRemappedLight(half perceptualRoughness, SCSS_LightParam d)
 {
@@ -86,153 +76,110 @@ float getRemappedLight(half perceptualRoughness, SCSS_LightParam d)
 	return remappedLight;
 }
 
-float applyAttenuation(half NdotL, half attenuation)
-{
-	#if defined(SCSS_CROSSTONE)
-	// This depends on knowing when the first shadow transition point is to work well.
-	// Ideally, though, it shouldn't depend on the parameters itself. 
-	half shadeVal = _1st_ShadeColor_Step - _1st_ShadeColor_Feather * 0.5;
-	shadeVal = shadeVal-0.01;
-	NdotL = lerp(shadeVal*NdotL, NdotL, attenuation);
-	#else
-	NdotL = min(NdotL * attenuation, NdotL);
-	#endif
-	return NdotL;
+float applyAttenuation(half NdotL, half attenuation) {
+    NdotL = min(NdotL * attenuation, NdotL);
+    return NdotL;
 }
 
-half3 calcVertexLight(float4 vertexAttenuation, float occlusion, SCSS_TonemapInput tone[2], half softness)
-{
-	float3 vertexContribution = 0;
-	#if defined(UNITY_PASS_FORWARDBASE)
+float applyAttenuationCrosstone(half NdotL, half attenuation, SCSS_TonemapInput t) {
+	// This depends on knowing when the first shadow transition point is to work well.
+	// Ideally, though, it shouldn't depend on the parameters itself. 
+    half shadeVal = t.offset - t.width * 0.5;
+    shadeVal = shadeVal - 0.01;
+    NdotL = lerp(shadeVal * NdotL, NdotL, attenuation);
+    return NdotL;
+}
 
-		#if !defined(SCSS_CROSSTONE)
-		vertexAttenuation = applyShadowLift(vertexAttenuation, occlusion);
-    	for (int num = 0; num < 4; num++) {
-    		vertexContribution += unity_LightColor[num] * 
-    			(sampleRampWithOptions(vertexAttenuation[num], softness)+tone[0].col);
-    	}
-    	#endif
+half3 calcVertexLight(float4 vertexAttenuation, SCSS_LightrampData data) {
+    float3 vertexContribution = 0;
+    vertexAttenuation = applyShadowLift(vertexAttenuation, data.occlusion, data.shadowLift);
+    for (int num = 0; num < 4; num++) {
+        vertexContribution += unity_LightColor[num] * (sampleRampWithOptions(vertexAttenuation[num], data.softness) + data.tone0.col);
+    }
+    return vertexContribution;
+}
 
-		#if defined(SCSS_CROSSTONE)
-    	for (int num = 0; num < 4; num++) {
-    		vertexContribution += unity_LightColor[num] * 
-    			sampleCrossToneLighting(vertexAttenuation[num], tone[0], tone[1], 1.0);
-    	}
-    	#endif
-
-	#endif
-	return vertexContribution;
+half3 calcVertexLight(float4 vertexAttenuation, SCSS_CrosstoneData data) {
+    float3 vertexContribution = 0;
+    for (int num = 0; num < 4; num++) {
+        vertexContribution += unity_LightColor[num] * sampleCrossToneLighting(vertexAttenuation[num], data, 1.0);
+    }
+    return vertexContribution;
 }
 
 // For baked lighting.
-half3 calcDiffuseGI(float3 albedo, SCSS_TonemapInput tone[2], float occlusion, half softness,
-	float3 indirectLighting, float3 directLighting, SCSS_LightParam d)
-{
-	float ambientLight = d.NdotAmb;
+// remappedLight should be d.NdotAmb. 
+half3 calcDiffuseGI(float3 albedo, SCSS_LightrampData data, float3 indirectLighting, float3 directLighting, float remappedLight) {
+    float ambientLight = remappedLight;
+    float3 indirectAverage = 0.5 * (indirectLighting + directLighting);
+    const half ambientLightSplitThreshold = 1.0;
+    half ambientLightSplitFactor = saturate(dot(abs((directLighting - indirectLighting) / indirectAverage), ambientLightSplitThreshold * sRGB_Luminance));
+    directLighting = lerp(indirectLighting, directLighting, _LightWrappingCompensationFactor);
 
-	/*
-	Ambient lighting splitting: 
-	Strong shading looks good, but weak shading looks bad. 
-	This system removes shading if it's too weak.
-	*/
-	
-	float3 indirectAverage = 0.5 * (indirectLighting + directLighting);
+    ambientLight = applyShadowLift(ambientLight, data.occlusion, data.shadowLift);
+    float3 indirectContribution = sampleRampWithOptions(ambientLight, data.softness);
+    indirectLighting = lerp(indirectLighting, directLighting, data.tone0.col);
+    indirectAverage = lerp(indirectAverage, directLighting, data.tone0.col);
 
-	// Make this a UI value later.
-	const half ambientLightSplitThreshold = 1.0;
-	half ambientLightSplitFactor = 
-	saturate(
-		dot(abs((directLighting-indirectLighting)/indirectAverage), 
-		ambientLightSplitThreshold * sRGB_Luminance));
+    return lerp(indirectAverage, lerp(indirectLighting, directLighting, indirectContribution), ambientLightSplitFactor) * albedo;
+}
 
-	directLighting	= lerp(indirectLighting, directLighting, _LightWrappingCompensationFactor);
+half3 calcDiffuseGI(float3 albedo, SCSS_CrosstoneData data, float3 indirectLighting, float3 directLighting, float remappedLight) {
+    float ambientLight = remappedLight;
+    float3 indirectAverage = 0.5 * (indirectLighting + directLighting);
+    const half ambientLightSplitThreshold = 1.0;
+    half ambientLightSplitFactor = saturate(dot(abs((directLighting - indirectLighting) / indirectAverage), ambientLightSplitThreshold * sRGB_Luminance));
+    directLighting = lerp(indirectLighting, directLighting, _LightWrappingCompensationFactor);
 
-	#if !defined(SCSS_CROSSTONE)
-	ambientLight = applyShadowLift(ambientLight, occlusion);
-	float3 indirectContribution = sampleRampWithOptions(ambientLight, softness);
-	indirectLighting = lerp(indirectLighting, directLighting, tone[0].col);
-	indirectAverage = lerp(indirectAverage, directLighting, tone[0].col);
-	#endif
+    ambientLight *= data.occlusion;
+    float3 indirectContribution = sampleCrossToneLighting(ambientLight, data, albedo);
 
-	#if defined(SCSS_CROSSTONE)
-	ambientLight *= occlusion;
-	float3 indirectContribution = sampleCrossToneLighting(ambientLight, tone[0], tone[1], albedo);
-	#endif
-
-	float3 lightContribution;
-
-	#if defined(SCSS_CROSSTONE)
-	if (_CrosstoneToneSeparation == 0) lightContribution = 
-	lerp(indirectAverage,
-	lerp(indirectLighting, directLighting, indirectContribution),
-	ambientLightSplitFactor) * albedo;
-
-	if (_CrosstoneToneSeparation == 1) lightContribution = 
-	lerp(indirectAverage * albedo,
-	directLighting*indirectContribution,
-	ambientLightSplitFactor);
-	#endif
-
-	#if !defined(SCSS_CROSSTONE)
-	lightContribution = 
-	lerp(indirectAverage,
-	lerp(indirectLighting, directLighting, indirectContribution),
-	ambientLightSplitFactor) * albedo;
-	#endif
-
-	return lightContribution;
+    if (data.crosstoneToneSeparation == 0) {
+        return lerp(indirectAverage, lerp(indirectLighting, directLighting, indirectContribution), ambientLightSplitFactor) * albedo;
+    } else {
+        return lerp(indirectAverage * albedo, directLighting * indirectContribution, ambientLightSplitFactor);
+    }
 }
 
 // For directional lights where attenuation is shadow.
-half3 calcDiffuseBase(float3 albedo, SCSS_TonemapInput tone[2], float occlusion, half perceptualRoughness, 
-	half attenuation, half softness, SCSS_LightParam d, SCSS_Light l)
-{
-	float remappedLight = getRemappedLight(perceptualRoughness, d);
-	remappedLight = remappedLight * 0.5 + 0.5;
-
-	remappedLight = applyAttenuation(remappedLight, attenuation);
-
-	#if !defined(SCSS_CROSSTONE)
-	remappedLight = applyShadowLift(remappedLight, occlusion);
-	float3 lightContribution = lerp(tone[0].col, 1.0, sampleRampWithOptions(remappedLight, softness)) * albedo;
-	#endif
-
-	#if defined(SCSS_CROSSTONE)
-	remappedLight *= occlusion;
-	float3 lightContribution = sampleCrossToneLighting(remappedLight, tone[0], tone[1], albedo);
-	#endif
-
-	lightContribution *= l.color;
-
-	lightContribution *= _LightWrappingCompensationFactor;
-
-	return lightContribution;	
+// remappedLight must be 0..1 range.
+half3 calcDiffuseBase(float3 albedo, SCSS_LightrampData data, half attenuation, float3 lightColor, float remappedLight) {
+    remappedLight = applyAttenuation(remappedLight, attenuation);
+    remappedLight = applyShadowLift(remappedLight, data.occlusion, data.shadowLift);
+    float3 lightContribution = lerp(data.tone0.col, 1.0, sampleRampWithOptions(remappedLight, data.softness)) * albedo;
+    lightContribution *= lightColor;
+    lightContribution *= _LightWrappingCompensationFactor;
+    return lightContribution;
 }
 
-// For point/spot lights where attenuation is shadow+attenuation.
-half3 calcDiffuseAdd(float3 albedo, SCSS_TonemapInput tone[2], float occlusion, half perceptualRoughness, 
-	half softness, SCSS_LightParam d, SCSS_Light l)
-{
-	float remappedLight = getRemappedLight(perceptualRoughness, d);
-	remappedLight = remappedLight * 0.5 + 0.5;
-
-	#if !defined(SCSS_CROSSTONE)
-	remappedLight = applyShadowLift(remappedLight, occlusion);
-	float3 lightContribution = sampleRampWithOptions(remappedLight, softness);
-
-	float3 directLighting = l.color;
-	float3 indirectLighting = l.color * tone[0].col;
-
-	lightContribution = lerp(indirectLighting, directLighting, lightContribution) * albedo;
-	#endif
-
-	#if defined(SCSS_CROSSTONE)
-	float3 lightContribution = sampleCrossToneLighting(remappedLight, tone[0], tone[1], albedo);
-	lightContribution *= l.color;
-	#endif
-
-	return lightContribution;
+half3 calcDiffuseBase(float3 albedo, SCSS_CrosstoneData data, half attenuation, float3 lightColor, float remappedLight) {
+    remappedLight = applyAttenuationCrosstone(remappedLight, attenuation, data.tone0);
+    remappedLight *= data.occlusion;
+    float3 lightContribution = sampleCrossToneLighting(remappedLight, data, albedo);
+    lightContribution *= lightColor;
+    lightContribution *= _LightWrappingCompensationFactor;
+    return lightContribution;
 }
+
+// For point/spot lights, where attenuation is shadow+attenuation.
+// remappedLight must be 0..1 range.
+half3 calcDiffuseAdd(float3 albedo, SCSS_LightrampData data, float3 lightColor, float remappedLight) {
+    remappedLight = applyShadowLift(remappedLight, data.occlusion, data.shadowLift);
+    float3 lightContribution = sampleRampWithOptions(remappedLight, data.softness);
+
+    float3 directLighting = lightColor;
+    float3 indirectLighting = lightColor * data.tone0.col;
+
+    lightContribution = lerp(indirectLighting, directLighting, lightContribution) * albedo;
+    return lightContribution;
+}
+
+half3 calcDiffuseAdd(float3 albedo, SCSS_CrosstoneData data, float3 lightColor, float remappedLight) {
+    float3 lightContribution = sampleCrossToneLighting(remappedLight, data, albedo);
+    lightContribution *= lightColor;
+    return lightContribution;
+}
+
 
 #if defined(_SPECULAR)
 void getSpecularVD(float roughness, SCSS_LightParam d, SCSS_Light l, SCSS_ShadingParam p,
@@ -414,13 +361,29 @@ float3 SCSS_ShadeBase(const SCSS_Input c, const SCSS_ShadingParam p)
 	SCSS_Light l = MainLight(p.position.xyz);
 	SCSS_LightParam d = initialiseLightParam(l, p);
 
+    float remappedLight = getRemappedLight(c.perceptualRoughness, d);
+	remappedLight = remappedLight * 0.5 + 0.5;
+	float giLight = d.NdotAmb;
+
+	if (_SDFMode)
+	{
+		remappedLight = getSDFLighting(l.dir, c.sdf, c.sdfSmoothness);
+		giLight = getSDFLighting(d.ambDir, c.sdf, c.sdfSmoothness);
+	}
+
 	float3 directLighting, indirectLighting;
 
 	getDirectIndirectLighting(p.normal, /*out*/ directLighting, /*out*/ indirectLighting);
 
-	finalColor  = calcDiffuseGI(c.albedo, c.tone, c.occlusion, c.softness, indirectLighting, directLighting, d);
-	finalColor += calcDiffuseBase(c.albedo, c.tone, c.occlusion,
-		c.perceptualRoughness, p.attenuation, c.softness, d, l);
+	// Prepare Lightramp/Crosstone parameters to pass on
+	#if defined(SCSS_CROSSTONE)
+    SCSS_CrosstoneData shadingData = initaliseCrosstoneParam(c);
+	#else
+    SCSS_LightrampData shadingData = initaliseLightrampParam(c);
+	#endif
+
+    finalColor  = calcDiffuseGI(c.albedo, shadingData, indirectLighting, directLighting, giLight);
+    finalColor += calcDiffuseBase(c.albedo, shadingData, p.attenuation, l.color, remappedLight);
 
 	// Prepare fake light params for subsurface scattering.
 	SCSS_Light iL = l;
@@ -464,8 +427,22 @@ float3 SCSS_ShadeLight(const SCSS_Input c, const SCSS_ShadingParam p, const SCSS
 	float3 finalColor;
 
 	SCSS_LightParam d = initialiseLightParam(l, p);
+    float remappedLight = getRemappedLight(c.perceptualRoughness, d);
+	remappedLight = remappedLight * 0.5 + 0.5;
 
-    finalColor = calcDiffuseAdd(c.albedo, c.tone, c.occlusion, c.perceptualRoughness, c.softness, d, l);
+	if (_SDFMode)
+	{
+		remappedLight = getSDFLighting(l.dir, c.sdf, c.sdfSmoothness);
+	}
+	
+	// Prepare Lightramp/Crosstone parameters to pass on
+	#if defined(SCSS_CROSSTONE)
+    SCSS_CrosstoneData shadingData = initaliseCrosstoneParam(c);
+	#else
+    SCSS_LightrampData shadingData = initaliseLightrampParam(c);
+	#endif
+
+    finalColor = calcDiffuseAdd(c.albedo, shadingData, l.color, remappedLight);
 
 	if (p.isOutline <= 0)
 	{
@@ -579,8 +556,6 @@ float3 SCSS_ApplyLighting(SCSS_Input c, SCSS_ShadingParam p)
 		finalColor *= lightmap;
 	#endif
 
-	//finalColor *= _LightWrappingCompensationFactor;
-
 	// Apply the light scaling if the light clamp is active. When the light clamp is active,
 	// the final colour is divided by the light intensity
    	if (getLightClampActive()) finalColor = finalColor / max(max3(effectLighting), 1);
@@ -596,6 +571,8 @@ float3 SCSS_ApplyLighting(SCSS_Input c, SCSS_ShadingParam p)
 	//finalColor = lerp(finalColor, c.emission, c.emission.a);
 	finalColor += c.emission;
 	#endif
+
+		return SCSS_ShadeBase(c, p);
 
 	return finalColor;
 }

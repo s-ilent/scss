@@ -20,7 +20,7 @@ s_EmissionDetailPhase	Phase/Pulse	Sets the phase of the emission detail texture.
 _EmissionMap2nd	2nd Emission Map	Second emission map (RGB), which controls emitted light that isn't affected by lighting.
 _EmissionDetailParams2nd	2nd Emission Detail Parameters	XY: Scrolling speed, ZW: Phase
 _DetailEmissionMap2nd	2nd Emission Detail Mask	An additional texture multiplied against the main 2nd emission map. This allows adding additional detail patterns to the emissive texture.
-_EmissionRimPower2nd	2nd Emission Rim Power	When above zero, applies an effect to the emission which darkens it at glancing angles. When below zero, the emission will only be visible at glancing angles. This can be used for a fluroescence effect. 
+_EmissionRimPower2nd	2nd Emission Rim Power	When above zero, applies an effect to the 2nd emission which darkens it at glancing angles. When below zero, the emission will only be visible at glancing angles. This can be used for a fluroescence effect. 
 _SpecGlossMap	Specular Map	Specular Map (RGBA, RGB: Specular/Metalness, A: Smoothness)
 _SpecularType	Specular Style	Allows you to set whether specular is active, and what kind of specular to use if so.
 _Smoothness	Smoothness	The smoothness of the material. The specular map's alpha channel is used for this, with this slider being a multiplier.
@@ -163,6 +163,7 @@ _ShadingGradeMap	Shading Adjustment	Adds additional shading to darkened regions,
 _ShadingGradeMapLevel	Shading Adjustment Level	Modifies the middle point of the shading adjustment.
 _ShadowBorderColor	Shading Tone Border	Adds a colour shift to the intersection between the shading tones. Black means no change.
 _ShadowBorderRange	Width	Sets the width of the colour shift. 
+_SDFMode	SDF Mode	Whether to treat the shading adjustment as an SDF shadow texture. An SDF shadow texture is a specially created shadow mask that replaces the lighting calculation for the surface. Note that in order for SDF shadows to work correctly, your mesh data must be oriented correctly. 
 _LightMultiplyAnimated	Runtime Light Adjustment	Modifies the output values. The lower this value, the darker the light reflected by the material.
 _LightAddAnimated	Runtime Light Increase	Modifies the output values. The higher this value, the greater the amount of baseline luminance is applied to the material. Not recommended for regular use.
 _LightClampAnimated	Runtime Light Clamp	Limits the output value of lighting. When enabled, total lighting applied is limited. Not recommended for regular use.

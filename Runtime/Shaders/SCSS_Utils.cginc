@@ -41,6 +41,17 @@ bool inMirror()
     return unity_CameraProjection[2][0] != 0.f || unity_CameraProjection[2][1] != 0.f;
 }
 
+float3 inferno_quintic(float x)
+{
+    x = saturate(x);
+    float4 x1 = float4(1.0, x, x * x, x * x * x); // 1 x x2 x3
+    float4 x2 = x1 * x1.w * x; // x4 x5 x6 x7
+    return float3(
+        dot(x1.xyzw, float4(-0.027780558, +1.228188385, +0.278906882, +3.892783760)) + dot(x2.xy, float2(-8.490712758, +4.069046086)),
+        dot(x1.xyzw, float4(+0.014065206, +0.015360518, +1.605395918, -4.821108251)) + dot(x2.xy, float2(+8.389314011, -4.193858954)),
+        dot(x1.xyzw, float4(-0.019628385, +3.122510347, -5.893222355, +2.798380308)) + dot(x2.xy, float2(-3.608884658, +4.324996022)));
+}
+
 float interleaved_gradient(float2 uv)
 {
 	float3 magic = float3(0.06711056, 0.00583715, 52.9829189);
@@ -324,6 +335,24 @@ float2 sharpSample( float4 texelSize , float2 coord )
     return coord;
 }
 
+float simpleRimHelper(float power, float NdotV)
+{
+	float absPower = abs(power);
+	if (absPower > 0.0001)
+	{
+		// d.NdotV is not guaranteed to be positive, so clamp it here. 
+		float rimMask = saturate(pow(max(abs(NdotV), float(FLT_EPS)), absPower));
+		return power < 0.0 ? 1.0 - rimMask : rimMask;
+	}
+	return 1.0;
+}
+
+// where x is depth and y is the modulator
+float depthBlend(float x, float y)
+{
+	return (x+y) - (x*y);
+}
+
 // Colour transform helper functions
 // Source: https://beesbuzz.biz/code/16-hsv-color-transforms
 
@@ -346,20 +375,13 @@ float3 TransformHSV(float3 col, float h, float s, float v)
     return ret;
 }
 
-// This is based on a typical calculation for tonemapping
-// scenes to screens, but in this case we want to flatten
-// and shift the image colours.
-// Lavender's the most aesthetic colour for this.
-float3 AutoToneMapping(float3 color)
-{
-    const float A = 0.7;
-    const float3 B = float3(.74, 0.6, .74); 
-    const float C = 0;
-    const float D = 1.59;
-    const float E = 0.451;
-    color = max((0.0), color - (0.004));
-    color = (color * (A * color + B)) / (color * (C * color + D) + E);
-    return color;
+float3 gtaoMultiBounce(float visibility, const float3 albedo) {
+    // Jimenez et al. 2016, "Practical Realtime Strategies for Accurate Indirect Occlusion"
+    float3 a =  2.0404 * albedo - 0.3324;
+    float3 b = -4.7951 * albedo + 0.6417;
+    float3 c =  2.7552 * albedo + 0.6903;
+
+    return max((visibility), ((visibility * a + b) * visibility + c) * visibility);
 }
 
 inline float4 ApplyNearVertexSquishing(float4 posCS)
@@ -440,6 +462,57 @@ float clampNoV(float NoV) {
 }
 
 //-----------------------------------------------------------------------------
+// Helper functions for matcaps
+//-----------------------------------------------------------------------------
+
+half2 getMatcapUVs(float3 normal, float3 viewDir)
+{
+    // Based on Masataka SUMI's implementation
+    half3 worldUp = float3(0, 1, 0);
+    half3 worldViewUp = normalize(worldUp - viewDir * dot(viewDir, worldUp));
+    half3 worldViewRight = normalize(cross(viewDir, worldViewUp));
+    return half2(dot(worldViewRight, normal), dot(worldViewUp, normal)) * 0.5 + 0.5;
+}
+
+half2 getMatcapUVsOriented(float3 normal, float3 viewDir, float3 upDir)
+{
+    // Based on Masataka SUMI's implementation
+    half3 worldViewUp = normalize(upDir - viewDir * dot(viewDir, upDir));
+    half3 worldViewRight = normalize(cross(viewDir, worldViewUp));
+    return half2(dot(worldViewRight, normal), dot(worldViewUp, normal)) * 0.5 + 0.5;
+}
+
+// Used for matcaps
+float3 applyBlendMode(int blendOp, half3 a, half3 b, half t)
+{
+    switch (blendOp) 
+    {
+        default:
+        case 0: return a + b * t;
+        case 1: return a * LerpWhiteTo_local(b, t);
+        case 2: return a + b * a * t;
+    }
+}
+
+float3 applyMatcapTint(half4 matcap, half4 tint)
+{
+    // An adjustment to make matcap colour settings more useful.
+    // Tint alpha controls whether matcaps are multiplied or "screen" blended.
+    return lerp(1 - ((1 - matcap.rgb) * (1 - tint.rgb)),
+                matcap.rgb * tint.rgb,
+                tint.a);
+}
+
+float3 applyMatcap(sampler2D src, half2 matcapUV, float3 dst, float4 tint, int blendMode, float blendStrength)
+{
+	// Skip if intensity is zero. 
+	if (blendStrength < 1.0/255.0) return dst;
+
+    half4 matcap = tex2D(src, matcapUV);
+    return applyBlendMode(blendMode, dst, applyMatcapTint(matcap, tint), blendStrength * matcap.a);
+}
+
+//-----------------------------------------------------------------------------
 // These functions rely on data or functions not available in the shadow pass
 //-----------------------------------------------------------------------------
 
@@ -514,17 +587,6 @@ void correctedScreenShadowsForMSAA(float4 _ShadowCoord, inout float shadow)
     }
     #endif //SHADOWMAPSAMPLER_AND_TEXELSIZE_DEFINED
     #endif //SHADOWS_SCREEN
-}
-
-float3 inferno_quintic(float x)
-{
-    x = saturate(x);
-    float4 x1 = float4(1.0, x, x * x, x * x * x); // 1 x x2 x3
-    float4 x2 = x1 * x1.w * x; // x4 x5 x6 x7
-    return float3(
-        dot(x1.xyzw, float4(-0.027780558, +1.228188385, +0.278906882, +3.892783760)) + dot(x2.xy, float2(-8.490712758, +4.069046086)),
-        dot(x1.xyzw, float4(+0.014065206, +0.015360518, +1.605395918, -4.821108251)) + dot(x2.xy, float2(+8.389314011, -4.193858954)),
-        dot(x1.xyzw, float4(-0.019628385, +3.122510347, -5.893222355, +2.798380308)) + dot(x2.xy, float2(-3.608884658, +4.324996022)));
 }
 
 //------------------------------------------------------------------------------
@@ -746,135 +808,6 @@ float StrandSpecular(float3 T, float3 H, float exponent, float strength)
 	float sinTH = sqrt(1.0-dotTH*dotTH);
 	float dirAtten = smoothstep(-1.0, 0.0, dotTH);
 	return dirAtten * pow(sinTH, exponent) * strength;
-}
-
-float3 GetSHDirectionL1()
-{
-    // For efficiency, we only get the direction from L1.
-    // Because getting it from L2 would be too hard!
-    return
-        normalize((unity_SHAr.xyz + unity_SHAg.xyz + unity_SHAb.xyz) + FLT_EPS);
-}
-
-float3 SimpleSH9(float3 normal)
-{
-    return ShadeSH9(float4(normal, 1));
-}
-
-// Get the average (L0) SH contribution
-// Biased due to a constant factor added for L2
-half3 GetSHAverageFast()
-{
-    return float3(unity_SHAr.w, unity_SHAg.w, unity_SHAb.w);
-}
-
-
-// Get the ambient (L0) SH contribution correctly
-// Provided by Dj Lukis.LT - Unity's SH calculation adds a constant
-// factor which produces a slight bias in the result.
-half3 GetSHAverage ()
-{
-    return float3(unity_SHAr.w, unity_SHAg.w, unity_SHAb.w)
-     + float3(unity_SHBr.z, unity_SHBg.z, unity_SHBb.z) / 3.0;
-}
-
-// Get the maximum SH contribution
-// synqark's Arktoon shader's shading method
-// This method has some flaws: 
-// - Getting the length of the L1 data is a bit wrong
-//   because .w contains ambient contribution
-// - Getting the length of L2 doesn't correspond with
-//   intensity, because it doesn't store direct vectors
-half3 GetSHLengthOld ()
-{
-    half3 x, x1;
-    x.r = length(unity_SHAr);
-    x.g = length(unity_SHAg);
-    x.b = length(unity_SHAb);
-    x1.r = length(unity_SHBr);
-    x1.g = length(unity_SHBg);
-    x1.b = length(unity_SHBb);
-    return x + x1;
-}
-
-// Returns the value from SH in the lighting direction with the 
-// brightest intensity. 
-half3 GetSHMaxL1()
-{
-    float4 maxDirection = float4(GetSHDirectionL1(), 1.0);
-    return SHEvalLinearL0L1(maxDirection) + max(SHEvalLinearL2(maxDirection), 0);
-}
-
-float3 SHEvalLinearL2(float3 n)
-{
-    return SHEvalLinearL2(float4(n, 1.0));
-}
-
-float getGreyscaleSH(float3 normal)
-{
-    // Samples the SH in the weakest and strongest direction and uses the difference
-    // to compress the SH result into 0-1 range.
-
-    // However, for efficiency, we only get the direction from L1.
-    float3 ambientLightDirection = GetSHDirectionL1();
-
-    // If this causes issues, it might be worth getting the min() of those two.
-    //float3 dd = float3(unity_SHAr.w, unity_SHAg.w, unity_SHAb.w);
-    float3 dd = SimpleSH9(-ambientLightDirection);
-    float3 ee = SimpleSH9(normal);
-    float3 aa = SimpleSH9(ambientLightDirection);
-
-    ee = saturate( (ee - dd) / (aa - dd));
-    return abs(dot(ee, sRGB_Luminance));
-
-    return dot(normal, ambientLightDirection);
-}
-
-half2 getMatcapUVs(float3 normal, float3 viewDir)
-{
-    // Based on Masataka SUMI's implementation
-    half3 worldUp = float3(0, 1, 0);
-    half3 worldViewUp = normalize(worldUp - viewDir * dot(viewDir, worldUp));
-    half3 worldViewRight = normalize(cross(viewDir, worldViewUp));
-    return half2(dot(worldViewRight, normal), dot(worldViewUp, normal)) * 0.5 + 0.5;
-}
-
-half2 getMatcapUVsOriented(float3 normal, float3 viewDir, float3 upDir)
-{
-    // Based on Masataka SUMI's implementation
-    half3 worldViewUp = normalize(upDir - viewDir * dot(viewDir, upDir));
-    half3 worldViewRight = normalize(cross(viewDir, worldViewUp));
-    return half2(dot(worldViewRight, normal), dot(worldViewUp, normal)) * 0.5 + 0.5;
-}
-
-// Used for matcaps
-float3 applyBlendMode(int blendOp, half3 a, half3 b, half t)
-{
-    switch (blendOp) 
-    {
-        default:
-        case 0: return a + b * t;
-        case 1: return a * LerpWhiteTo_local(b, t);
-        case 2: return a + b * a * t;
-    }
-}
-
-float3 applyMatcapTint(half4 matcap, half4 tint)
-{
-    // An adjustment to make matcap colour settings more useful.
-    // Tint alpha controls whether matcaps are multiplied or "screen" blended.
-    return lerp(1 - ((1 - matcap.rgb) * (1 - tint.rgb)),
-                matcap.rgb * tint.rgb,
-                tint.a);
-}
-
-float3 applyMatcap(sampler2D src, half2 matcapUV, float3 dst, float4 tint, int blendMode, float blendStrength)
-{
-	// Skip if intensity is zero. 
-	if (blendStrength < 1.0/255.0) return dst;
-
-    half4 matcap = tex2D(src, matcapUV);
-    return applyBlendMode(blendMode, dst, applyMatcapTint(matcap, tint), blendStrength * matcap.a);
 }
 
 #endif // if UNITY_STANDARD_BRDF_INCLUDED

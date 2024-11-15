@@ -2,8 +2,38 @@ fileFormatVersion: 2
 guid: a02577692ffe3bb4dac195a8db713239
 ShaderImporter:
   externalObjects: {}
-  defaultTextures: []
-  nonModifiableTextures: []
+  defaultTextures:
+  - _MainTex: {instanceID: 0}
+  - _MainTexBackface: {instanceID: 0}
+  - _ColorMask: {instanceID: 0}
+  - _ClippingMask: {instanceID: 0}
+  - _BumpMap: {instanceID: 0}
+  - _Ramp: {fileID: 2800000, guid: 6af41be6e81954543bfe50e9b2131c4d, type: 3}
+  - _ShadowMask: {instanceID: 0}
+  - _OutlineMask: {instanceID: 0}
+  - _FurMask: {instanceID: 0}
+  - _FurNoise: {instanceID: 0}
+  - _SpecGlossMap: {instanceID: 0}
+  - _SpecIridescenceRamp: {instanceID: 0}
+  - _MatcapMask: {instanceID: 0}
+  - _Matcap1: {instanceID: 0}
+  - _Matcap2: {instanceID: 0}
+  - _Matcap3: {instanceID: 0}
+  - _Matcap4: {instanceID: 0}
+  - _EmissionMap: {instanceID: 0}
+  - _DetailEmissionMap: {instanceID: 0}
+  - _EmissionMap2nd: {instanceID: 0}
+  - _DetailEmissionMap2nd: {instanceID: 0}
+  - _DetailAlbedoMask: {instanceID: 0}
+  - _DetailMap1: {instanceID: 0}
+  - _DetailMap2: {instanceID: 0}
+  - _DetailMap3: {instanceID: 0}
+  - _DetailMap4: {instanceID: 0}
+  - _AudiolinkMaskMap: {instanceID: 0}
+  - _AudiolinkSweepMap: {instanceID: 0}
+  - _ThicknessMap: {instanceID: 0}
+  nonModifiableTextures:
+  - _DFG: {instanceID: 0}
   userData: 
   assetBundleName: 
   assetBundleVariant: 

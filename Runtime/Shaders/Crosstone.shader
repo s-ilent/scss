@@ -42,6 +42,10 @@ Shader "Silent's Cel Shading/Crosstone (Outline)"
         _ShadowBorderColor ("Shade Border Color", Color) = (0,0,0,1)
         _ShadowBorderRange ("Shade Border Range", Range(0, 1)) = 0
 		//[Space]
+		[Enum(SDFMode)]
+		_SDFMode("SDF Mode", Float) = 0
+		_SDFSmoothness("SDF Smoothness", Range(0, 1)) = 0.01
+		//[Space]
 		[Enum(OutlineMode)] _OutlineMode("Outline Mode", Float) = 1.0
 		_OutlineMask("Outline Map", 2D) = "white" {}
 		_OutlineZPush("Outline Z Push", Float) = 0.0

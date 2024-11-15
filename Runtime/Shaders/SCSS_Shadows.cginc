@@ -36,9 +36,10 @@ float3 UnpackScaleNormal(float3 normal, float scale)
 }
 
 #include "SCSS_Config.cginc"
+#include "SCSS_Attributes.cginc"
 #include "SCSS_Utils.cginc"
 #include "SCSS_Input.cginc"
-#include "SCSS_Attributes.cginc"
+#include "SCSS_Lighting.cginc"
 #include "SCSS_Forward.cginc"
 #include "SCSS_ForwardVertex.cginc"
 
@@ -137,4 +138,4 @@ half4 fragShadowCaster (
     SHADOW_CASTER_FRAGMENT(i) 
 }
 
-#endif
+#endif // SCSS_SHADOWS_INCLUDED
