@@ -333,7 +333,7 @@ void applyEmission(inout SCSS_Input material, SCSS_TexCoords tc, float outlineDa
     detailTexcoord = _PixelSampleMode ? sharpSample(_DetailEmissionMap_TexelSize * _DetailEmissionMap_ST.xyxy, detailTexcoord) : detailTexcoord;
 
 
-    emission = UNITY_SAMPLE_TEX2D_SAMPLER(_EmissionMap, _EmissionMap, texcoord).rgb;
+    emission = UNITY_SAMPLE_TEX2D_SAMPLER(_EmissionMap, _MainTex, texcoord).rgb;
     emission = _EmissionMode ? emission * material.albedo : emission;
 
     half4 emissionDetail = 1.0;
@@ -366,7 +366,7 @@ void applyEmission2nd(inout SCSS_Input material, SCSS_TexCoords tc, float outlin
     detailTexcoord = _PixelSampleMode ? sharpSample(_DetailEmissionMap2nd_TexelSize * _DetailEmissionMap2nd_ST.xyxy, detailTexcoord) : detailTexcoord;
 
 
-    emission = UNITY_SAMPLE_TEX2D_SAMPLER(_EmissionMap2nd, _EmissionMap2nd, texcoord).rgb;
+    emission = UNITY_SAMPLE_TEX2D_SAMPLER(_EmissionMap2nd, _MainTex, texcoord).rgb;
     emission = _EmissionMode2nd ? emission * material.albedo : emission;
 
     half4 emissionDetail = 1.0;
