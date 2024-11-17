@@ -43,8 +43,10 @@ _FresnelStrengthInv	Inverse Rim Softness	Sets the sharpness of the inverse rim e
 _CustomFresnelColor	Emissive Rim	RGB sets the colour of the additive rim light. Alpha controls the power/width of the effect.
 _OutlineMode	Outline Mode	Adds outlines to the model with the specified blend mode. Can not be used with fur. 
 _outline_color	Outline Colour	Sets the colour used for outlines. In tint mode, this is multiplied against the texture.
-_outline_width	Outline Width	Sets the width of outlines in cm.
-_OutlineMask	Outline Mask	Sets the width of outlines.
+_outline_width	Outline Width	Sets the width of outlines in centimetres (0.01 world-space units).
+_OutlineMask	Outline Mask	Additional texture to adjust the width of outlines.
+_OutlineNearDistance	Nearest Distance	Sets the camera distance at which outlines begin to shrink. As the camera approaches outlines, their size is adjusted to make them look more natural - this property controls how much they shrink, close up.
+_OutlineFarDistance	Farthest Distance	Sets the camera distance at which outlines stop growing. As the camera withdraws from outlines, their size is adjusted to make them look more natural - this property controls how much they grow, at a distance.
 _OutlineZPush	Outline Depth Offset	Sets a depth offset that pushes the outlines behind the model, hiding outlines from overlapping parts of the material.
 _FurMode	Fur Mode	Adds fur to the model. Can not be used with outlines.
 _FurLayerCount	Layer Count	Sets the number of fur layers. More layers result in denser fur, but may impact performance.
@@ -146,7 +148,11 @@ _IndirectLightingBoost	Indirect Lighting Boost	Blends the lighting of shadows wi
 _Shadow	Shadow Mask Lightening	Sets the power of the shadow mask.
 _LightRampType	Lighting Ramp Type	For if you use lightramps that run from bottom to top instead of left to right, or none at all.
 _ShadowMaskType	Shadow Mask Style	Changes how the shadow mask is used.
-_VertexColorType	Vertex Colour Type	Sets how the vertex colour should be used. Outline only affects the colour of outlines. Additional data uses the red channel for outline width and the green for ramp softness.
+_VertexColorType	Vertex Colour Type	Sets how the vertex colour should be used. Outline colour/width only affects outlines. Custom data allows you to specify what each channel is used for.
+_VertexColorRType	Vertex Red Type	Sets how this vertex channel should be used. 
+_VertexColorGType	Vertex Green Type	Sets how this vertex channel should be used. 
+_VertexColorBType	Vertex Blue Type	Sets how this vertex channel should be used. 
+_VertexColorAType	Vertex Alpha Type	Sets how the vertex alpha should be used. 
 _AlbedoAlphaMode	Albedo Alpha Mode	Sets how the alpha channel of the albedo texture is used. 
 _GradientEditorButton	Open Gradient Editor	Opens the gradient editor window with the current material focused. This allows you to create a new lighting ramp and view the results on this material in realtime.
 _CrosstoneToneSeparation	1st Tone Blending Mode	Specifies the method used to blend tone with the albedo texture. Combined will merge one over the other, while Seperate will not.

@@ -144,6 +144,10 @@ VertexOutput vert(appdata_full_local v) {
     UNITY_TRANSFER_INSTANCE_ID(v, o);
     UNITY_INITIALIZE_VERTEX_OUTPUT_STEREO(o);
 
+	// This is mainly needed when Blender mangles vertex colour values.
+	// If you notice major differences in vertex colour behaviour to expectations, try this.
+	if (false) v.color.rgb = GammaToLinearSpace(v.color.rgb);
+
 	SCSS_AnimData anim = initialiseAnimParam();
 
 	float4 uvPack0 = float4(v.texcoord.xy, v.texcoord1.xy);
@@ -181,45 +185,61 @@ VertexOutput vert(appdata_full_local v) {
 	float4 objPos = mul(unity_ObjectToWorld, float4(0, 0, 0, 1));
 	o.worldPos = mul(unity_ObjectToWorld, v.vertex);
 
-	// This is mainly needed when Blender mangles vertex colour values.
-	// If you notice major differences in vertex colour behaviour to expectations, try this.
-	if (false) v.color.rgb = GammaToLinearSpace(v.color.rgb);
+	float variousData[7] = 
+	{ 
+		0.0, // 0 Default - not used
+		1.0, // 1 Outline width
+		1.0, // 2 Occlusion
+		1.0, // 3 Outline depth offset
+		1.0, // 4 Ramp ID/Softness
+		1.0, // 5 Alpha
+		1.0  // 6 Outline Alpha
+	};
 
-	// Extra data handling
-	// X: Outline width | Y: Ramp softness
-	// Z: Outline Z offset | 
+	variousData[_VertexColorAType] *= v.color.a;
+
 	switch (_VertexColorType) 
 	{
 		case 1: // Outline colour
 		o.color = v.color;
-		o.extraData = float4(v.color.a, 0.0, 1.0, 1.0); 
+		o.color.a = variousData[5] * variousData[6]; // Can only be one at a time. 
 		break;
 
 		case 2: // Additional data
 		o.color = 1.0; // Reset
-		o.extraData = v.color;
+		variousData[_VertexColorRType] *= v.color.r;
+		variousData[_VertexColorGType] *= v.color.g;
+		variousData[_VertexColorBType] *= v.color.b;
+		o.color.a = variousData[5];
+		o.color.r = variousData[6];
 		break;
 
 		case 3: // Ignore
-		o.color = 1.0; 
-		o.extraData = float4(1.0, 0.0, 1.0, 1.0); 
+		o.color = 1.0;  // Reset
+		o.color.a = variousData[5] * variousData[6]; // Can only be one at a time. 
 		break;
 
 		case 4: // Outline direction + width
 		o.color = 1.0; // Handled above
-		o.extraData = float4(1.0, 0.0, 1.0, 1.0); 
-		o.extraData.x = v.color.a;
+		o.color.a = variousData[5] * variousData[6]; // Can only be one at a time. 
 		break;
 		
 		default: // Colour
 		o.color = v.color;
-		o.extraData = float4(0.0, 0.0, 1.0, 1.0); 
-		o.extraData.x = v.color.a;
+		o.color.a = variousData[5] * variousData[6]; // Can only be one at a time. 
 		break;
 	}
 
-	// Invert ramp softness based on popular request
-	o.extraData.y = 1-o.extraData.y;
+	o.extraData = float4(
+		// Outline width
+		variousData[1], 
+		// Softness/Ramp ID (inverted to start at 0 when colour is white)
+		1.0 - variousData[4], 
+		// Outline depth offset
+		variousData[3], 
+		// Shade bias
+		variousData[2]);
+	
 
 	#if defined(SCSS_OUTLINE)
 	#if defined(SCSS_USE_OUTLINE_TEXTURE)
@@ -235,7 +255,8 @@ VertexOutput vert(appdata_full_local v) {
 	// Scale outlines relative to the distance from the camera. Outlines close up look ugly in VR because
 	// they can have holes, being shells. This is also why it is clamped to not make them bigger.
 	// That looks good at a distance, but not perfect. 
-	o.extraData.x *= min(distance(o.worldPos,_WorldSpaceCameraPos)*4, 1); 
+	//o.extraData.x *= min(distance(o.worldPos,_WorldSpaceCameraPos)*4, 1); 
+	o.extraData.x *= lerpstep(_OutlineFarDistance, _OutlineNearDistance, distance(o.worldPos, _WorldSpaceCameraPos));
 	#endif
 	
 	#if defined(SCSS_FUR)
@@ -288,12 +309,35 @@ VertexOutput vert_nogeom(appdata_full_local v) {
 	return o;
 }
 
+void ObjectToClipAndTransferData(inout VertexOutput o)
+{
+	// Unity's shadow macros assume that we have 
+	// - a v struct, with v.vertex corresponding to position
+	// - a struct, with [structName].pos correpsonding to clip position
+	// This doesn't match our layout, but we don't want to mess around with the
+	// shadow macros, so instead we fake it.
+	appdata_full_local v = (appdata_full_local)0;
+	v.vertex = o.pos;
+	v.texcoord1 = o.uvPack0.zwzw;
+
+	o.pos = ObjectToClipPos(o.pos);
+	UNITY_TRANSFER_SHADOW(o, v.texcoord1);
+
+#if defined(FOG_LINEAR) || defined(FOG_EXP) || defined(FOG_EXP2)
+	UNITY_TRANSFER_FOG_COMBINED_WITH_WORLD_POS(o, o.pos);
+#endif
+}
+
+#if defined(SCSS_OUTLINE)
+
 // Based on code from MToon
 inline VertexOutput CalculateOutlineVertexClipPosition(VertexOutput v)
 {
 	const float outlineWidth = v.extraData.r;
-	if (true)
+	switch(_OutlineCalculationMode)
 	{
+		case 0:
+		{
 		#if (SCSS_CAMERA_RELATIVE_VERTEX)
 			const half3 positionOS = v.pos.xyz;
 			const half3 normalOS = float3(v.tangentToWorldAndPackedData[0][3], v.tangentToWorldAndPackedData[1][3], v.tangentToWorldAndPackedData[2][3]);
@@ -311,9 +355,10 @@ inline VertexOutput CalculateOutlineVertexClipPosition(VertexOutput v)
 			v.worldPos = float4(positionWS + normalWS * outlineWidth, 1);
 			v.pos = UnityWorldToClipPos(v.worldPos);
         #endif
-	} 
-	if (false) 
-	{
+		}
+		break;
+		case 1:
+		{
         const float3 positionWS = mul(unity_ObjectToWorld, float4(v.pos.xyz, 1)).xyz;
         const half aspect = getScreenAspectRatio();
 
@@ -333,6 +378,8 @@ inline VertexOutput CalculateOutlineVertexClipPosition(VertexOutput v)
 
         v.worldPos = float4(positionWS, 1);
         v.pos = positionCS;
+		}
+		break;
 	}
 	return v;
 }
@@ -348,25 +395,6 @@ float4 ApplyOutlineZBias (float4 clipPos, float bias ) {
 	clipPos.z = lerp(zPushLimit, clipPos.z, bias);
 
 	return clipPos;
-}
-
-void ObjectToClipAndTransferData(inout VertexOutput o)
-{
-	// Unity's shadow macros assume that we have 
-	// - a v struct, with v.vertex corresponding to position
-	// - a struct, with [structName].pos correpsonding to clip position
-	// This doesn't match our layout, but we don't want to mess around with the
-	// shadow macros, so instead we fake it.
-	appdata_full_local v = (appdata_full_local)0;
-	v.vertex = o.pos;
-	v.texcoord1 = o.uvPack0.zwzw;
-
-	o.pos = ObjectToClipPos(o.pos);
-	UNITY_TRANSFER_SHADOW(o, v.texcoord1);
-
-#if defined(FOG_LINEAR) || defined(FOG_EXP) || defined(FOG_EXP2)
-	UNITY_TRANSFER_FOG_COMBINED_WITH_WORLD_POS(o, o.pos);
-#endif
 }
 
 [maxvertexcount(6)]
@@ -437,6 +465,8 @@ void geom(triangle VertexOutput IN[3], inout TriangleStream<VertexOutput> tristr
 	}
 }
 
+#endif // SCSS_OUTLINE
+
 #if defined(SCSS_FUR)
 
 float3 randomPointForFur(float2 seed1, float2 seed2)
@@ -467,7 +497,7 @@ inline VertexOutput CalculateFurPosition(VertexOutput v, float furLength, int la
 [instance(32)] // Max layers is 32
 void geom_fur(triangle VertexOutput IN[3], inout TriangleStream<VertexOutput> tristream, uint instanceID : SV_GSInstanceID)
 {
-	if ((IN[0].color.a + IN[1].color.a + IN[2].color.a) <= 0) return;
+	if ((IN[0].color.a + IN[1].color.a + IN[2].color.a) < 0) return;
 	// LOD scaling
 	const float lodScale = 1.0;
 	float layerCountScale = saturate(lodScale / (distance(IN[0].worldPos,_WorldSpaceCameraPos) )); 

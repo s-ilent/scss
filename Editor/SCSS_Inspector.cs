@@ -77,6 +77,21 @@ namespace SilentCelShading.Unity
 		{
 			None = 0, SingleChannel = 1, DualChannel = 2
 		}
+		public enum VertexColorChannelType
+		{
+			Ignore = 0,
+			OutlineWidth = 1,
+			Occlusion = 2,
+			OutlineDepth = 3,
+			RampID = 4,
+			Alpha = 5,
+			OutlineAlpha = 6
+		}
+		public enum OutlineCalculationMode
+		{
+			WorldSpace = 0,
+			ClipSpace = 1
+		}
 
 		protected Material target;
 		protected MaterialEditor editor;
@@ -1112,10 +1127,16 @@ namespace SilentCelShading.Unity
 					{
 						case OutlineMode.Tinted:
 						case OutlineMode.Colored:
-						ph.TexturePropertySingleLine("_OutlineMask");
-						ph.ShaderProperty("_outline_color");
+						WithGroupHorizontal(() => {
+							ph.TexturePropertySingleLine("_OutlineMask", "_outline_color");
+							ph.PropertyDropdownNoLabel("_OutlineCalculationMode", Enum.GetNames(typeof(OutlineCalculationMode)), editor);
+						});
+						EditorGUI.indentLevel+=2;
 						ph.ShaderProperty("_outline_width");
 						ph.ShaderProperty("_OutlineZPush");
+						ph.ShaderProperty("_OutlineNearDistance");
+						ph.ShaderProperty("_OutlineFarDistance");
+						EditorGUI.indentLevel-=2;
 						break;
 						case OutlineMode.None:
 						default:
@@ -1247,6 +1268,20 @@ namespace SilentCelShading.Unity
 			EditorGUILayout.Space();
 
 			ph.ShaderProperty("_VertexColorType");
+			if ((VertexColorType)ph.Property("_VertexColorType").floatValue == VertexColorType.CustomData) 
+			{
+				WithGroupHorizontal(() => {
+				EditorGUI.indentLevel ++;
+				EditorGUILayout.PrefixLabel("RGB: "); 
+				EditorGUI.indentLevel --;
+				ph.PropertyDropdownNoLabel("_VertexColorRType", Enum.GetNames(typeof(VertexColorChannelType)), editor);
+				ph.PropertyDropdownNoLabel("_VertexColorGType", Enum.GetNames(typeof(VertexColorChannelType)), editor);
+				ph.PropertyDropdownNoLabel("_VertexColorBType", Enum.GetNames(typeof(VertexColorChannelType)), editor);
+				});
+			}
+			ph.ShaderProperty("_VertexColorAType");
+			
+			EditorGUILayout.Space();
 
 			foreach (Material mat in ph.PropertyDropdown("_AlbedoAlphaMode", CommonStyles.albedoAlphaModeNames, editor))
 			{

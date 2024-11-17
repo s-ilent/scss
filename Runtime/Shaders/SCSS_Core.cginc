@@ -321,7 +321,6 @@ half3 calcSpecularCel(float3 specColor, float smoothness, float3 normal, float o
 		float anisotropy = _Anisotropy;
 		float softness = _CelSpecularSoftness;
 
-
 	    float3 direction = float3(1, 0, 0);
 
 	    float3 anisotropicT = normalize(mul(p.tangentToWorld, direction));

@@ -190,27 +190,37 @@ float CrosstoneShadingGradeMap (float2 uv)
 }
 #endif
 
-void applyVertexColour(float3 color, inout SCSS_Input c)
+void applyVertexColour(float4 color, inout SCSS_Input c)
 {
-	// Only float3 input is supported, as vertex alpha isn't 
+	// The vertex alpha should be valid, as outline width/etc is passed through extraData. 
+	// But if we're in custom data mode, the outline alpha will be in the vertex red channel instead.
 	switch (_VertexColorType)
 	{
 		// Color
 		case 0: 
-		c.albedo = c.albedo * color.rgb; 
+		c.albedo = c.albedo * color; 
 		if (_CrosstoneToneSeparation) c.tone[0].col *= color.rgb; 
 		if (_Crosstone2ndSeparation) c.tone[1].col *= color.rgb; 
 		c.outlineCol.rgb = color * _outline_color;
-		c.outlineCol.a = c.alpha * _outline_color.a;
+		c.outlineCol.a = _outline_color.a * (_VertexColorAType == 6) ? color.a : 1.0;
+		c.alpha = c.alpha * (_VertexColorAType == 5) ? color.a : 1.0;
+		break;
+
+		// Custom Data
+		case 2:
+		c.outlineCol.rgb = _outline_color;
+		c.outlineCol.a = _outline_color.a * color.r;
+		c.alpha = c.alpha * color.a;
 		break;
 		
 		// Outline Color
 		// color is color (passed from vertex)
-		// Additional Data/Ignore
+		// Additional Data/Ignore/Outline Width
 		// color is white (reset from vertex)
 		default: 
 		c.outlineCol.rgb = color * _outline_color;
-		c.outlineCol.a = _outline_color.a;
+		c.outlineCol.a = _outline_color.a * (_VertexColorAType == 6) ? color.a : 1.0;
+		c.alpha = c.alpha * (_VertexColorAType == 5) ? color.a : 1.0;
 		break;
 
 	}
@@ -291,13 +301,13 @@ void applyMaskedDetail (inout SCSS_Input material, SCSS_TexCoords tc)
 	#if defined(_DETAIL)
     {
         float4 _DetailMask_var = UNITY_SAMPLE_TEX2D_SAMPLER (_DetailAlbedoMask, _MainTex, tc.uv[0]);
-        if (any(_DetailMap1_TexelSize > 16.0)) applyDetail(material, _DetailMap1, applyScaleOffset(tc.uv[_DetailMap1UV], _DetailMap1_ST), 
+        if (any(_DetailMap1_TexelSize > 4.0)) applyDetail(material, _DetailMap1, applyScaleOffset(tc.uv[_DetailMap1UV], _DetailMap1_ST), 
 			_DetailMap1Type, _DetailMap1Blend, _DetailMap1Strength * _DetailMask_var[0]);
-        if (any(_DetailMap2_TexelSize > 16.0)) applyDetail(material, _DetailMap2, applyScaleOffset(tc.uv[_DetailMap2UV], _DetailMap2_ST), 
+        if (any(_DetailMap2_TexelSize > 4.0)) applyDetail(material, _DetailMap2, applyScaleOffset(tc.uv[_DetailMap2UV], _DetailMap2_ST), 
 			_DetailMap2Type, _DetailMap2Blend, _DetailMap2Strength * _DetailMask_var[1]);
-        if (any(_DetailMap3_TexelSize > 16.0)) applyDetail(material, _DetailMap3, applyScaleOffset(tc.uv[_DetailMap3UV], _DetailMap3_ST), 
+        if (any(_DetailMap3_TexelSize > 4.0)) applyDetail(material, _DetailMap3, applyScaleOffset(tc.uv[_DetailMap3UV], _DetailMap3_ST), 
 			_DetailMap3Type, _DetailMap3Blend, _DetailMap3Strength * _DetailMask_var[2]);
-        if (any(_DetailMap4_TexelSize > 16.0)) applyDetail(material, _DetailMap4, applyScaleOffset(tc.uv[_DetailMap4UV], _DetailMap4_ST), 
+        if (any(_DetailMap4_TexelSize > 4.0)) applyDetail(material, _DetailMap4, applyScaleOffset(tc.uv[_DetailMap4UV], _DetailMap4_ST), 
 			_DetailMap4Type, _DetailMap4Blend, _DetailMap4Strength * _DetailMask_var[3]);
     }
 	#endif
@@ -321,7 +331,8 @@ void applyMatcaps(inout float3 albedo, float3 normal, float3 viewDir, float3 bit
 
 void applyEmission(inout SCSS_Input material, SCSS_TexCoords tc, float outlineDarken, float ndotv)
 {
-    half3 emission = 0.0;
+    half3 emission = 1.0;
+    half4 emissionDetail = 1.0;
 
 #if defined(_EMISSION)
     float2 texcoord = tc.uv[_EmissionUVSec];
@@ -332,11 +343,9 @@ void applyEmission(inout SCSS_Input material, SCSS_TexCoords tc, float outlineDa
     detailTexcoord = TRANSFORM_TEX(detailTexcoord, _DetailEmissionMap);
     detailTexcoord = _PixelSampleMode ? sharpSample(_DetailEmissionMap_TexelSize * _DetailEmissionMap_ST.xyxy, detailTexcoord) : detailTexcoord;
 
-
     emission = UNITY_SAMPLE_TEX2D_SAMPLER(_EmissionMap, _MainTex, texcoord).rgb;
     emission = _EmissionMode ? emission * material.albedo : emission;
 
-    half4 emissionDetail = 1.0;
     if (any(_DetailEmissionMap_TexelSize.zw > 4.0))
     {
         emissionDetail = UNITY_SAMPLE_TEX2D_SAMPLER(_DetailEmissionMap, _DetailEmissionMap, detailTexcoord);
@@ -346,16 +355,18 @@ void applyEmission(inout SCSS_Input material, SCSS_TexCoords tc, float outlineDa
             emissionDetail.rgb = s;
         }
     }
+#endif
 
     emission = emissionDetail.rgb * emission * _EmissionColor.rgb;
     emission *= outlineDarken * simpleRimHelper(_EmissionRimPower, ndotv);
-#endif
     material.emission += half4(emission, 0.0);
 }
 
 void applyEmission2nd(inout SCSS_Input material, SCSS_TexCoords tc, float outlineDarken, float ndotv)
 {
-    half3 emission = 0.0;
+    half3 emission = 1.0;
+    half4 emissionDetail = 1.0;
+
 #if defined(_EMISSION_2ND)
     float2 texcoord = tc.uv[_EmissionUVSec2nd];
     texcoord = TRANSFORM_TEX(texcoord, _EmissionMap2nd);
@@ -365,11 +376,8 @@ void applyEmission2nd(inout SCSS_Input material, SCSS_TexCoords tc, float outlin
     detailTexcoord = TRANSFORM_TEX(detailTexcoord, _DetailEmissionMap2nd);
     detailTexcoord = _PixelSampleMode ? sharpSample(_DetailEmissionMap2nd_TexelSize * _DetailEmissionMap2nd_ST.xyxy, detailTexcoord) : detailTexcoord;
 
-
     emission = UNITY_SAMPLE_TEX2D_SAMPLER(_EmissionMap2nd, _MainTex, texcoord).rgb;
     emission = _EmissionMode2nd ? emission * material.albedo : emission;
-
-    half4 emissionDetail = 1.0;
 
     if (any(_DetailEmissionMap2nd_TexelSize.zw > 4.0))
     {
@@ -380,11 +388,10 @@ void applyEmission2nd(inout SCSS_Input material, SCSS_TexCoords tc, float outlin
             emissionDetail.rgb = s;
         }
     }
-
+#endif
 
     emission = emissionDetail.rgb * emission * _EmissionColor2nd.rgb;
     emission *= outlineDarken * simpleRimHelper(_EmissionRimPower2nd, ndotv);
-#endif
     material.emission += half4(emission, 0.0);
 }
 
@@ -531,7 +538,7 @@ inline SCSS_Input MaterialSetup(SCSS_TexCoords tc,
 	}
 
 	// Apply vertex colour to albedo and tones if selected
-	applyVertexColour(i_color.rgb, material);
+	applyVertexColour(i_color, material);
 
 	// Todo: Refactor this 
 	if (_ToggleHueControls)
@@ -548,7 +555,8 @@ inline SCSS_Input MaterialSetup(SCSS_TexCoords tc,
 	// Scattering parameters
 	material.thickness = Thickness(mainUVs);
 	
-	material.softness = i_extraData.g;
+	material.softness *= i_extraData.g;
+	material.occlusion *= i_extraData.a;
 
 	applyOutline(material, p_isOutline);
 

@@ -187,6 +187,9 @@ uniform float4 _CustomFresnelColor;
 uniform float _OutlineMode;
 uniform float _OutlineZPush;
 uniform float _outline_width;
+uniform float _OutlineCalculationMode;
+uniform float _OutlineNearDistance;
+uniform float _OutlineFarDistance;
 #endif
 uniform float4 _outline_color;
 
@@ -228,6 +231,10 @@ uniform float _SSSAmbient;
 uniform float4 _LightSkew;
 uniform float _PixelSampleMode;
 uniform float _VertexColorType;
+uniform float _VertexColorRType;
+uniform float _VertexColorGType;
+uniform float _VertexColorBType;
+uniform float _VertexColorAType;
 
 uniform float _DiffuseGeomShadowFactor;
 uniform float _LightWrappingCompensationFactor;

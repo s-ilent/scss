@@ -18,6 +18,10 @@ Shader "Silent's Cel Shading/Lightramp (Outline)"
 		_BumpMap("Normal Map", 2D) = "bump" {}
 		_BumpScale("Normal Map Scale", Float) = 1.0
 		[Enum(VertexColorType)]_VertexColorType ("Vertex Colour Type", Float) = 2.0
+		[Enum(VertexColorChannelType)]_VertexColorRType ("Vertex Red Type", Float) = 1.0
+		[Enum(VertexColorChannelType)]_VertexColorGType ("Vertex Green Type", Float) = 4.0
+		[Enum(VertexColorChannelType)]_VertexColorBType ("Vertex Blue Type", Float) = 3.0
+		[Enum(VertexColorChannelType)]_VertexColorAType ("Vertex Alpha Type", Float) = 1.0
 		//[Space]
 		[Enum(TintApplyMode)]_ToggleHueControls("Show HSV Controls", Float) = 0.0
 		_ShiftHue ("Hue Shift", Range(-180, 180)) = 0.0
@@ -41,7 +45,10 @@ Shader "Silent's Cel Shading/Lightramp (Outline)"
 		[Enum(OutlineMode)] _OutlineMode("Outline Mode", Float) = 1.0
 		_OutlineMask("Outline Map", 2D) = "white" {}
 		_OutlineZPush("Outline Z Push", Float) = 0.0
+		[Enum(OutlineCalculationMode)]_OutlineCalculationMode("Outline Calculation Mode", Float) = 0
 		_outline_width("Outline Width", Float) = 0.1
+		_OutlineNearDistance ("Outline Nearest Distance", Float) = 0.25
+		_OutlineFarDistance ("Outline Farthest Distance", Float) = 100
 		_outline_color("Outline Colour", Color) = (0.5,0.5,0.5,1)
 		//[Space]
         _FurMode("Fur Mode", Float) = 0.0
