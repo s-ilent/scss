@@ -572,8 +572,6 @@ float3 SCSS_ApplyLighting(SCSS_Input c, SCSS_ShadingParam p)
 	finalColor += c.emission;
 	#endif
 
-		return SCSS_ShadeBase(c, p);
-
 	return finalColor;
 }
 
