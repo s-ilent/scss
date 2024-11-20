@@ -192,8 +192,10 @@ float CrosstoneShadingGradeMap (float2 uv)
 
 void applyVertexColour(float4 color, inout SCSS_Input c)
 {
-	// The vertex alpha should be valid, as outline width/etc is passed through extraData. 
+	// Outline width/etc is passed through extraData, and alpha is passed through alpha.
 	// But if we're in custom data mode, the outline alpha will be in the vertex red channel instead.
+	float vertexAlpha = _VertexColorAType == 5 ? color.a : 1.0;
+	float outlineAlpha = _VertexColorAType == 6 ? color.a : 1.0;
 	switch (_VertexColorType)
 	{
 		// Color
@@ -202,8 +204,8 @@ void applyVertexColour(float4 color, inout SCSS_Input c)
 		if (_CrosstoneToneSeparation) c.tone[0].col *= color.rgb; 
 		if (_Crosstone2ndSeparation) c.tone[1].col *= color.rgb; 
 		c.outlineCol.rgb = color * _outline_color;
-		c.outlineCol.a = _outline_color.a * (_VertexColorAType == 6) ? color.a : 1.0;
-		c.alpha = c.alpha * (_VertexColorAType == 5) ? color.a : 1.0;
+		c.outlineCol.a = _outline_color.a * outlineAlpha;
+		c.alpha = c.alpha * vertexAlpha;
 		break;
 
 		// Custom Data
@@ -219,8 +221,8 @@ void applyVertexColour(float4 color, inout SCSS_Input c)
 		// color is white (reset from vertex)
 		default: 
 		c.outlineCol.rgb = color * _outline_color;
-		c.outlineCol.a = _outline_color.a * (_VertexColorAType == 6) ? color.a : 1.0;
-		c.alpha = c.alpha * (_VertexColorAType == 5) ? color.a : 1.0;
+		c.outlineCol.a = _outline_color.a * outlineAlpha;
+		c.alpha = c.alpha * vertexAlpha;
 		break;
 
 	}
