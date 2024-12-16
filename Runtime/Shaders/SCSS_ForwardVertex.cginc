@@ -176,11 +176,7 @@ VertexOutput vert(appdata_full_local v) {
 	// Previously this was the object-space normal, which was only used for outline direction;
 	// so it makes sense to use it as outline direction directly.
 
-	float3 outlineDir = (_VertexColorType == 4) ? (2.0 * v.color.xyz - 1.0) : normalOS;
-
-	o.tangentToWorldAndPackedData[0].w = outlineDir.x;
-	o.tangentToWorldAndPackedData[1].w = outlineDir.y;
-	o.tangentToWorldAndPackedData[2].w = outlineDir.z;
+	float3 outlineDir = normalOS;
 
 	float4 objPos = mul(unity_ObjectToWorld, float4(0, 0, 0, 1));
 	o.worldPos = mul(unity_ObjectToWorld, v.vertex);
@@ -222,6 +218,11 @@ VertexOutput vert(appdata_full_local v) {
 		case 4: // Outline direction + width
 		o.color = 1.0; // Handled above
 		o.color.a = variousData[5] * variousData[6]; // Can only be one at a time. 
+
+		// Outline direction needs to be transformed from tangent space to object space.
+		float3 bitangentDirOS = cross(v.normal.xyz, v.tangent.xyz) * tangentSign;
+		const float3x3 tangentToObject = float3x3(v.tangent.xyz, bitangentDirOS, v.normal.xyz);
+		outlineDir = mul((2.0 * v.color.xyz - 1.0), tangentToObject); 
 		break;
 		
 		default: // Colour
@@ -239,7 +240,10 @@ VertexOutput vert(appdata_full_local v) {
 		variousData[3], 
 		// Shade bias
 		variousData[2]);
-	
+
+	o.tangentToWorldAndPackedData[0].w = outlineDir.x;
+	o.tangentToWorldAndPackedData[1].w = outlineDir.y;
+	o.tangentToWorldAndPackedData[2].w = outlineDir.z;
 
 	#if defined(SCSS_OUTLINE)
 	#if defined(SCSS_USE_OUTLINE_TEXTURE)
@@ -255,8 +259,11 @@ VertexOutput vert(appdata_full_local v) {
 	// Scale outlines relative to the distance from the camera. Outlines close up look ugly in VR because
 	// they can have holes, being shells. This is also why it is clamped to not make them bigger.
 	// That looks good at a distance, but not perfect. 
-	//o.extraData.x *= min(distance(o.worldPos,_WorldSpaceCameraPos)*4, 1); 
-	o.extraData.x *= lerpstep(_OutlineFarDistance, _OutlineNearDistance, distance(o.worldPos, _WorldSpaceCameraPos));
+
+	float distanceFactor = distance(o.worldPos, _WorldSpaceCameraPos);
+	float distanceScale = saturate((distanceFactor - _OutlineNearDistance) / (_OutlineFarDistance - _OutlineNearDistance));
+	o.extraData.x *= lerp(_OutlineNearDistance, _OutlineFarDistance, distanceScale);
+
 	#endif
 	
 	#if defined(SCSS_FUR)
@@ -338,7 +345,14 @@ inline VertexOutput CalculateOutlineVertexClipPosition(VertexOutput v)
 	{
 		case 0:
 		{
-		#if (SCSS_CAMERA_RELATIVE_VERTEX)
+			// Old code, for compatibility
+		#if 0
+			const float3 positionWS = mul(unity_ObjectToWorld, float4(v.pos.xyz, 1)).xyz;
+			const half3 normalWS = v.tangentToWorldAndPackedData[2].xyz;
+
+			v.worldPos = float4(positionWS + normalWS * outlineWidth, 1);
+			v.pos = UnityWorldToClipPos(v.worldPos);
+		#endif
 			const half3 positionOS = v.pos.xyz;
 			const half3 normalOS = float3(v.tangentToWorldAndPackedData[0][3], v.tangentToWorldAndPackedData[1][3], v.tangentToWorldAndPackedData[2][3]);
 			float4x4 matrixIM = unity_WorldToObject;
@@ -347,13 +361,10 @@ inline VertexOutput CalculateOutlineVertexClipPosition(VertexOutput v)
 			// Calculate a world-space vertex offset we can apply in object space
 			half3 offsetOS = mul( mul(transpose((float3x3)matrixIM), (float3x3)matrixIM), outlineWidth.xxx);
 			half3 localPosition = positionOS + normalOS * offsetOS;
+		#if (SCSS_CAMERA_RELATIVE_VERTEX)
 			v.pos = ObjectToClipPosRelative(localPosition);
         #else
-			const float3 positionWS = mul(unity_ObjectToWorld, float4(v.pos.xyz, 1)).xyz;
-			const half3 normalWS = v.tangentToWorldAndPackedData[2].xyz;
-
-			v.worldPos = float4(positionWS + normalWS * outlineWidth, 1);
-			v.pos = UnityWorldToClipPos(v.worldPos);
+			v.pos = UnityObjectToClipPos(localPosition);
         #endif
 		}
 		break;
