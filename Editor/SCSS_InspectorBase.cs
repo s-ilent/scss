@@ -388,7 +388,16 @@ namespace SilentCelShading.Unity
         {
             if (mode != RenderingMode.Custom)
             {
-                ApplyBlendModeProperties(material, blendModeProperties[mode]);
+                // Handle invalid render mode, which can happen when swapping shaders.
+                if (blendModeProperties.ContainsKey(mode)) 
+                {
+                    ApplyBlendModeProperties(material, blendModeProperties[mode]);
+                }
+                else
+                {
+                    ApplyBlendModeProperties(material, blendModeProperties[0]);
+                }
+                
             }
             else
             {
