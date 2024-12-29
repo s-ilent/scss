@@ -31,7 +31,7 @@ struct appdata_full_local
     v_half4 texcoord2 : TEXCOORD2;
     v_half4 texcoord3 : TEXCOORD3;
     v_half4 color : COLOR;
-	uint vid : SV_VertexID;
+	// uint vid : SV_VertexID;
     UNITY_VERTEX_INPUT_INSTANCE_ID
 };
 
@@ -40,7 +40,7 @@ struct VertexOutput
     UNITY_VERTEX_INPUT_INSTANCE_ID
     UNITY_VERTEX_OUTPUT_STEREO
 
-	v_half4 pos : SV_POSITION; // UnityCG macro specified name. Technically "positionCS"
+	float4 pos : SV_POSITION; // UnityCG macro specified name. Technically "positionCS"
 	v_half4 color : COLOR0_centroid;
 	v_half4 uvPack0 : TEXCOORD0;
 	v_half4 uvPack1 : TEXCOORD1;
