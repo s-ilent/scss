@@ -159,7 +159,7 @@ VertexOutput vert(appdata_full_local v) {
 	SCSS_TexCoords postTexcoords = initialiseTexCoords(uvPack0, uvPack1);
 
 	// Object-space normal from vertex
-	float3 normalOS = v.normal;
+	float3 normalOS = normalize(v.normal);
 
 	// Object-space vertex position 
 	o.pos = v.vertex;
@@ -259,11 +259,17 @@ VertexOutput vert(appdata_full_local v) {
 	// Scale outlines relative to the distance from the camera. Outlines close up look ugly in VR because
 	// they can have holes, being shells. This is also why it is clamped to not make them bigger.
 	// That looks good at a distance, but not perfect. 
+	
+	// If the camera is orthographic, distance scaling doesn't need to apply.
+    if (unity_OrthoParams.w == 0.0)
+	{
+		// We also need to tweak the scaling factor by the FOV.
+		float fov = atan(1.0 / unity_CameraProjection._11) * 1.14591559;
 
-	float distanceFactor = distance(o.worldPos, _WorldSpaceCameraPos);
-	float distanceScale = saturate((distanceFactor - _OutlineNearDistance) / (_OutlineFarDistance - _OutlineNearDistance));
-	o.extraData.x *= lerp(_OutlineNearDistance, _OutlineFarDistance, distanceScale);
-
+		float distanceFactor = distance(o.worldPos, _WorldSpaceCameraPos) * fov;
+		float distanceScale = saturate((distanceFactor - _OutlineNearDistance) / (_OutlineFarDistance - _OutlineNearDistance));
+		o.extraData.x *= lerp(_OutlineNearDistance, _OutlineFarDistance, distanceScale);
+	}
 	#endif
 	
 	#if defined(SCSS_FUR)
@@ -345,14 +351,6 @@ inline VertexOutput CalculateOutlineVertexClipPosition(VertexOutput v)
 	{
 		case 0:
 		{
-			// Old code, for compatibility
-		#if 0
-			const float3 positionWS = mul(unity_ObjectToWorld, float4(v.pos.xyz, 1)).xyz;
-			const half3 normalWS = v.tangentToWorldAndPackedData[2].xyz;
-
-			v.worldPos = float4(positionWS + normalWS * outlineWidth, 1);
-			v.pos = UnityWorldToClipPos(v.worldPos);
-		#endif
 			const half3 positionOS = v.pos.xyz;
 			const half3 normalOS = float3(v.tangentToWorldAndPackedData[0][3], v.tangentToWorldAndPackedData[1][3], v.tangentToWorldAndPackedData[2][3]);
 			float4x4 matrixIM = unity_WorldToObject;
