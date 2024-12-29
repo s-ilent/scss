@@ -387,6 +387,7 @@ float3 gtaoMultiBounce(float visibility, const float3 albedo) {
 inline float4 ApplyNearVertexSquishing(float4 posCS)
 {
     #if SCSS_NEAR_SQUISH
+    if (unity_OrthoParams.w == 1.0) return posCS;
     // Compress meshes when they're close to the camera.
     // https://qiita.com/lilxyzw/items/3684d8f252ab1894773a#
     #if defined(UNITY_REVERSED_Z)
