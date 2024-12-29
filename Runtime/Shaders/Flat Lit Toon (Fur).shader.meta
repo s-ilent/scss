@@ -33,7 +33,7 @@ ShaderImporter:
   - _AudiolinkSweepMap: {instanceID: 0}
   - _ThicknessMap: {instanceID: 0}
   nonModifiableTextures:
-  - _DFG: {instanceID: 0}
+  - _DFG: {fileID: 2800000, guid: 5ef0bfd488b046146adfc1d1744c3cbc, type: 3}
   userData: 
   assetBundleName: 
   assetBundleVariant: 
