@@ -48,7 +48,7 @@ Shader "Silent's Cel Shading/Lightramp"
 		[Enum(OutlineCalculationMode)]_OutlineCalculationMode("Outline Calculation Mode", Float) = 0
 		_outline_width("Outline Width", Float) = 0.1
 		_OutlineNearDistance ("Outline Nearest Distance", Float) = 0.25
-		_OutlineFarDistance ("Outline Farthest Distance", Float) = 100
+		_OutlineFarDistance ("Outline Farthest Distance", Float) = 10
 		_outline_color("Outline Colour", Color) = (0.5,0.5,0.5,1)
 		//[Space]
         _FurMode("Fur Mode", Float) = 0.0
