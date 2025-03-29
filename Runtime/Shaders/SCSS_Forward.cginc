@@ -343,6 +343,7 @@ void applyEmission(inout SCSS_Input material, SCSS_TexCoords tc, float outlineDa
 
     float2 detailTexcoord = tc.uv[_DetailEmissionUVSec];
     detailTexcoord = TRANSFORM_TEX(detailTexcoord, _DetailEmissionMap);
+	detailTexcoord += _EmissionDetailParams.xy * _Time.y;
     detailTexcoord = _PixelSampleMode ? sharpSample(_DetailEmissionMap_TexelSize * _DetailEmissionMap_ST.xyxy, detailTexcoord) : detailTexcoord;
 
     emission = UNITY_SAMPLE_TEX2D_SAMPLER(_EmissionMap, _MainTex, texcoord).rgb;
@@ -376,6 +377,7 @@ void applyEmission2nd(inout SCSS_Input material, SCSS_TexCoords tc, float outlin
 
     float2 detailTexcoord = tc.uv[_DetailEmissionUVSec2nd];
     detailTexcoord = TRANSFORM_TEX(detailTexcoord, _DetailEmissionMap2nd);
+	detailTexcoord += _EmissionDetailParams2nd.xy * _Time.y;
     detailTexcoord = _PixelSampleMode ? sharpSample(_DetailEmissionMap2nd_TexelSize * _DetailEmissionMap2nd_ST.xyxy, detailTexcoord) : detailTexcoord;
 
     emission = UNITY_SAMPLE_TEX2D_SAMPLER(_EmissionMap2nd, _MainTex, texcoord).rgb;
