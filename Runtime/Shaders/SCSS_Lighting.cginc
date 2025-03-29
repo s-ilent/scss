@@ -252,7 +252,7 @@ void getDirectIndirectLighting(float3 normal, out float3 directLighting, out flo
 	directLighting   = 0.0;
 	indirectLighting = 0.0;
 
-	#ifndef SHADER_TARGET_GLSL
+	#ifdef SCSS_HLSL_COMPAT
 	[call] // https://www.gamedev.net/forums/topic/682920-hlsl-switch-attributes/
 	#endif
 	switch (_LightingCalculationType)

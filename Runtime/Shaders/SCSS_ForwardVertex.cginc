@@ -517,7 +517,11 @@ void geom_fur(triangle VertexOutput IN[3], inout TriangleStream<VertexOutput> tr
 
 	int maxLayers =  max(_FurLayerCount * layerCountScale, 1);
 
-    if(instanceID > maxLayers) return;
+	#ifdef SCSS_HLSL_COMPAT
+	if(instanceID > maxLayers) return;
+	#else
+	if(instanceID > 1) return; // For now, disable the additional layers on non-HLSL platforms.
+	#endif
 
 	// Generate base vertex
 	[unroll]

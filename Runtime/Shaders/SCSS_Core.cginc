@@ -187,7 +187,7 @@ void getSpecularVD(float roughness, SCSS_LightParam d, SCSS_Light l, SCSS_Shadin
 {
 	V = 0; D = 0;
 
-	#ifndef SHADER_TARGET_GLSL
+	#ifdef SCSS_HLSL_COMPAT
 	[call] 
 	// Call should improve performance by avoiding the execution of unused code paths.
 	// https://www.gamedev.net/forums/topic/682920-hlsl-switch-attributes/

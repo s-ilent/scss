@@ -71,4 +71,9 @@
     #endif
 #endif
 
+#if !defined(UNITY_COMPILER_HLSLCC) && !defined(UNITY_COMPILER_HLSL2GLSL) && !defined(SHADER_TARGET_GLSL)
+	#define SCSS_HLSL_COMPAT
+#endif
+
+
 #endif // SCSS_CONFIG_INCLUDED
