@@ -145,7 +145,7 @@ half3 calcDiffuseGI(float3 albedo, SCSS_CrosstoneData data, float3 indirectLight
 // remappedLight must be 0..1 range.
 half3 calcDiffuseBase(float3 albedo, SCSS_LightrampData data, half attenuation, float3 lightColor, float remappedLight) {
     remappedLight = applyAttenuation(remappedLight, attenuation);
-    remappedLight = applyShadowLift(remappedLight, data.occlusion, data.shadowLift);
+    remappedLight = applyShadowLift(remappedLight, data.tone0.bias * data.occlusion, data.shadowLift);
     float3 lightContribution = lerp(data.tone0.col, 1.0, sampleRampWithOptions(remappedLight, data.softness)) * albedo;
     lightContribution *= lightColor;
     lightContribution *= _LightWrappingCompensationFactor;
@@ -164,7 +164,7 @@ half3 calcDiffuseBase(float3 albedo, SCSS_CrosstoneData data, half attenuation, 
 // For point/spot lights, where attenuation is shadow+attenuation.
 // remappedLight must be 0..1 range.
 half3 calcDiffuseAdd(float3 albedo, SCSS_LightrampData data, float3 lightColor, float remappedLight) {
-    remappedLight = applyShadowLift(remappedLight, data.occlusion, data.shadowLift);
+    remappedLight = applyShadowLift(remappedLight, data.tone0.bias * data.occlusion, data.shadowLift);
     float3 lightContribution = sampleRampWithOptions(remappedLight, data.softness);
 
     float3 directLighting = lightColor;
