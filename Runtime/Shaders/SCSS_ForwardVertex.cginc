@@ -353,40 +353,38 @@ inline VertexOutput CalculateOutlineVertexClipPosition(VertexOutput v)
 		{
 			const half3 positionOS = v.pos.xyz;
 			const half3 normalOS = float3(v.tangentToWorldAndPackedData[0][3], v.tangentToWorldAndPackedData[1][3], v.tangentToWorldAndPackedData[2][3]);
-			float4x4 matrixIM = unity_WorldToObject;
-			matrixIM._m03_m13_m23 += _WorldSpaceCameraPos.xyz;
 
-			// Calculate a world-space vertex offset we can apply in object space
-			half3 offsetOS = mul( mul(transpose((float3x3)matrixIM), (float3x3)matrixIM), outlineWidth.xxx);
-			half3 localPosition = positionOS + normalOS * offsetOS;
-		#if (SCSS_CAMERA_RELATIVE_VERTEX)
-			v.pos = ObjectToClipPosRelative(localPosition);
-        #else
-			v.pos = UnityObjectToClipPos(localPosition);
-        #endif
+			float3 worldScale;
+			worldScale.x = length(unity_ObjectToWorld._m00_m10_m20);
+			worldScale.y = length(unity_ObjectToWorld._m01_m11_m21);
+			worldScale.z = length(unity_ObjectToWorld._m02_m12_m22);
+
+			const float SCALE_EPSILON = 1e-6f; 
+			worldScale = max(worldScale, SCALE_EPSILON);
+
+			float3 correctedOffsetOS = (1.0f / worldScale) * (float3)outlineWidth.xxx;
+
+			half3 localPosition = positionOS + normalOS * correctedOffsetOS;
+			v.pos = ObjectToClipPos(localPosition);
 		}
 		break;
 		case 1:
 		{
-        const float3 positionWS = mul(unity_ObjectToWorld, float4(v.pos.xyz, 1)).xyz;
-        const half aspect = getScreenAspectRatio();
+        	const float3 positionWS = mul(unity_ObjectToWorld, float4(v.pos.xyz, 1)).xyz;
+        	const half aspect = getScreenAspectRatio();
 
-		#if (SCSS_CAMERA_RELATIVE_VERTEX)
-			float4 positionCS = ObjectToClipPosRelative(v.pos.xyz);
-        #else
-			float4 positionCS = UnityObjectToClipPos(v.pos.xyz);
-        #endif
+			float4 positionCS = ObjectToClipPos(v.pos.xyz);
 
-        const half3 normalOS = float3(v.tangentToWorldAndPackedData[0].w, v.tangentToWorldAndPackedData[1].w, v.tangentToWorldAndPackedData[2].w);
-        const half3 normalVS = getObjectToViewNormal(normalOS);
-        const half3 normalCS = TransformViewToProjection(normalVS.xyz);
-        half2 normalProjectedCS = normalize(normalCS.xy);
-        normalProjectedCS *= positionCS.w;
-        normalProjectedCS.x *= aspect;
-        positionCS.xy += outlineWidth * normalProjectedCS.xy * saturate(1 - abs(normalVS.z)); // ignore offset when normal toward camera
+        	const half3 normalOS = float3(v.tangentToWorldAndPackedData[0].w, v.tangentToWorldAndPackedData[1].w, v.tangentToWorldAndPackedData[2].w);
+        	const half3 normalVS = getObjectToViewNormal(normalOS);
+        	const half3 normalCS = TransformViewToProjection(normalVS.xyz);
+        	half2 normalProjectedCS = normalize(normalCS.xy);
+        	normalProjectedCS *= positionCS.w;
+        	normalProjectedCS.x *= aspect;
+        	positionCS.xy += outlineWidth * normalProjectedCS.xy * saturate(1 - abs(normalVS.z)); // ignore offset when normal toward camera
 
-        v.worldPos = float4(positionWS, 1);
-        v.pos = positionCS;
+        	v.worldPos = float4(positionWS, 1);
+        	v.pos = positionCS;
 		}
 		break;
 	}
