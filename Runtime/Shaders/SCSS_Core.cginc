@@ -247,7 +247,7 @@ half3 calcSpecularBase(float3 specColor, float smoothness, float3 normal, float 
     // To provide true Lambert lighting, we need to be able to kill specular completely.
     specularTerm *= any(specColor) ? 1.0 : 0.0;
 
-	gi =  GetUnityGI(l.color.rgb, l.dir, normal, 
+	gi = GetUnityGI(l.color.rgb, l.dir, normal, 
 		p.view, d.reflDir, attenuation, occlusion, perceptualRoughness, p.position.xyz);
 
 	bool isCloth = (_SpecularType==2);
@@ -313,8 +313,7 @@ half3 calcSpecularCel(float3 specColor, float smoothness, float3 normal, float o
     	spec = max(0.02,spec);
     	spec *= UNITY_PI * rcp(_CelSpecularSteps);
 
-    	float3 envLight = UNITY_SAMPLE_TEXCUBE_LOD(unity_SpecCube0, normal, UNITY_SPECCUBE_LOD_STEPS);
-		return (spec * specColor *  l.color) + (spec * specColor * envLight);
+		return (spec * specColor *  l.color);
 	}
 	if (_SpecularType == 5) {
 		// It might be better if these are passed in parameters in future
@@ -340,8 +339,7 @@ half3 calcSpecularCel(float3 specColor, float smoothness, float3 normal, float o
 		spec2 = sharpenLighting(frac(spec2), softness)+floor(spec2);
 		spec += spec2;
 		
-    	float3 envLight = UNITY_SAMPLE_TEXCUBE_LOD(unity_SpecCube0, normal, UNITY_SPECCUBE_LOD_STEPS);
-		return (spec * specColor *  l.color);// + (spec * specColor * envLight);
+		return (spec * specColor * l.color);
 	}
 	return 0;
 }
@@ -370,9 +368,10 @@ float3 SCSS_ShadeBase(const SCSS_Input c, const SCSS_ShadingParam p)
 		giLight = getSDFLighting(d.ambDir, c.sdf, c.sdfSmoothness);
 	}
 
-	float3 directLighting, indirectLighting;
+	float3 directLighting, indirectLighting, indirectDominantDir;
 
-	getDirectIndirectLighting(p.normal, /*out*/ directLighting, /*out*/ indirectLighting);
+	getDirectIndirectLighting(p.normal, p.position, d.sh, 
+		/*out*/ directLighting, /*out*/ indirectLighting, /*out*/ indirectDominantDir);
 
 	// Prepare Lightramp/Crosstone parameters to pass on
 	#if defined(SCSS_CROSSTONE)
@@ -383,20 +382,21 @@ float3 SCSS_ShadeBase(const SCSS_Input c, const SCSS_ShadingParam p)
 
     finalColor  = calcDiffuseGI(c.albedo, shadingData, indirectLighting, directLighting, giLight);
     finalColor += calcDiffuseBase(c.albedo, shadingData, p.attenuation, l.color, remappedLight);
+	
+    half directionality = max(0.001, length(indirectDominantDir));
+    float3 indirectKeyLight = directLighting * directionality;
 
 	// Prepare fake light params for subsurface scattering.
 	SCSS_Light iL = l;
-	SCSS_LightParam iD = d;
-	iL.color = GetSHMaxL1();
-	iL.dir = Unity_SafeNormalize((unity_SHAr.xyz + unity_SHAg.xyz + unity_SHAb.xyz) * _LightSkew.xyz);
-	iD = initialiseLightParam(iL, p);
+	iL.color = indirectKeyLight;
+	iL.dir = Unity_SafeNormalize(indirectDominantDir);
+	SCSS_LightParam iD = recalculateLightParamLight(iL, p, d);
 
 	// Prepare fake light params for spec/fresnel which simulate specular.
 	SCSS_Light fL = l;
-	SCSS_LightParam fD = d;
-	fL.color = p.attenuation * fL.color + GetSHMaxL1();
-	fL.dir = Unity_SafeNormalize(fL.dir + (unity_SHAr.xyz + unity_SHAg.xyz + unity_SHAb.xyz) * _LightSkew.xyz);
-	fD = initialiseLightParam(fL, p);
+	fL.color = p.attenuation * fL.color + indirectKeyLight;
+	fL.dir = Unity_SafeNormalize(fL.dir + indirectDominantDir);
+	SCSS_LightParam fD = recalculateLightParamLight(fL, p, d);
 
 	if (p.isOutline <= 0)
 	{
@@ -410,7 +410,7 @@ float3 SCSS_ShadeBase(const SCSS_Input c, const SCSS_ShadingParam p)
 		#endif
 
 		#if defined(_METALLICGLOSSMAP)
-	    finalColor += calcSpecularBase(c, p.attenuation, d, l, p);
+	    finalColor += calcSpecularBase(c, p.attenuation, fD, fL, p);
 	    #endif
 
 	    #if defined(_SPECGLOSSMAP)
@@ -487,13 +487,13 @@ float3 SCSS_ApplyLighting(SCSS_Input c, SCSS_ShadingParam p)
 	// Generic lighting for effects.
 	float3 effectLighting = FLT_EPS + l.color;
 	#if defined(UNITY_PASS_FORWARDBASE)
-	effectLighting += GetSHAverage();
+	effectLighting += d.sh.L0;
 	#endif
 
 	// Generic lighting for effects with shadow applied.
 	float3 effectLightShadow = l.color * max((1+d.NdotL)*p.attenuation, 0);
 	#if defined(UNITY_PASS_FORWARDBASE)
-	effectLightShadow += GetSHAverage();
+	effectLightShadow += d.sh.L0;
 	#endif
 
     // Workaround for scenes with HDR off blowing out in VRchat.

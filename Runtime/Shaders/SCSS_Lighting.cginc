@@ -2,13 +2,26 @@
 // UNITY_SHADER_NO_UPGRADE
 #define SCSS_LIGHTING_INCLUDED
 
+#include "SCSS_Input.cginc"
+#include "SCSS_LightVolumes.cginc"
+
 // Functions and structs used for the lighting calculation.
+
+struct SHdata
+{
+    float3 L0;
+    float3 L1r;
+    float3 L1g;
+    float3 L1b;
+    // L2 could be added, but is not necessary for cel shading
+};
 
 struct SCSS_LightParam
 {
 	half3 viewDir, halfDir, reflDir, ambDir;
 	half NdotL, NdotV, LdotH, NdotH;
 	half NdotAmb;
+    SHdata sh;
 };
 
 // Allows saturate to be called on light params. 
@@ -86,6 +99,169 @@ SCSS_RimLightInput initialiseRimParam()
 	return rim;
 }
 
+
+float3 SHEvalLinearL2(float3 n)
+{
+    return SHEvalLinearL2(float4(n, 1.0));
+}
+
+/*
+// Paper: ZH3: Quadratic Zonal Harmonics, i3D 2024. https://torust.me/ZH3.pdf
+// Code based on paper and demo https://www.shadertoy.com/view/Xfj3RK
+// https://gist.github.com/pema99/f735ca33d1299abe0e143ee94fc61e73
+*/
+
+// L1 radiance = L1 irradiance * PI / Y_1 / AHat_1
+// PI / (sqrt(3 / PI) / 2) / ((2 * PI) / 3) = sqrt(3 * PI)
+const static float L0IrradianceToRadiance = 2 * sqrt(UNITY_PI);
+
+// L0 radiance = L0 irradiance * PI / Y_0 / AHat_0
+// PI / (sqrt(1 / PI) / 2) / PI = 2 * sqrt(PI)
+const static float L1IrradianceToRadiance = sqrt(3 * UNITY_PI);
+
+const static float4 L0L1IrradianceToRadiance = float4(L0IrradianceToRadiance, L1IrradianceToRadiance, L1IrradianceToRadiance, L1IrradianceToRadiance);
+
+float SHEvalLinearL0L1_ZH3Hallucinate(float4 sh, float3 normal)
+{
+    float4 radiance = sh * L0L1IrradianceToRadiance;
+
+    float3 zonalAxis = float3(radiance.w, radiance.y, radiance.z);
+    float l1Length = length(zonalAxis);
+    zonalAxis /= l1Length;
+
+    float ratio = l1Length / radiance.x;
+    float zonalL2Coeff = radiance.x * ratio * (0.08 + 0.6 * ratio); // Curve-fit.
+
+    float fZ = dot(zonalAxis, normal);
+    float zhNormal = sqrt(5.0f / (16.0f * UNITY_PI)) * (3.0f * fZ * fZ - 1.0f);
+
+    float result = dot(sh, float4(1, float3(normal.y, normal.z, normal.x)));
+    result += 0.25f * zhNormal * zonalL2Coeff;
+    return result;
+}
+
+/* http://www.geomerics.com/wp-content/uploads/2015/08/CEDEC_Geomerics_ReconstructingDiffuseLighting1.pdf */
+// Optimised version by d4rkpl4y3r
+float3 ShadeSH9_Geometrics(float3 n, SHdata sh)
+{
+    // average energy
+    float3 R0 = sh.L0;
+
+    // avg direction of incoming light
+    //float3 R1 = 0.5f * L1;
+    float3 R1r = sh.L1r;
+    float3 R1g = sh.L1g;
+    float3 R1b = sh.L1b;
+
+    float3 rlenR1 = { dot(R1r,R1r), dot(R1g, R1g), dot(R1b, R1b) };
+    rlenR1 = rsqrt(rlenR1);
+
+    // directional brightness
+    float3 lenR1 = rcp(rlenR1) * .5;
+
+    // linear angle between normal and direction 0-1
+    float3 q = { dot(R1r, n), dot(R1g, n), dot(R1b, n) };
+    q = q * rlenR1 * .5 + .5;
+    q = isnan(q) ? 1 : q;
+
+    // power for q
+    // lerps from 1 (linear) to 3 (cubic) based on directionality
+    float3 p = 1.0f + 2.0f * (lenR1 / R0);
+
+    // dynamic range constant
+    // should vary between 4 (highly directional) and 0 (ambient)
+    float3 a = (1.0f - (lenR1 / R0)) / (1.0f + (lenR1 / R0));
+
+    return max(0, R0 * (a + (1.0f - a) * (p + 1.0f) * pow(q, p)));
+}
+
+SHdata SampleProbes(float3 worldPos)
+{
+    SHdata sh = (SHdata)0;
+
+    #if defined(SCSS_USE_VRC_LIGHT_VOLUMES)
+    LightVolumeSH(worldPos, sh.L0, sh.L1r, sh.L1b, sh.L1g);
+    #else
+    sh.L0 = float3(unity_SHAr.w, unity_SHAg.w, unity_SHAb.w) + float3(unity_SHBr.z, unity_SHBg.z, unity_SHBb.z) / 3.0;
+    sh.L1r = unity_SHAr.xyz; 
+    sh.L1g = unity_SHAg.xyz; 
+    sh.L1b = unity_SHAb.xyz;
+    #endif
+
+    return sh;
+}
+
+float3 SampleIrradiance(float3 normal, SHdata sh, out float3 dominantDir)
+{
+    float3 nL1x; float3 nL1y; float3 nL1z;
+    nL1x = float3(sh.L1r[0], sh.L1g[0], sh.L1b[0]);
+    nL1y = float3(sh.L1r[1], sh.L1g[1], sh.L1b[1]);
+    nL1z = float3(sh.L1r[2], sh.L1g[2], sh.L1b[2]);
+    dominantDir = float3(luminance(nL1x), luminance(nL1y), luminance(nL1z));
+
+    // Compute irradiance using the SH components
+    half3 irradiance = 0.0;
+
+    #if (SPHERICAL_HARMONICS == SPHERICAL_HARMONICS_DEFAULT)
+        irradiance.r = dot(sh.L1r, normal.xyz) + sh.L0.r;
+        irradiance.g = dot(sh.L1g, normal.xyz) + sh.L0.g;
+        irradiance.b = dot(sh.L1b, normal.xyz) + sh.L0.b;
+    #endif
+
+    #if (SPHERICAL_HARMONICS == SPHERICAL_HARMONICS_GEOMETRICS)
+        irradiance   = ShadeSH9_Geometrics(normal.xyz, sh);
+    #endif
+
+    #if (SPHERICAL_HARMONICS == SPHERICAL_HARMONICS_ZH3)
+        irradiance.r = SHEvalLinearL0L1_ZH3Hallucinate(float4(sh.L0.r, sh.L1r), normal.xyz);
+        irradiance.g = SHEvalLinearL0L1_ZH3Hallucinate(float4(sh.L0.g, sh.L1g), normal.xyz);
+        irradiance.b = SHEvalLinearL0L1_ZH3Hallucinate(float4(sh.L0.b, sh.L1b), normal.xyz);
+    #endif
+
+    return irradiance;
+}
+
+float3 SampleIrradianceSimple(float3 normal, SHdata sh)
+{
+    half3 irradiance = 0.0;
+    irradiance.r = dot(sh.L1r, normal.xyz) + sh.L0.r;
+    irradiance.g = dot(sh.L1g, normal.xyz) + sh.L0.g;
+    irradiance.b = dot(sh.L1b, normal.xyz) + sh.L0.b;
+    return irradiance;
+}
+
+float3 GetSHDirectionL1(SHdata sh)
+{
+    return normalize((sh.L1r.xyz + sh.L1g.xyz + sh.L1b.xyz) + FLT_EPS);
+}
+
+// Returns the value from SH in the lighting direction with the 
+// brightest intensity. 
+half3 GetSHMaxL1(SHdata sh)
+{
+    float4 maxDirection = float4(GetSHDirectionL1(sh), 1.0);
+    return SampleIrradianceSimple(maxDirection, sh);
+}
+
+float getGreyscaleSH(float3 normal, SHdata sh)
+{
+    // Samples the SH in the weakest and strongest direction and uses the difference
+    // to compress the SH result into 0-1 range.
+
+    // However, for efficiency, we only get the direction from L1.
+    float3 ambientLightDirection = GetSHDirectionL1(sh);
+
+    // If this causes issues, it might be worth getting the min() of those two.
+    float3 dd = SampleIrradianceSimple(-ambientLightDirection, sh);
+    float3 ee = SampleIrradianceSimple(normal, sh);
+    float3 aa = SampleIrradianceSimple(ambientLightDirection, sh);
+
+    ee = saturate( (ee - dd) / (aa - dd));
+    return abs(dot(ee, sRGB_Luminance));
+
+    return dot(normal, ambientLightDirection);
+}
+
 //-----------------------------------------------------------------------------
 // These functions use data or functions not available in the shadow pass
 //-----------------------------------------------------------------------------
@@ -127,89 +303,7 @@ SCSS_Light MainLight(float3 worldPos)
     return l;
 }
 
-float3 GetSHDirectionL1()
-{
-    // For efficiency, we only get the direction from L1.
-    // Because getting it from L2 would be too hard!
-    return
-        normalize((unity_SHAr.xyz + unity_SHAg.xyz + unity_SHAb.xyz) + FLT_EPS);
-}
-
-float3 SimpleSH9(float3 normal)
-{
-    return ShadeSH9(float4(normal, 1));
-}
-
-// Get the average (L0) SH contribution
-// Biased due to a constant factor added for L2
-half3 GetSHAverageFast()
-{
-    return float3(unity_SHAr.w, unity_SHAg.w, unity_SHAb.w);
-}
-
-
-// Get the ambient (L0) SH contribution correctly
-// Provided by Dj Lukis.LT - Unity's SH calculation adds a constant
-// factor which produces a slight bias in the result.
-half3 GetSHAverage ()
-{
-    return float3(unity_SHAr.w, unity_SHAg.w, unity_SHAb.w)
-     + float3(unity_SHBr.z, unity_SHBg.z, unity_SHBb.z) / 3.0;
-}
-
-// Get the maximum SH contribution
-// synqark's Arktoon shader's shading method
-// This method has some flaws: 
-// - Getting the length of the L1 data is a bit wrong
-//   because .w contains ambient contribution
-// - Getting the length of L2 doesn't correspond with
-//   intensity, because it doesn't store direct vectors
-half3 GetSHLengthOld ()
-{
-    half3 x, x1;
-    x.r = length(unity_SHAr);
-    x.g = length(unity_SHAg);
-    x.b = length(unity_SHAb);
-    x1.r = length(unity_SHBr);
-    x1.g = length(unity_SHBg);
-    x1.b = length(unity_SHBb);
-    return x + x1;
-}
-
-// Returns the value from SH in the lighting direction with the 
-// brightest intensity. 
-half3 GetSHMaxL1()
-{
-    float4 maxDirection = float4(GetSHDirectionL1(), 1.0);
-    return SHEvalLinearL0L1(maxDirection) + max(SHEvalLinearL2(maxDirection), 0);
-}
-
-float3 SHEvalLinearL2(float3 n)
-{
-    return SHEvalLinearL2(float4(n, 1.0));
-}
-
-float getGreyscaleSH(float3 normal)
-{
-    // Samples the SH in the weakest and strongest direction and uses the difference
-    // to compress the SH result into 0-1 range.
-
-    // However, for efficiency, we only get the direction from L1.
-    float3 ambientLightDirection = GetSHDirectionL1();
-
-    // If this causes issues, it might be worth getting the min() of those two.
-    //float3 dd = float3(unity_SHAr.w, unity_SHAg.w, unity_SHAb.w);
-    float3 dd = SimpleSH9(-ambientLightDirection);
-    float3 ee = SimpleSH9(normal);
-    float3 aa = SimpleSH9(ambientLightDirection);
-
-    ee = saturate( (ee - dd) / (aa - dd));
-    return abs(dot(ee, sRGB_Luminance));
-
-    return dot(normal, ambientLightDirection);
-}
-
-float getAmbientLight (float3 ambientLightDirection, float3 normal, float3 viewDir)
+float getAmbientLight (float3 ambientLightDirection, float3 normal, float3 viewDir, SHdata sh)
 {
 	if (_IndirectShadingType == 2) // Flatten
 	{
@@ -228,9 +322,20 @@ float getAmbientLight (float3 ambientLightDirection, float3 normal, float3 viewD
 	float ambientLight = dot(normal, ambientLightDirection);
 	ambientLight = ambientLight * 0.5 + 0.5;
 
+    // Todo: Maybe this should be restructured like the other SH functions?
 	if (_IndirectShadingType == 0) // Dynamic
-		ambientLight = getGreyscaleSH(normal);
+		ambientLight = getGreyscaleSH(normal, sh);
 	return ambientLight;
+}
+
+// Helper function for derived lights
+SCSS_LightParam recalculateLightParamLight (SCSS_Light l, SCSS_ShadingParam s, SCSS_LightParam d)
+{
+	d.halfDir = Unity_SafeNormalize (l.dir + s.view);
+	d.NdotL = (dot(l.dir, s.normal)); // Calculate NdotL
+	d.LdotH = (dot(l.dir, d.halfDir));
+	d.NdotH = (dot(s.normal, d.halfDir)); // Saturate seems to cause artifacts
+    return d;
 }
 
 SCSS_LightParam initialiseLightParam (SCSS_Light l, SCSS_ShadingParam s)
@@ -242,15 +347,22 @@ SCSS_LightParam initialiseLightParam (SCSS_Light l, SCSS_ShadingParam s)
 	d.NdotV = (dot(s.view,  s.normal)); // Calculate NdotV
 	d.LdotH = (dot(l.dir, d.halfDir));
 	d.NdotH = (dot(s.normal, d.halfDir)); // Saturate seems to cause artifacts
-    d.ambDir = Unity_SafeNormalize((unity_SHAr.xyz + unity_SHAg.xyz + unity_SHAb.xyz) * _LightSkew.xyz);
-	d.NdotAmb = getAmbientLight(d.ambDir, s.normal, s.view);
+
+    // Todo: Apply _LightSkew if light probes are used
+    d.sh = SampleProbes(s.position);
+    d.ambDir = GetSHDirectionL1(d.sh);
+	d.NdotAmb = getAmbientLight(d.ambDir, s.normal, s.view, d.sh);
 	return d;
 }
 
-void getDirectIndirectLighting(float3 normal, out float3 directLighting, out float3 indirectLighting)
+void getDirectIndirectLighting(float3 normal, float3 worldPos, SHdata sh,
+    out float3 directLighting, out float3 indirectLighting, out float3 dominantDirection)
 {
-	directLighting   = 0.0;
-	indirectLighting = 0.0;
+	directLighting    = 0.0;
+	indirectLighting  = 0.0;
+    dominantDirection = 0.0;
+
+    float3 baseIrradiance = SampleIrradiance(normal, sh, dominantDirection);
 
 	#ifdef SCSS_HLSL_COMPAT
 	[call] // https://www.gamedev.net/forums/topic/682920-hlsl-switch-attributes/
@@ -258,25 +370,25 @@ void getDirectIndirectLighting(float3 normal, out float3 directLighting, out flo
 	switch (_LightingCalculationType)
 	{
 	case 0: // Unbiased
-		directLighting   = GetSHMaxL1();
-		indirectLighting = GetSHAverage(); 
+		directLighting   = GetSHMaxL1(sh);
+		indirectLighting = sh.L0; 
 	break;
 	case 1: // Standard
 		directLighting = 
-		indirectLighting = BetterSH9(half4(normal, 1.0));
+		indirectLighting = baseIrradiance;
 	break;
 	case 2: // Cubed
-		directLighting   = BetterSH9(half4(0.0,  1.0, 0.0, 1.0));
-		indirectLighting = BetterSH9(half4(0.0, -1.0, 0.0, 1.0)); 
+		directLighting   = SampleIrradianceSimple(half4(0.0,  1.0, 0.0, 1.0), sh);
+		indirectLighting = SampleIrradianceSimple(half4(0.0, -1.0, 0.0, 1.0), sh);
 	break;
 	case 3: // True Directional
-		float4 ambientDir = float4(Unity_SafeNormalize(unity_SHAr.xyz + unity_SHAg.xyz + unity_SHAb.xyz), 1.0);
-		directLighting   = BetterSH9(ambientDir);
-		indirectLighting = BetterSH9(-ambientDir); 
+		float4 ambientDir = float4(Unity_SafeNormalize(sh.L1r.xyz + sh.L1g.xyz + sh.L1b.xyz), 1.0);
+		directLighting   = SampleIrradianceSimple( ambientDir, sh);
+		indirectLighting = SampleIrradianceSimple(-ambientDir, sh); 
 	break;
 	case 4: // Biased
-		directLighting   = GetSHMaxL1();
-		indirectLighting = BetterSH9(half4(0.0, 0.0, 0.0, 1.0)); 
+		directLighting   = GetSHMaxL1(sh); 
+		indirectLighting = SampleIrradiance(half4(0.0, 0.0, 0.0, 1.0), sh, dominantDirection); 
 	break;
 	}
 

@@ -2,6 +2,9 @@
 // UNITY_SHADER_NO_UPGRADE
 #define SCSS_INPUT_INCLUDED
 
+#include "SCSS_Utils.cginc"
+#include "SCSS_Attributes.cginc"
+
 //---------------------------------------
 // Keyword squeezing. 
 

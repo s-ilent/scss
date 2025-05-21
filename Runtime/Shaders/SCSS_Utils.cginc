@@ -33,6 +33,10 @@ float4 _CameraDepthTexture_TexelSize;
 
 #define sRGB_Luminance float3(0.2126, 0.7152, 0.0722)
 
+float luminance(const float3 linearCol) {
+    return dot(linearCol, sRGB_Luminance);
+}
+
 // Epsilon value for floating point numbers that we can't allow to reach 0
 #define FLT_EPS 1e-5
 

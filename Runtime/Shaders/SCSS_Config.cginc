@@ -40,6 +40,26 @@
 // closer clipping plane on the camera.
 #define SCSS_NEAR_SQUISH 1
 
+// When this is enabled, the shader will read voxelised light probes from
+// data stored using the "VRC Light Volumes" system. This is mainly available
+// for VRchat, but it's possible to implement on other platforms. See the 
+// SCSS_LightVolumes.cginc and LICENSE for more info. 
+#define SCSS_USE_VRC_LIGHT_VOLUMES 1
+
+//------------------------------------------------------------------------------
+// Image based lighting configuration
+//------------------------------------------------------------------------------
+
+// Spherical harmonics sampling algorithm
+// Unity's default; basic SH sampling
+#define SPHERICAL_HARMONICS_DEFAULT         0
+// Geometrics' deringing lightprobe sampling
+#define SPHERICAL_HARMONICS_GEOMETRICS      1
+// Activision's Quadratic Zonal Harmonics
+#define SPHERICAL_HARMONICS_ZH3             2
+
+#define SPHERICAL_HARMONICS SPHERICAL_HARMONICS_ZH3
+
 // Safety net for things that can't be used in Standard's codepaths on weaker hardware
 // Following implementation in Unity 2020's built-in pipeline
 
