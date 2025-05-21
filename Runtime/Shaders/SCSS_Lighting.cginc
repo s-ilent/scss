@@ -180,7 +180,7 @@ SHdata SampleProbes(float3 worldPos)
     SHdata sh = (SHdata)0;
 
     #if defined(SCSS_USE_VRC_LIGHT_VOLUMES)
-    LightVolumeSH(worldPos, sh.L0, sh.L1r, sh.L1b, sh.L1g);
+    LightVolumeSH(worldPos, sh.L0, sh.L1r, sh.L1g, sh.L1b);
     #else
     sh.L0 = float3(unity_SHAr.w, unity_SHAg.w, unity_SHAb.w) + float3(unity_SHBr.z, unity_SHBg.z, unity_SHBb.z) / 3.0;
     sh.L1r = unity_SHAr.xyz; 
@@ -237,7 +237,7 @@ float3 GetSHDirectionL1(SHdata sh)
 
 // Returns the value from SH in the lighting direction with the 
 // brightest intensity. 
-half3 GetSHMaxL1(SHdata sh)
+float3 GetSHMaxL1(SHdata sh)
 {
     float4 maxDirection = float4(GetSHDirectionL1(sh), 1.0);
     return SampleIrradianceSimple(maxDirection, sh);
