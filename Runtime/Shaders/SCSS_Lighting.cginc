@@ -5,6 +5,20 @@
 #include "SCSS_Input.cginc"
 #include "SCSS_LightVolumes.cginc"
 
+//------------------------------------------------------------------------------
+// Image based lighting configuration
+//------------------------------------------------------------------------------
+
+// Spherical harmonics sampling algorithm
+// Unity's default; basic SH sampling
+#define SPHERICAL_HARMONICS_DEFAULT         0
+// Geometrics' deringing lightprobe sampling
+#define SPHERICAL_HARMONICS_GEOMETRICS      1
+// Activision's Quadratic Zonal Harmonics
+#define SPHERICAL_HARMONICS_ZH3             2
+
+#define SPHERICAL_HARMONICS SPHERICAL_HARMONICS_ZH3
+
 // Functions and structs used for the lighting calculation.
 
 struct SHdata
@@ -140,6 +154,25 @@ float SHEvalLinearL0L1_ZH3Hallucinate(float4 sh, float3 normal)
     return result;
 }
 
+
+float3 SHEvalLinearL0L1_ZH3Hallucinate(float3 normal, float3 L0, 
+    float3 L1r, float3 L1g, float3 L1b)
+{
+    float3 shL0 = L0;
+    float3 shL1_1 = float3(L1r.y, L1g.y, L1b.y);
+    float3 shL1_2 = float3(L1r.z, L1g.z, L1b.z);
+    float3 shL1_3 = float3(L1r.x, L1g.x, L1b.x);
+
+    float3 result = 0.0;
+    float4 a = float4(shL0.r, shL1_1.r, shL1_2.r, shL1_3.r);
+    float4 b = float4(shL0.g, shL1_1.g, shL1_2.g, shL1_3.g);
+    float4 c = float4(shL0.b, shL1_1.b, shL1_2.b, shL1_3.b);
+    result.r = SHEvalLinearL0L1_ZH3Hallucinate(a, normal);
+    result.g = SHEvalLinearL0L1_ZH3Hallucinate(b, normal);
+    result.b = SHEvalLinearL0L1_ZH3Hallucinate(c, normal);
+    return result;
+}
+
 /* http://www.geomerics.com/wp-content/uploads/2015/08/CEDEC_Geomerics_ReconstructingDiffuseLighting1.pdf */
 // Optimised version by d4rkpl4y3r
 float3 ShadeSH9_Geometrics(float3 n, SHdata sh)
@@ -213,9 +246,7 @@ float3 SampleIrradiance(float3 normal, SHdata sh, out float3 dominantDir)
     #endif
 
     #if (SPHERICAL_HARMONICS == SPHERICAL_HARMONICS_ZH3)
-        irradiance.r = SHEvalLinearL0L1_ZH3Hallucinate(float4(sh.L0.r, sh.L1r), normal.xyz);
-        irradiance.g = SHEvalLinearL0L1_ZH3Hallucinate(float4(sh.L0.g, sh.L1g), normal.xyz);
-        irradiance.b = SHEvalLinearL0L1_ZH3Hallucinate(float4(sh.L0.b, sh.L1b), normal.xyz);
+        irradiance   = SHEvalLinearL0L1_ZH3Hallucinate(normal.xyz, sh.L0, sh.L1r, sh.L1g, sh.L1b );
     #endif
 
     return irradiance;
