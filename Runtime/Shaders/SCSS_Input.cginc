@@ -84,8 +84,8 @@ uniform float _EmissiveLightSenseEnd2nd;
 #endif
 
 #if defined(_AUDIOLINK)
-UNITY_DECLARE_TEX2D(_AudiolinkMaskMap); uniform half4 _AudiolinkMaskMap_ST;
-UNITY_DECLARE_TEX2D(_AudiolinkSweepMap); uniform half4 _AudiolinkSweepMap_ST;
+UNITY_DECLARE_TEX2D_NOSAMPLER(_AudiolinkMaskMap); uniform half4 _AudiolinkMaskMap_ST;
+UNITY_DECLARE_TEX2D_NOSAMPLER(_AudiolinkSweepMap); uniform half4 _AudiolinkSweepMap_ST;
 uniform float _AudiolinkIntensity;
 uniform float _AudiolinkMaskMapUVSec;
 uniform float _AudiolinkSweepMapUVSec;

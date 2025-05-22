@@ -409,9 +409,9 @@ void applyEmissiveAudioLink(inout SCSS_Input material, SCSS_TexCoords tc)
     sweepTexcoord = TRANSFORM_TEX(sweepTexcoord, _AudiolinkSweepMap);
 
     // Load mask texture
-    half4 mask = UNITY_SAMPLE_TEX2D_SAMPLER(_AudiolinkMaskMap, _AudiolinkMaskMap, maskTexcoord);
+    half4 mask = UNITY_SAMPLE_TEX2D_SAMPLER(_AudiolinkMaskMap, _MainTex, maskTexcoord);
     // Load weights texture
-    half4 weights = UNITY_SAMPLE_TEX2D_SAMPLER(_AudiolinkSweepMap, _AudiolinkSweepMap, sweepTexcoord);
+    half4 weights = UNITY_SAMPLE_TEX2D_SAMPLER(_AudiolinkSweepMap, _MainTex, sweepTexcoord);
 
 	// Apply a small epsilon to the weights to avoid artifacts.
     const float epsilon = (1.0 / 255.0);
