@@ -14,6 +14,9 @@
 
 #if (defined(_METALLICGLOSSMAP) || defined(_SPECGLOSSMAP))
 	#define _SPECULAR
+#else
+	#define _SPECULARHIGHLIGHTS_OFF
+	#define _GLOSSYREFLECTIONS_OFF
 #endif
 
 #if (defined(_SUNDISK_NONE))
@@ -111,6 +114,8 @@ uniform float _UseEnergyConservation;
 uniform float _Anisotropy;
 uniform float _CelSpecularSoftness;
 uniform float _CelSpecularSteps;
+uniform fixed _SpecularHighlights;
+uniform fixed _GlossyReflections;
 UNITY_DECLARE_TEX2D_NOSAMPLER(_SpecIridescenceRamp);
 uniform float4 _SpecIridescenceRamp_TexelSize;
 #else
@@ -229,6 +234,16 @@ uniform float _SSSIntensity;
 uniform float _SSSPow;
 uniform float _SSSDist;
 uniform float _SSSAmbient;
+#endif
+
+#if defined(_HATCHING)
+sampler2D _HatchingTex;
+half _HatchingScale;
+half _HatchingMovementFPS;
+half _HatchingShadingAdd;
+half _HatchingShadingMul;
+half _HatchingRimAdd;
+half _HatchingAlbedoMul;
 #endif
 
 uniform float4 _LightSkew;

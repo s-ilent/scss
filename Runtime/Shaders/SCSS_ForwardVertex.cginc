@@ -310,9 +310,8 @@ VertexOutput vert_nogeom(appdata_full_local v) {
 
 	o.pos = ObjectToClipPos(o.pos);
 
-#if defined(FOG_LINEAR) || defined(FOG_EXP) || defined(FOG_EXP2)
-	UNITY_TRANSFER_FOG_COMBINED_WITH_WORLD_POS(o, o.pos);
-#endif
+	// Transfer non-squished Z for fog.
+	o.worldPos.w = o.pos.z;
 
 	o.pos = ApplyNearVertexSquishing(o.pos);
 	
@@ -336,9 +335,8 @@ void ObjectToClipAndTransferData(inout VertexOutput o)
 	o.pos = ObjectToClipPos(o.pos);
 	UNITY_TRANSFER_SHADOW(o, v.texcoord1);
 
-#if defined(FOG_LINEAR) || defined(FOG_EXP) || defined(FOG_EXP2)
-	UNITY_TRANSFER_FOG_COMBINED_WITH_WORLD_POS(o, o.pos);
-#endif
+	// Transfer non-squished Z for fog.
+	o.worldPos.w = o.pos.z;
 }
 
 #if defined(SCSS_OUTLINE)
@@ -362,9 +360,10 @@ inline VertexOutput CalculateOutlineVertexClipPosition(VertexOutput v)
 			const float SCALE_EPSILON = 1e-6f; 
 			worldScale = max(worldScale, SCALE_EPSILON);
 
-			float3 correctedOffsetOS = (1.0f / worldScale) * (float3)outlineWidth.xxx;
+			float3 correctedOffsetOS = (1.0f / worldScale) * outlineWidth;
 
 			half3 localPosition = positionOS + normalOS * correctedOffsetOS;
+			
 			v.pos = ObjectToClipPos(localPosition);
 		}
 		break;
@@ -439,9 +438,8 @@ void geom(triangle VertexOutput IN[3], inout TriangleStream<VertexOutput> tristr
 	    		UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(o); 
 
 				o = CalculateOutlineVertexClipPosition(o);
-				#if defined(FOG_LINEAR) || defined(FOG_EXP) || defined(FOG_EXP2)
-					UNITY_TRANSFER_FOG_COMBINED_WITH_WORLD_POS(o, o.pos);
-				#endif
+				// Transfer non-squished Z for fog.
+				o.worldPos.w = o.pos.z;
 				o.pos = ApplyOutlineZBias(o.pos, o.extraData.z);
 				o.pos = ApplyNearVertexSquishing(o.pos);
 				o.extraData.x = true;

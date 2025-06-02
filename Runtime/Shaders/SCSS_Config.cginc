@@ -46,6 +46,11 @@
 // SCSS_LightVolumes.cginc and LICENSE for more info. 
 #define SCSS_USE_VRC_LIGHT_VOLUMES 1
 
+// When this is enabled, the shader will support Unity's fog. Normally this would be
+// controlled by the multi_compile_fog statement in the shader, but since fog was moved to
+// a new function to reduce the number of shader variants, it must be set here.
+#define SCSS_USE_UNITY_FOG 1
+
 // Safety net for things that can't be used in Standard's codepaths on weaker hardware
 // Following implementation in Unity 2020's built-in pipeline
 

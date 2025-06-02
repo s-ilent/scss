@@ -607,6 +607,7 @@ namespace SilentCelShading.Unity
 			DetailMapOptions();
 			SubsurfaceOptions();
 			ContactShadowOptions();
+			HatchingOptions();
 		}
 
 		protected void EmissionOptions()
@@ -1024,9 +1025,27 @@ namespace SilentCelShading.Unity
 			}
 		}
 
+		protected void HatchingOptions()
+		{
+			EditorGUILayout.Space();
+			if (ph.TogglePropertyHeader("_UseHatching") && ph.PropertyEnabled("_UseHatching"))
+			{
+				ph.TexturePropertySingleLine("_HatchingTex", "_HatchingScale");
+				
+				EditorGUI.indentLevel += 2;
+				ph.ShaderProperty("_HatchingMovementFPS");
+				ph.ShaderProperty("_HatchingShadingAdd");
+				ph.ShaderProperty("_HatchingShadingMul");
+				ph.ShaderProperty("_HatchingRimAdd");
+				ph.ShaderProperty("_HatchingAlbedoMul");
+				EditorGUI.indentLevel -= 2;
+			}
+		}
+
 		private void DrawDetailField(string texture, string uvSec, string blend, string type, string strength)
 		{
-			WithGroupHorizontal(() => {
+			WithGroupHorizontal(() =>
+			{
 				ph.TextureColorPropertyWithColorReset(texture, uvSec);
 				ph.PropertyDropdownNoLabel(type, Enum.GetNames(typeof(DetailMapType)), editor);
 
@@ -1036,9 +1055,9 @@ namespace SilentCelShading.Unity
 				EditorGUI.EndDisabledGroup();
 			});
 			ph.TextureScaleOffsetProperty(texture);
-			EditorGUI.indentLevel+=2;
+			EditorGUI.indentLevel += 2;
 			ph.ShaderProperty(strength);
-			EditorGUI.indentLevel-=2;
+			EditorGUI.indentLevel -= 2;
 		}
 
 

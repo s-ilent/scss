@@ -75,6 +75,8 @@ Shader "Silent's Cel Shading/Lightramp (Fur)"
 		_SpecGlossMap ("Specular Map", 2D) = "white" {}
 		[ToggleUI]_UseMetallic ("Use as Metallic", Float) = 0.0
 		[ToggleUI]_UseEnergyConservation ("Energy Conservation", Float) = 0.0
+		[ToggleUI]_SpecularHighlights ("Specular Highlights", Float) = 1.0
+		[ToggleUI]_GlossyReflections ("Glossy Reflections", Float) = 1.0
 		_Smoothness ("Smoothness", Range(0, 1)) = 1
 		_CelSpecularSoftness ("Softness", Range(1, 0)) = 0.02
 		_CelSpecularSteps("Steps", Range(1, 4)) = 1
@@ -174,6 +176,14 @@ Shader "Silent's Cel Shading/Lightramp (Fur)"
 		[Enum(DetailBlendMode)]
         _DetailMap4Blend ("Detail Map 4 Blend Mode", Float) = 0.0 
         _DetailMap4Strength ("Detail Map 4 Power", Range(0, 1)) = 1.0 
+		[Toggle(_HATCHING)] _UseHatching("Enable Hatching", Float) = 0.0
+		_HatchingTex("Hatching Map", 2D) = "black" {}
+		_HatchingScale("Hatching Scale", Float) = 1.0
+		[IntRange]_HatchingMovementFPS("Hatching Movement FPS", Range(0, 30)) = 5.0
+		_HatchingShadingAdd("Hatching Shading Add Level", Range(0, 1)) = 1.0
+		_HatchingShadingMul("Hatching Shading Multiply Level",  Range(0, 1)) = 0.0
+		_HatchingRimAdd("Hatching Rimlight Add Level",  Range(0, 1)) = 1.0
+		_HatchingAlbedoMul("Hatching Albedo Mul Level",  Range(0, 1)) = 0.0
 
 		[Toggle(_AUDIOLINK)]_UseEmissiveAudiolink("Enable Audiolink Emission", Float ) = 0.0
 		_AudiolinkIntensity("Audiolink Emission Intensity", Float) = 1.0
@@ -263,14 +273,12 @@ Shader "Silent's Cel Shading/Lightramp (Fur)"
 		[ToggleUI]_AlbedoAlphaMode("Albedo Alpha Mode", Float) = 0.0
 		[ToggleUI]_PixelSampleMode("Sharp Sampling Mode", Float) = 0.0
 		//[Space]
-		[Enum(LightingCalculationType)] _LightingCalculationType ("Lighting Calculation Type", Float) = 0.0
+		[Enum(LightingCalculationType)] _LightingCalculationType ("Lighting Calculation Type", Float) = 3.0
 		[Enum(IndirectShadingType)] _IndirectShadingType ("Indirect Shading Type", Float) = 0.0
 		_LightSkew ("Light Skew", Vector) = (1, 0.1, 1, 0)
         _DiffuseGeomShadowFactor ("Diffuse Geometric Shadowing Factor", Range(0, 1)) = 1
         _LightWrappingCompensationFactor("Light Wrapping Compensation Factor", Range(0.5, 1)) = 0.8
 		//[Space]
-		[ToggleOff(_SPECULARHIGHLIGHTS_OFF)]_SpecularHighlights ("Specular Highlights", Float) = 1.0
-		[ToggleOff(_GLOSSYREFLECTIONS_OFF)]_GlossyReflections ("Glossy Reflections", Float) = 1.0
 		//[Space]
         // Advanced options.
 		//[Header(System Render Flags)]
@@ -329,7 +337,8 @@ Shader "Silent's Cel Shading/Lightramp (Fur)"
 		#pragma target 5.0
 		#pragma shader_feature _ _ALPHATEST_ON _ALPHABLEND_ON _ALPHAPREMULTIPLY_ON
         #pragma multi_compile_instancing
-        #pragma skip_variants DYNAMICLIGHTMAP_ON LIGHTMAP_ON LIGHTMAP_SHADOW_MIXING DIRLIGHTMAP_COMBINED SHADOWS_SHADOWMASK
+        #pragma skip_variants DYNAMICLIGHTMAP_ON LIGHTMAP_ON LIGHTMAP_SHADOW_MIXING DIRLIGHTMAP_COMBINED SHADOWS_SHADOWMASK 
+		#pragma skip_variants FOG_EXP FOG_EXP2 FOG_LINEAR
 		
 		#define SCSS_FUR
 		#define SCSS_COVERAGE_OUTPUT
@@ -350,23 +359,20 @@ Shader "Silent's Cel Shading/Lightramp (Fur)"
 			#pragma require geometry
 
 			#pragma multi_compile_fwdbase
-			#pragma multi_compile_fog
-			#pragma multi_compile _ UNITY_HDR_ON
-			#pragma multi_compile _ VERTEXLIGHT_ON
+			#pragma multi_compile_fragment UNITY_HDR_ON
+			#pragma multi_compile VERTEXLIGHT_ON
 
 			// Needs to be global for Unity reasons
-			#pragma shader_feature _ _EMISSION
-			#pragma shader_feature_local _ _EMISSION_2ND
+			#pragma shader_feature _EMISSION
+			#pragma shader_feature_local_fragment _EMISSION_2ND
 
-			#pragma shader_feature_local _ _DETAIL_MULX2
+			#pragma shader_feature_local_fragment _DETAIL_MULX2
 			#pragma shader_feature_local _ _METALLICGLOSSMAP _SPECGLOSSMAP
-			#pragma shader_feature_local _ _SMOOTHNESS_TEXTURE_ALBEDO_CHANNEL_A
-			#pragma shader_feature_local _ _SPECULARHIGHLIGHTS_OFF
-			#pragma shader_feature_local _ _GLOSSYREFLECTIONS_OFF		
-			#pragma shader_feature_local _ _SUNDISK_NONE		
-			#pragma shader_feature_local _ _BACKFACE
-			#pragma shader_feature_local _ _AUDIOLINK
-			#pragma shader_feature_local _ _CONTACTSHADOWS
+			#pragma shader_feature_local_fragment _SUNDISK_NONE		
+			#pragma shader_feature_local_fragment _BACKFACE
+			#pragma shader_feature_local_fragment _AUDIOLINK
+			#pragma shader_feature_local_fragment _CONTACTSHADOWS
+			#pragma shader_feature_local_fragment _HATCHING
 			
 			#include "SCSS_Core.cginc"
 
@@ -395,17 +401,14 @@ Shader "Silent's Cel Shading/Lightramp (Fur)"
 			#pragma require geometry
 
 			#pragma multi_compile_fwdadd_fullshadows
-			#pragma multi_compile_fog
-			#pragma multi_compile _ UNITY_HDR_ON
+			#pragma multi_compile_fragment UNITY_HDR_ON
 			
-			#pragma shader_feature_local _ _DETAIL_MULX2
+			#pragma shader_feature_local_fragment _DETAIL_MULX2
 			#pragma shader_feature_local _ _METALLICGLOSSMAP _SPECGLOSSMAP
-			#pragma shader_feature_local _ _SMOOTHNESS_TEXTURE_ALBEDO_CHANNEL_A
-			#pragma shader_feature_local _ _SPECULARHIGHLIGHTS_OFF
-			#pragma shader_feature_local _ _GLOSSYREFLECTIONS_OFF
-			#pragma shader_feature_local _ _SUNDISK_NONE			
-			#pragma shader_feature_local _ _BACKFACE
-			#pragma shader_feature_local _ _CONTACTSHADOWS
+			#pragma shader_feature_local_fragment _SUNDISK_NONE			
+			#pragma shader_feature_local_fragment _BACKFACE
+			#pragma shader_feature_local_fragment _CONTACTSHADOWS
+			#pragma shader_feature_local_fragment _HATCHING
 
 			#include "SCSS_Core.cginc"
 

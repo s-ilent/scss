@@ -17,7 +17,7 @@
 // Activision's Quadratic Zonal Harmonics
 #define SPHERICAL_HARMONICS_ZH3             2
 
-#define SPHERICAL_HARMONICS SPHERICAL_HARMONICS_ZH3
+#define SPHERICAL_HARMONICS SPHERICAL_HARMONICS_GEOMETRICS
 
 // Functions and structs used for the lighting calculation.
 
@@ -293,6 +293,29 @@ float getGreyscaleSH(float3 normal, SHdata sh)
     return dot(normal, ambientLightDirection);
 }
 
+
+float getGreyscaleSH_Simplified(float3 normal, float3 ambientLightDirection, SHdata sh)
+{
+
+    float3 M = float3(
+        dot(sh.L1r, ambientLightDirection),
+        dot(sh.L1g, ambientLightDirection),
+        dot(sh.L1b, ambientLightDirection)
+    );
+
+    float3 DEN = 2.0f * M + FLT_EPS;
+
+    float3 X = float3(
+        dot(sh.L1r, normal),
+        dot(sh.L1g, normal),
+        dot(sh.L1b, normal)
+    );
+
+    float3 ee_remapped = saturate((X + M) / DEN);
+
+    return dot(ee_remapped, sRGB_Luminance);
+}
+
 //-----------------------------------------------------------------------------
 // These functions use data or functions not available in the shadow pass
 //-----------------------------------------------------------------------------
@@ -355,7 +378,7 @@ float getAmbientLight (float3 ambientLightDirection, float3 normal, float3 viewD
 
     // Todo: Maybe this should be restructured like the other SH functions?
 	if (_IndirectShadingType == 0) // Dynamic
-		ambientLight = getGreyscaleSH(normal, sh);
+		ambientLight = getGreyscaleSH_Simplified(normal, ambientLightDirection, sh);
 	return ambientLight;
 }
 

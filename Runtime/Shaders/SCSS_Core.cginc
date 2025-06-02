@@ -16,7 +16,7 @@
 #if defined(_SUBSURFACE)
 //SSS method from GDC 2011 conference by Colin Barre-Bresebois & Marc Bouchard and modified by Xiexe
 float3 getSubsurfaceScatteringLight (SCSS_Light l, float3 normalDirection, float3 viewDirection, 
-    float attenuation, float3 thickness, float3 indirectLight = 0)
+    float attenuation, float3 thickness)
 {
     float3 vSSLight = l.dir + normalDirection * _SSSDist; // Distortion
     float3 vdotSS = pow(saturate(dot(viewDirection, -vSSLight)), _SSSPow) 
@@ -24,7 +24,7 @@ float3 getSubsurfaceScatteringLight (SCSS_Light l, float3 normalDirection, float
     
     return lerp(1, attenuation, float(any(_WorldSpaceLightPos0.xyz))) 
                 * (vdotSS + _SSSAmbient) * abs(_ThicknessMapInvert-thickness)
-                * (l.color + indirectLight) * _SSSCol;
+                * (l.color) * _SSSCol;
                 
 }
 #endif
@@ -196,7 +196,7 @@ void getSpecularVD(float roughness, SCSS_LightParam d, SCSS_Light l, SCSS_Shadin
 	{
 	case 1: // GGX
 		V = SmithJointGGXVisibilityTerm (d.NdotL, d.NdotV, roughness);
-	    D = GGXTerm (d.NdotH, roughness);
+	    D = D_GGX (roughness, d.NdotH);
 	    break;
 
 	case 2: // Charlie (cloth)
@@ -240,10 +240,6 @@ half3 calcSpecularBase(float3 specColor, float smoothness, float3 normal, float 
 	half specularTerm = V*D * UNITY_PI; // Torrance-Sparrow model, Fresnel is applied later
 	specularTerm = max(0, specularTerm * d.NdotL);
 
-	#if defined(_SPECULARHIGHLIGHTS_OFF)
-    	specularTerm = 0.0;
-	#endif
-
     // To provide true Lambert lighting, we need to be able to kill specular completely.
     specularTerm *= any(specColor) ? 1.0 : 0.0;
 
@@ -255,6 +251,9 @@ half3 calcSpecularBase(float3 specColor, float smoothness, float3 normal, float 
     float horizon = min(1.0 + dot(d.reflDir, normal), 1.0);
     float3 dfgEnergyCompensation = specularDFGEnergyCompensation(dfg, specColor, isCloth);
 	float3 environmentSpecular = specularDFG(dfg, specColor, isCloth) * dfgEnergyCompensation;
+
+	specularTerm *= _SpecularHighlights;
+	environmentSpecular *= _GlossyReflections;
 
 	return
 	specularTerm * (gi.light.color) * FresnelTerm(specColor, d.LdotH) +
@@ -270,11 +269,7 @@ half3 calcSpecularBase(SCSS_Input c, float attenuation,
 
 half3 calcSpecularAdd(float3 specColor, float smoothness, float3 normal, float oneMinusReflectivity, float perceptualRoughness,
 	SCSS_LightParam d, SCSS_Light l, SCSS_ShadingParam p)
-{
-	#if defined(_SPECULARHIGHLIGHTS_OFF)
-		return 0.0;
-	#endif
-	
+{	
 	half V = 0; half D = 0; 
 	float roughness = PerceptualRoughnessToRoughness(perceptualRoughness);
 
@@ -291,6 +286,8 @@ half3 calcSpecularAdd(float3 specColor, float smoothness, float3 normal, float o
 
     // To provide true Lambert lighting, we need to be able to kill specular completely.
     specularTerm *= any(specColor) ? 1.0 : 0.0;
+	
+	specularTerm *= _SpecularHighlights;
 
 	return
 	specularTerm * l.color * FresnelTerm(specColor, d.LdotH);
@@ -406,7 +403,7 @@ float3 SCSS_ShadeBase(const SCSS_Input c, const SCSS_ShadingParam p)
 				p.attenuation, c.thickness) * c.albedo;
 			#endif
 		finalColor += getSubsurfaceScatteringLight(iL, p.normal, p.view,
-			1, c.thickness) * c.albedo;
+				1, c.thickness) * c.albedo;
 		#endif
 
 		#if defined(_METALLICGLOSSMAP)
@@ -447,7 +444,7 @@ float3 SCSS_ShadeLight(const SCSS_Input c, const SCSS_ShadingParam p, const SCSS
 	{
 		#if defined(_SUBSURFACE) 
 		finalColor += c.albedo * getSubsurfaceScatteringLight(l, p.normal, p.view,
-			p.attenuation, c.thickness, c.tone[0].col);
+			p.attenuation, c.thickness);
 		#endif
 
 		#if defined(_METALLICGLOSSMAP)

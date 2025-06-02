@@ -113,6 +113,11 @@ float hashR2_3D( float3 fragCoord ) {
     return hashR2_2D( float2( hashR2_2D( fragCoord.xy ), fragCoord.z ) );
 }
 
+float3 r3_modified(float idx, float3 seed)
+{
+    return frac(seed + float(idx) * float3(0.180827486604, 0.328956393296, 0.450299522098));
+}
+
 float r2Dither(float gray, float2 pos, float steps) {
 	// pos is screen pixel position in 0-res range
     // Calculated noised gray value
@@ -428,6 +433,71 @@ static float getScreenAspectRatio()
 
     // ...and the aspect ratio is width / height. 
     return viewSpaceUpperRight.x / viewSpaceUpperRight.y;
+}
+
+float4 SampleTexture2DBiplanar( sampler2D sam, float3 p, float3 n, float k )
+{
+    // grab coord derivatives for texturing
+    float3 dpdx = ddx(p);
+    float3 dpdy = ddy(p);
+    n = abs(n);
+
+    // determine major axis (in x; yz are following axis)
+    int3 ma =  (n.x>n.y && n.x>n.z) ? int3(0,1,2) :
+               (n.y>n.z)            ? int3(1,2,0) :
+                                      int3(2,0,1) ;
+    // determine minor axis (in x; yz are following axis)
+    int3 mi =  (n.x<n.y && n.x<n.z) ? int3(0,1,2) :
+               (n.y<n.z)            ? int3(1,2,0) :
+                                      int3(2,0,1) ;
+    // determine median axis (in x;  yz are following axis)
+    int3 me = clamp(3 - mi - ma, 0, 2); 
+    
+    // project+fetch
+    float4 x = tex2Dgrad( sam, float2(   p[ma.y],   p[ma.z]), 
+                               float2(dpdx[ma.y],dpdx[ma.z]), 
+                               float2(dpdy[ma.y],dpdy[ma.z]) );
+    float4 y = tex2Dgrad( sam, float2(   p[me.y],   p[me.z]), 
+                               float2(dpdx[me.y],dpdx[me.z]),
+                               float2(dpdy[me.y],dpdy[me.z]) );
+    
+    // blend factors
+    float2 w = float2(n[ma.x],n[me.x]);
+    // make local support
+    w = clamp( (w-0.5773)/(1.0-0.5773), 0.0, 1.0 );
+    // shape transition
+    w = pow( w, k/8.0 );
+    // blend and return
+    return (x*w.x + y*w.y) / (w.x + w.y);
+}
+
+
+void applyUnityFog(inout float4 col, float depth)
+{
+    float fogFactor = 1.0;
+    
+    if (unity_FogParams.x != 0.0f) // Is Exp2 fog active?
+    {
+        float exponent_val = unity_FogParams.x * depth;
+        fogFactor = exp2(-exponent_val * exponent_val);
+    }
+    else if (unity_FogParams.y != 0.0f) // Is Exp fog active?
+    {
+        float exponent = unity_FogParams.y * depth;
+        fogFactor = exp2(-exponent);
+    }
+    else if (unity_FogParams.z != unity_FogParams.w)
+    {
+        fogFactor = depth * unity_FogParams.z + unity_FogParams.w;
+    }
+    
+    fixed3 appliedFogColor = unity_FogColor.rgb;
+
+    #if defined(UNITY_PASS_FORWARDADD) 
+        appliedFogColor = fixed3(0,0,0);
+    #endif
+
+    col.rgb = lerp(appliedFogColor, col.rgb, saturate(fogFactor));
 }
 
 //-----------------------------------------------------------------------------
@@ -778,6 +848,17 @@ float V_Neubelt(float NoV, float NoL) {
     return saturate(1.0 / (4.0 * (NoL + NoV - NoL * NoV)));
 }
 
+
+float D_GGX(float roughness, float NoH) {
+    float oneMinusNoHSquared = 1.0f - NoH * NoH;
+    float a = NoH * roughness;
+    float a2 = a * a;
+    float k_denominator = oneMinusNoHSquared + a2;
+    float k = roughness / k_denominator;
+    float d = k * k * (1.0f / UNITY_PI);
+    return d;
+}
+
 float D_GGX_Anisotropic(float NoH, const float3 h,
         const float3 t, const float3 b, float at, float ab) {
     float ToH = dot(t, h);
@@ -785,8 +866,7 @@ float D_GGX_Anisotropic(float NoH, const float3 h,
     float a2 = at * ab;
     float3 v = float3(ab * ToH, at * BoH, a2 * NoH);
     float v2 = dot(v, v);
-    float w2 = a2 / v2;
-    w2 = max(0.001, w2);
+    float w2 = a2 / max(v2, FLT_EPS);
     return a2 * w2 * w2 * UNITY_INV_PI;
 }
 

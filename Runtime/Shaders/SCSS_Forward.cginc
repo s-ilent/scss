@@ -460,6 +460,26 @@ void applyRimLight(inout SCSS_Input material, float NdotH, float rlPow4, float o
 	}
 }
 
+void applyHatching(inout SCSS_Input material, float3 viewDir, float3 worldPos)
+{	
+	#if defined(_HATCHING)
+	float4 baseWorldPos = mul(unity_ObjectToWorld,float4( 0,0,0,1 ));
+
+	float3 hatchingOffset = (_HatchingMovementFPS > 0) 
+		? r3_modified(floor(_Time.y * _HatchingMovementFPS), baseWorldPos)
+		: 0;
+	
+	float3 hatchingPos = _HatchingScale * viewDir * floor( distance( baseWorldPos , float4( _WorldSpaceCameraPos , 0.0 ) ) );
+
+	float4 hatchingTex = SampleTexture2DBiplanar(_HatchingTex, hatchingOffset+hatchingPos, viewDir, 16.0);
+
+	material.occlusion = material.occlusion * LerpWhiteTo_local(hatchingTex.g, _HatchingShadingMul) + (hatchingTex.g * _HatchingShadingAdd);
+	material.rim.width *= 1 + (hatchingTex.g * _HatchingRimAdd * 10);
+	material.albedo *= LerpWhiteTo_local(hatchingTex.g, _HatchingAlbedoMul);
+	#endif
+}
+
+#include "SCSS_Lighting.cginc"
 
 inline SCSS_Input MaterialSetup(SCSS_TexCoords tc,
 	float4 i_color, float4 i_extraData, float p_isOutline, float p_furDepth, uint facing)
@@ -609,6 +629,8 @@ inline void MaterialSetupPostParams(inout SCSS_Input material, SCSS_ShadingParam
 	};
 	#endif // _SPECULAR
 
+	applyHatching(material, p.view, p.position);
+
 	applyRimLight(material, d.NdotH, rlPow4, outlineDarken);
 	
 	// Apply matcap before specular effect.
@@ -692,7 +714,11 @@ float4 frag(VertexOutput i, uint facing : SV_IsFrontFace
 	#endif
 
 	fixed4 finalRGBA = fixed4(finalColor, outputAlpha);
-	UNITY_APPLY_FOG(i.worldPos.w, finalRGBA);
+
+	#if defined(SCSS_USE_UNITY_FOG)
+	applyUnityFog(finalRGBA, UNITY_Z_0_FAR_FROM_CLIPSPACE(i.worldPos.w));
+	#endif
+
 	return finalRGBA;
 }
 
