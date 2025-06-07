@@ -498,7 +498,7 @@ inline SCSS_Input MaterialSetup(SCSS_TexCoords tc,
 	// Setup albedo 
 	float4 mainTex = UNITY_SAMPLE_TEX2D (_MainTex, mainUVs);
 	#if defined(_BACKFACE)
-		if (!facing) mainTex = UNITY_SAMPLE_TEX2D (_MainTexBackface, mainUVs);
+		if (!facing) mainTex = UNITY_SAMPLE_TEX2D_SAMPLER (_MainTexBackface, _MainTex, mainUVs);
 	#endif
 	material.albedo = mainTex.rgb;
 

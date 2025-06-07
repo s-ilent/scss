@@ -578,12 +578,13 @@ float3 applyMatcapTint(half4 matcap, half4 tint)
                 tint.a);
 }
 
-float3 applyMatcap(sampler2D src, half2 matcapUV, float3 dst, float4 tint, int blendMode, float blendStrength)
+SamplerState sampler_MatcapTrilinearClampSampler;
+float3 applyMatcap(Texture2D src, half2 matcapUV, float3 dst, float4 tint, int blendMode, float blendStrength)
 {
 	// Skip if intensity is zero. 
 	if (blendStrength < 1.0/255.0) return dst;
 
-    half4 matcap = tex2D(src, matcapUV);
+    half4 matcap = src.Sample(sampler_MatcapTrilinearClampSampler, matcapUV);
     return applyBlendMode(blendMode, dst, applyMatcapTint(matcap, tint), blendStrength * matcap.a);
 }
 

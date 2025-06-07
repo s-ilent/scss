@@ -11,7 +11,7 @@ half OutlineMask(float2 uv)
 {
 	#if defined(SCSS_OUTLINE)
 		// Needs LOD, sampled in vertex function
-		return tex2Dlod(_OutlineMask, float4(uv, 0, 0)).r;
+		return UNITY_SAMPLE_TEX2D_LOD(_OutlineMask, uv, 0).r;
 	#else
 		return 0;
 	#endif
@@ -21,7 +21,7 @@ half FurMask(float2 uv)
 {
 	#if defined(SCSS_FUR)
 		// Needs LOD, sampled in vertex function
-    	return tex2Dlod(_FurMask, float4(uv, 0, 0)).r;
+		return UNITY_SAMPLE_TEX2D_LOD(_FurMask, uv, 0).r;
 	#else
 		return 0;
 	#endif

@@ -46,7 +46,7 @@ UNITY_DECLARE_TEX2D_NOSAMPLER(_ColorMask); uniform half4 _ColorMask_ST;
 UNITY_DECLARE_TEX2D_NOSAMPLER(_BumpMap); uniform half4 _BumpMap_ST;
 
 #if defined(_BACKFACE)
-UNITY_DECLARE_TEX2D(_MainTexBackface); // Texel size assumed same as _MainTex.
+UNITY_DECLARE_TEX2D_NOSAMPLER(_MainTexBackface); // Texel size assumed same as _MainTex.
 #endif
 
 // Workaround for shadow compiler error. 
@@ -149,8 +149,9 @@ uniform float _ShadowBorderRange;
 #endif
 
 #if !defined(SCSS_CROSSTONE)
+SamplerState _RampLinearClampSampler;
 UNITY_DECLARE_TEX2D_NOSAMPLER(_ShadowMask); uniform half4 _ShadowMask_ST;
-uniform sampler2D _Ramp; uniform half4 _Ramp_ST;
+UNITY_DECLARE_TEX2D_NOSAMPLER(_Ramp); uniform half4 _Ramp_ST;
 uniform float _LightRampType;
 uniform float4 _ShadowMaskColor;
 uniform float _ShadowMaskType;
@@ -191,24 +192,14 @@ uniform float _FresnelStrengthInv;
 
 uniform float4 _CustomFresnelColor;
 
-#if defined(SCSS_OUTLINE)
-uniform float _OutlineMode;
-uniform float _OutlineZPush;
-uniform float _outline_width;
-uniform float _OutlineCalculationMode;
-uniform float _OutlineNearDistance;
-uniform float _OutlineFarDistance;
-#endif
-uniform float4 _outline_color;
-
 uniform float _LightingCalculationType;
 
-
+// Note: Sampler is declared in Utils
 UNITY_DECLARE_TEX2D_NOSAMPLER(_MatcapMask); uniform half4 _MatcapMask_ST; 
-uniform sampler2D _Matcap1; uniform half4 _Matcap1_ST; 
-uniform sampler2D _Matcap2; uniform half4 _Matcap2_ST; 
-uniform sampler2D _Matcap3; uniform half4 _Matcap3_ST; 
-uniform sampler2D _Matcap4; uniform half4 _Matcap4_ST; 
+UNITY_DECLARE_TEX2D_NOSAMPLER(_Matcap1); uniform half4 _Matcap1_ST; 
+UNITY_DECLARE_TEX2D_NOSAMPLER(_Matcap2); uniform half4 _Matcap2_ST; 
+UNITY_DECLARE_TEX2D_NOSAMPLER(_Matcap3); uniform half4 _Matcap3_ST; 
+UNITY_DECLARE_TEX2D_NOSAMPLER(_Matcap4); uniform half4 _Matcap4_ST; 
 
 uniform float _UseMatcap;
 uniform float _Matcap1Strength;
@@ -256,13 +247,7 @@ uniform float _VertexColorAType;
 
 uniform float _DiffuseGeomShadowFactor;
 uniform float _LightWrappingCompensationFactor;
-
 uniform float _IndirectShadingType;
-
-uniform float _UseInteriorOutline;
-uniform float _InteriorOutlineWidth;
-
-uniform sampler2D _OutlineMask; uniform half4 _OutlineMask_ST; 
 
 // Animation
 uniform float _UseAnimation;
@@ -443,6 +428,7 @@ uniform uint _ContactShadowSteps;
 // Detail masks
 UNITY_DECLARE_TEX2D_NOSAMPLER(_DetailAlbedoMask);
 #if defined(_DETAIL)
+// Detail maps need seperate samplers, in case the user specifies clamp mode. 
 uniform sampler2D _DetailMap1; uniform half4 _DetailMap1_ST; uniform half4 _DetailMap1_TexelSize; 
 uniform sampler2D _DetailMap2; uniform half4 _DetailMap2_ST; uniform half4 _DetailMap2_TexelSize; 
 uniform sampler2D _DetailMap3; uniform half4 _DetailMap3_ST; uniform half4 _DetailMap3_TexelSize; 
@@ -453,25 +439,47 @@ uniform float _DetailMap3UV; uniform float _DetailMap3Type; uniform float _Detai
 uniform float _DetailMap4UV; uniform float _DetailMap4Type; uniform float _DetailMap4Blend; uniform float _DetailMap4Strength; 
 #endif
 
-// Fur options
-#if defined(SCSS_FUR)
-uniform sampler2D _FurMask;
-UNITY_DECLARE_TEX2D_NOSAMPLER(_FurNoise); float4 _FurNoise_ST;
-UNITY_DECLARE_TEX2D_NOSAMPLER(_FurNormal);
-uniform float _FurLength;
-uniform float _FurMode;
-uniform float _FurLayerCount;
-uniform float _FurRandomization;
-uniform float _FurThickness;
-uniform float _FurGravity;
-#endif
-
 // SDF options
 uniform float _SDFMode;
 uniform float _SDFSmoothness;
 
 #if defined(_AUDIOLINK)
 #include "SCSS_AudioLink.cginc"
+#endif
+
+
+
+#if (defined(SHADER_STAGE_VERTEX) || defined(SHADER_STAGE_GEOMETRY))
+// Outline options
+#if defined(SCSS_OUTLINE)
+UNITY_DECLARE_TEX2D(_OutlineMask); uniform half4 _OutlineMask_ST; 
+uniform float _OutlineZPush;
+uniform float _outline_width;
+uniform float _OutlineCalculationMode;
+uniform float _OutlineNearDistance;
+uniform float _OutlineFarDistance;
+#endif
+// Fur options
+#if defined(SCSS_FUR)
+UNITY_DECLARE_TEX2D(_FurMask);
+uniform float _FurLength;
+uniform float _FurMode;
+uniform float _FurLayerCount;
+uniform float _FurRandomization;
+uniform float _FurGravity;
+#endif
+#endif
+
+#if defined(SCSS_OUTLINE)
+uniform float _OutlineMode;
+uniform float4 _outline_color;
+#else
+float4 _outline_color = float4(0,0,0,0);
+#endif
+
+#if defined(SCSS_FUR)
+UNITY_DECLARE_TEX2D_NOSAMPLER(_FurNoise); float4 _FurNoise_ST;
+uniform float _FurThickness;
 #endif
 
 //-------------------------------------------------------------------------------------

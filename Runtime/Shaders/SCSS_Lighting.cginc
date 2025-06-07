@@ -479,9 +479,9 @@ float3 sampleRampWithOptions(float rampPosition, half softness)
             return saturate(lightContribution);
         case 1: // Vertical
             rampUV = float2(softness, rampPosition);
-            return tex2D(_Ramp, saturate(rampUV));
+            return _Ramp.Sample(_RampLinearClampSampler, saturate(rampUV));
         default: // Horizontal
-            return tex2D(_Ramp, saturate(rampUV));
+            return _Ramp.Sample(_RampLinearClampSampler, saturate(rampUV));
     }
 	#endif
 }
