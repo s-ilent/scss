@@ -320,6 +320,7 @@ Shader "Silent's Cel Shading/Crosstone (Outline)"
 		Tags
 		{
 			"RenderType" = "Opaque"
+			"VRCFallback"="toonstandardoutline"
 		}
 
         Blend[_SrcBlend][_DstBlend], One One

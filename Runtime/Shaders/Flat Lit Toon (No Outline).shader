@@ -312,6 +312,7 @@ Shader "Silent's Cel Shading/Lightramp"
 		Tags
 		{
 			"RenderType" = "Opaque"
+			"VRCFallback"="toonstandard"
 		}
 
         Blend[_SrcBlend][_DstBlend], One One

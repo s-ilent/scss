@@ -319,6 +319,7 @@ Shader "Silent's Cel Shading/Crosstone (Fur)"
 		Tags
 		{
 			"RenderType" = "Opaque"
+			"VRCFallback"="toonstandard"
 		}
 
         Blend[_SrcBlend][_DstBlend], One One
