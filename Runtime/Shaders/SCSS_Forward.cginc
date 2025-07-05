@@ -502,11 +502,14 @@ inline SCSS_Input MaterialSetup(SCSS_TexCoords tc,
 	#endif
 	material.albedo = mainTex.rgb;
 
-	// Setup alpha
-	material.alpha = _Color.a;
 	#if defined(_BACKFACE)
-		if (!facing) material.alpha = _ColorBackface.a;
+	float4 tintColorAlpha = facing? _Color : _ColorBackface;
+	#else
+	float4 tintColorAlpha = _Color;
 	#endif
+
+	// Setup alpha
+	material.alpha = tintColorAlpha.a;
 	switch(_AlbedoAlphaMode)
 	{
 		case 0: material.alpha *= mainTex.a; break;
@@ -572,9 +575,9 @@ inline SCSS_Input MaterialSetup(SCSS_TexCoords tc,
 		material.tone[1].col = applyMaskedHSVToAlbedo(material.tone[1].col, tintMask, _ShiftHue, _ShiftSaturation, _ShiftValue);
 	}
 
-	material.albedo *= LerpWhiteTo_local(_Color.rgb, tintMask);
-	if (_CrosstoneToneSeparation) material.tone[0].col *= LerpWhiteTo_local(_Color.rgb, tintMask);
-	if (_Crosstone2ndSeparation) material.tone[1].col *= LerpWhiteTo_local(_Color.rgb, tintMask);
+	material.albedo *= LerpWhiteTo_local(tintColorAlpha, tintMask);
+	if (_CrosstoneToneSeparation) material.tone[0].col *= LerpWhiteTo_local(tintColorAlpha, tintMask);
+	if (_Crosstone2ndSeparation) material.tone[1].col *= LerpWhiteTo_local(tintColorAlpha, tintMask);
 	
 	// Scattering parameters
 	material.thickness = Thickness(mainUVs);
