@@ -1757,6 +1757,21 @@ namespace SilentCelShading.Unity
 						case 2f: tFloat["_Matcap1Blend"] = (float)MatcapBlendModes.Median; break;
 						case 3f: tFloat["_Matcap1Blend"] = (float)MatcapBlendModes.Multiply; break;
 					};
+					if (GetFloatProperty(material, "_UseMatCap2nd") == 1)
+					{
+						tFloat["_UseMatcap"] = 1.0f;
+						tTexture["_Matcap2"] = GetTextureProperty(material, "_MatCap2ndTex");
+						tColor["_Matcap2Tint"] = GetColorProperty(material, "_MatCap2ndColor");
+						tFloat["_Matcap2Strength"] = GetFloatProperty(material, "_MatCap2ndBlend");
+						float? matcap2ndType = GetFloatProperty(material, "_MatCap2ndBlendMode");
+						switch (matcap2ndType)
+						{
+							case 0f: tFloat["_Matcap2Blend"] = (float)MatcapBlendModes.Additive; break;
+							case 1f: tFloat["_Matcap2Blend"] = (float)MatcapBlendModes.Additive; break;
+							case 2f: tFloat["_Matcap2Blend"] = (float)MatcapBlendModes.Median; break;
+							case 3f: tFloat["_Matcap2Blend"] = (float)MatcapBlendModes.Multiply; break;
+						}
+					}
 					
 					tFloat["_UseFresnel"] = (float)AmbientFresnelType.Lit * GetFloatProperty(material, "_UseRim") ?? 0;
                     tColor["_FresnelTint"] = GetColorProperty(material, "_RimColor");
