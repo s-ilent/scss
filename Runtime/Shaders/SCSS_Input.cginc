@@ -70,9 +70,6 @@ uniform half _EmissionUVSec;
 UNITY_DECLARE_TEX2D(_DetailEmissionMap); uniform half4 _DetailEmissionMap_ST; uniform half4 _DetailEmissionMap_TexelSize;
 uniform float _DetailEmissionUVSec;
 uniform float4 _EmissionDetailParams;
-uniform float _UseEmissiveLightSense;
-uniform float _EmissiveLightSenseStart;
-uniform float _EmissiveLightSenseEnd;
 #endif
 
 #if defined(_EMISSION_2ND)
@@ -81,10 +78,15 @@ uniform half _EmissionUVSec2nd;
 UNITY_DECLARE_TEX2D(_DetailEmissionMap2nd); uniform half4 _DetailEmissionMap2nd_ST; uniform half4 _DetailEmissionMap2nd_TexelSize;
 uniform float _DetailEmissionUVSec2nd;
 uniform float4 _EmissionDetailParams2nd;
-uniform float _UseEmissiveLightSense2nd;
-uniform float _EmissiveLightSenseStart2nd;
-uniform float _EmissiveLightSenseEnd2nd;
 #endif
+
+uniform float _UseEmissiveLightSense;
+uniform float _EmissiveLightSenseStart;
+uniform float _EmissiveLightSenseEnd;
+// Not implemented yet
+// uniform float _UseEmissiveLightSense2nd;
+// uniform float _EmissiveLightSenseStart2nd;
+// uniform float _EmissiveLightSenseEnd2nd;
 
 #if defined(_AUDIOLINK)
 UNITY_DECLARE_TEX2D_NOSAMPLER(_AudiolinkMaskMap); uniform half4 _AudiolinkMaskMap_ST;
@@ -216,7 +218,7 @@ uniform float4 _Matcap3Tint;
 uniform float4 _Matcap4Tint;
 
 #if defined(_SUBSURFACE)
-UNITY_DECLARE_TEX2D_NOSAMPLER(_ThicknessMap); uniform half4 _ThicknessMap_ST;
+UNITY_DECLARE_TEX2D_NOSAMPLER(_ThicknessMap);
 uniform float _UseSubsurfaceScattering;
 uniform float _ThicknessMapPower;
 uniform float _ThicknessMapInvert;

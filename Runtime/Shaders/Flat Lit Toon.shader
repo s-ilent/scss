@@ -115,7 +115,6 @@ Shader "Silent's Cel Shading/Lightramp (Outline)"
 		//[Space]
 		_DetailEmissionMap("Detail Emission Map", 2D) = "white" {}
         [Enum(UV0, 0, UV1, 1, UV2, 2, UV3, 3)]_DetailEmissionUVSec("Detail Emission UV Source", Float) = 0
-		[Enum(DetailEmissionMode)]_EmissionDetailType("Emission Detail Type", Float) = 0
 		[HDR]_EmissionDetailParams("Emission Detail Params", Vector) = (0,0,0,0)
 		
 		//[Space]
@@ -360,8 +359,8 @@ Shader "Silent's Cel Shading/Lightramp (Outline)"
 			#pragma require geometry
 
 			#pragma multi_compile_fwdbase
-			#pragma multi_compile_fragment UNITY_HDR_ON
-			#pragma multi_compile VERTEXLIGHT_ON
+			#pragma multi_compile_fragment _ UNITY_HDR_ON
+			#pragma multi_compile _ VERTEXLIGHT_ON
 
 			// Needs to be global for Unity reasons
 			#pragma shader_feature _EMISSION
@@ -402,7 +401,7 @@ Shader "Silent's Cel Shading/Lightramp (Outline)"
 			#pragma require geometry
 
 			#pragma multi_compile_fwdadd_fullshadows
-			#pragma multi_compile_fragment UNITY_HDR_ON
+			#pragma multi_compile_fragment _ UNITY_HDR_ON
 			
 			#pragma shader_feature_local_fragment _DETAIL_MULX2
 			#pragma shader_feature_local _ _METALLICGLOSSMAP _SPECGLOSSMAP
