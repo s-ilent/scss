@@ -361,8 +361,8 @@ float3 SCSS_ShadeBase(const SCSS_Input c, const SCSS_ShadingParam p)
 
 	if (_SDFMode)
 	{
-		remappedLight = getSDFLighting(l.dir, c.sdf, c.sdfSmoothness);
-		giLight = getSDFLighting(d.ambDir, c.sdf, c.sdfSmoothness);
+		remappedLight = getSDFLightingMasked(l.dir, c.sdf, c.sdfSmoothness, remappedLight, c.sdfMask);
+		giLight = getSDFLightingMasked(d.ambDir, c.sdf, c.sdfSmoothness, giLight, c.sdfMask);
 	}
 
 	float3 directLighting, indirectLighting, indirectDominantDir;
@@ -428,7 +428,7 @@ float3 SCSS_ShadeLight(const SCSS_Input c, const SCSS_ShadingParam p, const SCSS
 
 	if (_SDFMode)
 	{
-		remappedLight = getSDFLighting(l.dir, c.sdf, c.sdfSmoothness);
+		remappedLight = getSDFLightingMasked(l.dir, c.sdf, c.sdfSmoothness, remappedLight, c.sdfMask);
 	}
 	
 	// Prepare Lightramp/Crosstone parameters to pass on

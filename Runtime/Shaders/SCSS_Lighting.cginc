@@ -531,5 +531,10 @@ float getSDFLighting(float3 lightDir, float2 sdfLR, float shadowFlatBlur) {
     return finalSDF;
 }
 
+float getSDFLightingMasked(float3 lightDir, float2 sdfLR, float shadowFlatBlur, float baseLight, float lightMask)
+{
+    float sdfLight = getSDFLighting(lightDir, sdfLR, shadowFlatBlur);
+    return lerp(sdfLight, baseLight, lightMask);
+}
 
 #endif // SCSS_LIGHTING_INCLUDED

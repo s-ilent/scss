@@ -617,6 +617,7 @@ struct SCSS_Input
 	half occlusion;
 	half2 sdf;
 	half sdfSmoothness;
+	half sdfMask;
 
 	half3 specColor; half specOcclusion;
 	half3 anisotropyDirection;

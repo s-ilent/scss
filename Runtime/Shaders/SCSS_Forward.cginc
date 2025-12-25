@@ -554,12 +554,15 @@ inline SCSS_Input MaterialSetup(SCSS_TexCoords tc,
 		material.sdf = float2(sdfL, sdfR);
 		material.occlusion = 1.0;
 		material.sdfSmoothness = _SDFSmoothness;
+		material.sdfMask = 0;
 		break;
 
 		case 2:
-		material.sdf = UNITY_SAMPLE_TEX2D_SAMPLER(SDF_SOURCE, _MainTex, mainUVs);
+		float4 sdfMaskTex = UNITY_SAMPLE_TEX2D_SAMPLER(SDF_SOURCE, _MainTex, mainUVs);
+		material.sdf = sdfMaskTex.rg;
 		material.occlusion = 1.0;
 		material.sdfSmoothness = _SDFSmoothness;
+		material.sdfMask = sdfMaskTex.b;
 		break;
 		#undef SDF_SOURCE
 	}
