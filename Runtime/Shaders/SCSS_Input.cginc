@@ -816,20 +816,23 @@ float getAlphaFresnel(float NdotV, float width, float sharpness, float strength,
 
 void applyAlphaFresnel(inout float inAlpha, float NoV)
 {
-float feather = 0.05;
-float cutOff = smoothstep(_AlphaFresnelThreshold, _AlphaFresnelThreshold + feather, inAlpha);
-float mask = 1.0 - cutOff;
+    if (_UseAlphaFresnel)
+    {
+        float feather = 0.05;
+        float cutOff = smoothstep(_AlphaFresnelThreshold, _AlphaFresnelThreshold + feather, inAlpha);
+        float mask = 1.0 - cutOff;
 
-    float fresnelFactor = getAlphaFresnel(
-        NoV,
-        _AlphaFresnelWidth,
-        _AlphaFresnelSharpness,
-        _AlphaFresnelStrength,
-        _AlphaFresnelInvert,
-        mask
-    );
+        float fresnelFactor = getAlphaFresnel(
+            NoV,
+            _AlphaFresnelWidth,
+            _AlphaFresnelSharpness,
+            _AlphaFresnelStrength,
+            _AlphaFresnelInvert,
+            mask
+        );
 
-    inAlpha *= fresnelFactor;
+        inAlpha *= fresnelFactor;
+    }
 }
 
 #endif // SCSS_INPUT_INCLUDED

@@ -85,7 +85,7 @@ _HatchingShadingAdd	Shading Add Level	Controls the additive intensity of the hat
 _HatchingShadingMul	Shading Multiply Level	Controls the multiplicative intensity of the hatching effect in shaded areas. Higher values darken the hatching pattern.
 _HatchingRimAdd	Rim Light Add Level	Adjusts the intensity of the hatching effect in rim-lit areas. Higher values make the hatching more visible in these regions.
 _HatchingAlbedoMul	Albedo Mul Level	Controls the blending of the hatching effect with the albedo texture. Higher values increase the influence of the hatching pattern on the material's base color.
-_UseAlphaFresnel	Enable Alpha Fresnel	Toggles the alpha fresnel effect, which reduces the opacity of the material as it faces towards the viewer. Useful for simulating see-through materials with a certain thickness, like tights.
+_UseAlphaFresnel	Alpha Fresnel	Toggles the alpha fresnel effect, which reduces the opacity of the material as it faces towards the viewer. Useful for simulating see-through materials with a certain thickness, like tights.
 _AlphaFresnelWidth	Width	Controls the width of the rim. Higher values cover more of the object.
 _AlphaFresnelSharpness	Sharpness	Controls the hardness of the edge. Must be <= Width to see a gradient.
 _AlphaFresnelStrength	Strength	 Controls the opacity of the transparent area (0 = Invisible, 1 = Solid).
