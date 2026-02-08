@@ -502,38 +502,56 @@ float3 AutoToneMapping(float3 color)
     return color;
 }
 
+// Maps an index 0-5 to the primary cardinal axes
+half3 GetCardinal(int i)
+{
+    // Cycle through 0 to 5 to prevent out-of-bounds
+    int index = i % 6;
+
+    // Define the 6 cardinal directions
+    static const half3 directions[6] = {
+        half3( 1,  0,  0), // 0: +X (Right)
+        half3(-1,  0,  0), // 1: -X (Left)
+        half3( 0,  1,  0), // 2: +Y (Up)
+        half3( 0, -1,  0), // 3: -Y (Down)
+        half3( 0,  0,  1), // 4: +Z (Forward)
+        half3( 0,  0, -1)  // 5: -Z (Back)
+    };
+
+    return directions[index];
+}
 
 // Based on lilxyzw's implementation
-float getSDFLighting(float3 lightDir, float2 sdfLR, float shadowFlatBlur) {
+half getSDFLighting(half3 lightDir, half2 sdfLR, half shadowFlatBlur) {
     // Compute the right face direction in world space
-    float3 rightFaceDirection = mul((float3x3)unity_ObjectToWorld, float3(-1.0, 0.0, 0.0));
-    float lightDotRightFace = dot(lightDir.xz, rightFaceDirection.xz);
+    half3 rightFaceDirection = mul((half3x3)unity_ObjectToWorld, GetCardinal(_SDFRightVector));
+    half lightDotRightFace = dot(lightDir.xz, rightFaceDirection.xz);
 
     // Flip SDF based on the light direction
-    float shadingSDF = lightDotRightFace < 0 ? sdfLR[1] : sdfLR[0];
-    float hardShadow = saturate(max(sdfLR.x, sdfLR.y)*10);
+    half shadingSDF = lightDotRightFace < 0 ? sdfLR[1] : sdfLR[0];
+    half hardShadow = saturate(max(sdfLR.x, sdfLR.y)*10);
 
     // Compute the forward face direction in world space
-    float3 forwardFaceDirection = mul((float3x3)unity_ObjectToWorld, float3(0.0, 0.0, 1.0)).xyz;
+    half3 forwardFaceDirection = mul((half3x3)unity_ObjectToWorld, GetCardinal(_SDFFrontVector)).xyz;
     forwardFaceDirection.y *= shadowFlatBlur;
     forwardFaceDirection = dot(forwardFaceDirection, forwardFaceDirection) == 0 ? 0 : normalize(forwardFaceDirection);
 
     // Adjust light direction for shadow flat blur
-    float3 lightDirection = lightDir;
+    half3 lightDirection = lightDir;
     lightDirection.y *= shadowFlatBlur;
     lightDirection = dot(lightDirection, lightDirection) == 0 ? 0 : normalize(lightDirection);
 
     // Compute the shading based on light and face directions
-    float lightFaceDot = dot(lightDirection, forwardFaceDirection);
-    //float finalSDF = saturate(lightFaceDot * hardShadow + shadingSDF * 1 );
-    float finalSDF = saturate(lightFaceDot * 0.5 + shadingSDF * 0.5 + 0.25);
+    half lightFaceDot = dot(lightDirection, forwardFaceDirection);
+    //half finalSDF = saturate(lightFaceDot * hardShadow + shadingSDF * 1 );
+    half finalSDF = saturate(lightFaceDot * 0.5 + shadingSDF * 0.5 + 0.25);
 
     return finalSDF;
 }
 
-float getSDFLightingMasked(float3 lightDir, float2 sdfLR, float shadowFlatBlur, float baseLight, float lightMask)
+half getSDFLightingMasked(half3 lightDir, half2 sdfLR, half shadowFlatBlur, half baseLight, half lightMask)
 {
-    float sdfLight = getSDFLighting(lightDir, sdfLR, shadowFlatBlur);
+    half sdfLight = getSDFLighting(lightDir, sdfLR, shadowFlatBlur);
     return lerp(sdfLight, baseLight, lightMask);
 }
 

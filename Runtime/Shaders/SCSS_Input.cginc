@@ -449,8 +449,10 @@ uniform float _DetailMap4UV; uniform float _DetailMap4Type; uniform float _Detai
 #endif
 
 // SDF options
-uniform float _SDFMode;
-uniform float _SDFSmoothness;
+uniform half _SDFMode;
+uniform half _SDFSmoothness;
+uniform int _SDFFrontVector;
+uniform int _SDFRightVector;
 
 #if defined(_AUDIOLINK)
 #include "SCSS_AudioLink.cginc"

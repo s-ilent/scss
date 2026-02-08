@@ -54,7 +54,7 @@ namespace SilentCelShading.Unity
 
         public enum DetailBlendMode
         {
-            Multiply2x = 0, Multiply = 1, Add = 2, AlphaBlend = 3, Screen = 4,
+            Multiply2x = 0, Multiply = 1, Add = 2, AlphaBlend = 3, Screen = 4, Subtract = 5
         }
 
         public enum TintApplyMode
@@ -76,6 +76,15 @@ namespace SilentCelShading.Unity
         public enum SDFMode
         {
             None = 0, SingleChannel = 1, DualChannel = 2
+        }
+        public enum CardinalDir
+        {
+            [InspectorName("+X")]PosX = 0, // +X
+            [InspectorName("-X")]NegX = 1, // -X
+            [InspectorName("+Y")]PosY = 2, // +Y
+            [InspectorName("-Y")]NegY = 3, // -Y
+            [InspectorName("+Z")]PosZ = 4, // +Z
+            [InspectorName("-Z")]NegZ = 5  // -Z
         }
         public enum VertexColorChannelType
         {
@@ -881,7 +890,13 @@ namespace SilentCelShading.Unity
 
             ph.TexturePropertySingleLine("_ShadingGradeMap", "_Tweak_ShadingGradeMapLevel");
             ph.ShaderProperty("_SDFMode");
-            ph.ShaderProperty("_SDFSmoothness");
+
+            if ((SDFMode)ph.Property("_SDFMode").floatValue != SDFMode.None)
+            {
+                ph.ShaderProperty("_SDFSmoothness");
+                ph.ShaderProperty("_SDFFrontVector");
+                ph.ShaderProperty("_SDFRightVector");
+            }
         }
 
         protected void SpecularOptions()

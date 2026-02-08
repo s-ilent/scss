@@ -48,6 +48,8 @@ Shader "Silent's Cel Shading/Crosstone (Fur)"
 		//[Space]
 		_SDFMode("SDF Mode", Float) = 0
 		_SDFSmoothness("SDF Smoothness", Range(0, 1)) = 0.01
+		[Enum(CardinalDir)]	_SDFFrontVector("SDF Front", Float) = 4
+		[Enum(CardinalDir)]	_SDFRightVector("SDF Right", Float) = 1
 		//[Space]
 		[Enum(OutlineMode)] _OutlineMode("Outline Mode", Float) = 0.0
 		_OutlineMask("Outline Map", 2D) = "white" {}
