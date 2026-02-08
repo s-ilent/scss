@@ -352,9 +352,9 @@ Shader "Silent's Cel Shading/Crosstone (Fur)"
         CGINCLUDE
 		#pragma target 5.0
 		#pragma shader_feature_local_fragment _ _ALPHATEST_ON _ALPHABLEND_ON _ALPHAPREMULTIPLY_ON
+		#pragma shader_feature_local_vertex _ FOG_EXP FOG_EXP2 FOG_LINEAR
         #pragma multi_compile_instancing
         #pragma skip_variants DYNAMICLIGHTMAP_ON LIGHTMAP_ON LIGHTMAP_SHADOW_MIXING DIRLIGHTMAP_COMBINED SHADOWS_SHADOWMASK
-		#pragma skip_variants FOG_EXP FOG_EXP2 FOG_LINEAR
 
 		#define SCSS_CROSSTONE
 		#define SCSS_FUR

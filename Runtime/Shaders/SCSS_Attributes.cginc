@@ -2,10 +2,13 @@
 // UNITY_SHADER_NO_UPGRADE
 #define SCSS_ATTRIBUTES_INCLUDED
 
-#include "UnityCG.cginc"
-#include "AutoLight.cginc"
+#if defined(SCSS_IS_URP)
+    #include "SCSS_CompatURP.hlsl"
+#else
+    #include "SCSS_CompatBIRP.hlsl"
+#endif
 
-// Testing using a lower precision format for the vertex data. 
+// Testing using a lower precision format for the vertex data.
 // This could increase performance in situations where there is a lot of GPU load,`
 // at the cost of some GPU load.
 
@@ -15,7 +18,7 @@
 #define v_half3 min16float3
 #define v_half4 min16float4
 #else
-#define v_half  half 
+#define v_half  half
 #define v_half2 half2
 #define v_half3 half3
 #define v_half4 half4
@@ -47,14 +50,10 @@ struct VertexOutput
 	float4 worldPos : TEXCOORD2;
     v_half4 tangentToWorldAndPackedData[3] : TEXCOORD3;    // [3x3:tangentToWorld | 1x3: outlineDir]
 
-	#if defined(VERTEXLIGHT_ON)
-	v_half4 vertexLight : TEXCOORD6;
-	#endif
-
 	v_half4 extraData : EXTRA_DATA;
 
 	// Pass-through the shadow coordinates if this pass has shadows.
-	// Note the workaround for UNITY_SHADOW_COORDS issue. 
+	// Note the workaround for UNITY_SHADOW_COORDS issue.
 	#if defined(USING_SHADOWS_UNITY) && defined(UNITY_SHADOW_COORDS)
 	UNITY_SHADOW_COORDS(8)
 	#endif
@@ -96,13 +95,13 @@ struct VertexOutputStereoShadowCaster
 
 struct FragmentInput
 {
-	VertexOutput i; 
+	VertexOutput i;
 	uint facing : SV_IsFrontFace;
 };
 
 struct FragmentOutput
 {
-	float4 color : SV_Target;
+	half4 color : SV_Target;
 	uint coverage : SV_Coverage;
 };
 

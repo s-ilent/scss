@@ -33,7 +33,7 @@ float4 _CameraDepthTexture_TexelSize;
 
 #define sRGB_Luminance float3(0.2126, 0.7152, 0.0722)
 
-float luminance(const float3 linearCol) {
+half luminance(const float3 linearCol) {
     return dot(linearCol, sRGB_Luminance);
 }
 
@@ -45,30 +45,30 @@ bool inMirror()
     return unity_CameraProjection[2][0] != 0.f || unity_CameraProjection[2][1] != 0.f;
 }
 
-float3 inferno_quintic(float x)
+half3 inferno_quintic(half x)
 {
     x = saturate(x);
-    float4 x1 = float4(1.0, x, x * x, x * x * x); // 1 x x2 x3
-    float4 x2 = x1 * x1.w * x; // x4 x5 x6 x7
-    return float3(
-        dot(x1.xyzw, float4(-0.027780558, +1.228188385, +0.278906882, +3.892783760)) + dot(x2.xy, float2(-8.490712758, +4.069046086)),
-        dot(x1.xyzw, float4(+0.014065206, +0.015360518, +1.605395918, -4.821108251)) + dot(x2.xy, float2(+8.389314011, -4.193858954)),
-        dot(x1.xyzw, float4(-0.019628385, +3.122510347, -5.893222355, +2.798380308)) + dot(x2.xy, float2(-3.608884658, +4.324996022)));
+    half4 x1 = half4(1.0, x, x * x, x * x * x); // 1 x x2 x3
+    half4 x2 = x1 * x1.w * x; // x4 x5 x6 x7
+    return half3(
+        dot(x1.xyzw, half4(-0.027780558, +1.228188385, +0.278906882, +3.892783760)) + dot(x2.xy, half2(-8.490712758, +4.069046086)),
+        dot(x1.xyzw, half4(+0.014065206, +0.015360518, +1.605395918, -4.821108251)) + dot(x2.xy, half2(+8.389314011, -4.193858954)),
+        dot(x1.xyzw, half4(-0.019628385, +3.122510347, -5.893222355, +2.798380308)) + dot(x2.xy, half2(-3.608884658, +4.324996022)));
 }
 
-float interleaved_gradient(float2 uv)
+half interleaved_gradient(float2 uv)
 {
 	float3 magic = float3(0.06711056, 0.00583715, 52.9829189);
 	return frac(magic.z * frac(dot(uv, magic.xy)));
 }
 
-float Dither17(float2 Pos, float FrameIndexMod4)
+half Dither17(float2 Pos, float FrameIndexMod4)
 {
     // 3 scalar float ALU (1 mul, 2 mad, 1 frac)
     return frac(dot(float3(Pos.xy, FrameIndexMod4), uint3(2, 7, 23) / 17.0f));
 }
 
-float max3 (float3 x) 
+half max3 (half3 x)
 {
 	return max(x.x, max(x.y, x.z));
 }
@@ -82,14 +82,14 @@ float T(float z) {
 
 // R dither mask
 float getR2(float2 pixel) {
-    const float phi2 = pow((9. + sqrt(69.)) / 18., 1./3.) + pow((9. - sqrt(69.)) / 18., 1./3.); 
+    const float phi2 = pow((9. + sqrt(69.)) / 18., 1./3.) + pow((9. - sqrt(69.)) / 18., 1./3.);
     const float C1 = 1. - 1. / phi2;
     const float C2 = 1. - 1. / (phi2 * phi2);
     return frac(C1 * float(pixel.x) + C2 * float(pixel.y));
 }
 
 float2 getR2_2(float2 pixel) {
-    const float phi2 = pow((9. + sqrt(69.)) / 18., 1./3.) + pow((9. - sqrt(69.)) / 18., 1./3.); 
+    const float phi2 = pow((9. + sqrt(69.)) / 18., 1./3.) + pow((9. - sqrt(69.)) / 18., 1./3.);
     const float C1 = 1. - 1. / phi2;
     const float C2 = 1. - 1. / (phi2 * phi2);
     return float2(frac(C1 * float(pixel.x)), frac(C2 * float(pixel.y)));
@@ -121,7 +121,7 @@ float3 r3_modified(float idx, float3 seed)
 float r2Dither(float gray, float2 pos, float steps) {
 	// pos is screen pixel position in 0-res range
     // Calculated noised gray value
-    float noised = (2./steps) * T(getR2(float2(pos.xy))) + gray - (1./steps); 
+    float noised = (2./steps) * T(getR2(float2(pos.xy))) + gray - (1./steps);
     // Clamp to the number of gray levels we want
     return floor(steps * noised) / (steps-1.);
 }
@@ -145,7 +145,7 @@ float4 cubic_weights(float v)
 
 inline void applyAlphaSharpen(inout float alpha, float cutoff)
 {
-    // Use an epsilon above the normal float epsilon. 
+    // Use an epsilon above the normal float epsilon.
     alpha = ((alpha - cutoff) / max(fwidth(alpha), 1e-3) + 0.5);
 }
 
@@ -176,16 +176,16 @@ inline void applyAlphaClip(inout float alpha, float cutoff, float2 pos, bool sha
     #if (SHADER_TARGET > 40)
     half samplecount = GetRenderTargetSampleCount();
     #else
-    half samplecount = 1; 
+    half samplecount = 1;
     #endif
 
     float modAlpha = alpha;
 
-    // Apply dithered alpha. 
-    if (sharpen) 
+    // Apply dithered alpha.
+    if (sharpen)
     {
         applyAlphaSharpen(modAlpha, cutoff);
-    } 
+    }
     else
     {
         applyAlphaCutoff(modAlpha, cutoff);
@@ -198,8 +198,8 @@ inline void applyAlphaClip(inout float alpha, float cutoff, float2 pos, bool sha
         if (!isBlending || forceDither)
         {
             // Previously, this was passed through the T function to remap it
-            // into a triangular distribution, but in practise this seems to 
-            // produce worse results. 
+            // into a triangular distribution, but in practise this seems to
+            // produce worse results.
             pos += _SinTime.x%4;
             float mask = (getR2(pos));
             modAlpha = modAlpha + mask / samplecount;
@@ -210,7 +210,7 @@ inline void applyAlphaClip(inout float alpha, float cutoff, float2 pos, bool sha
     // If 0, remove now.
     clip (modAlpha > FLT_EPS? modAlpha : -1);
 
-    alpha = saturate(modAlpha); 
+    alpha = saturate(modAlpha);
 }
 
 inline half3 PreMultiplyAlpha_local (half3 diffColor, half alpha, half oneMinusReflectivity, out half outModifiedAlpha)
@@ -292,7 +292,7 @@ float lerpstep( float a, float b, float t)
     return saturate( ( t - a ) / ( b - a ) );
 }
 
-float smootherstep(float a, float b, float t) 
+float smootherstep(float a, float b, float t)
 {
     t = saturate( ( t - a ) / ( b - a ) );
     return t * t * t * (t * (t * 6. - 15.) + 10.);
@@ -330,16 +330,16 @@ float simpleSharpen (float x, float width, float mid, const float smoothnessMode
     return x;
 }
 
-// Returns pixel sharpened to nearest pixel boundary. 
+// Returns pixel sharpened to nearest pixel boundary.
 // texelSize is Unity _Texture_TexelSize; zw is w/h, xy is 1/wh
 float2 sharpSample( float4 texelSize , float2 coord )
-{    
+{
     #if defined(SHADER_STAGE_FRAGMENT)
     // Vertex shader errors out on fwidth
     float2 boxSize = clamp(fwidth(coord) * texelSize.zw, 1e-5, 1);
     coord = coord * texelSize.zw - 0.5 * boxSize;
     float2 txOffset = smoothstep(1 - boxSize, 1, frac(coord));
-    return(floor(coord) + 0.5 + txOffset) * texelSize.xy; 
+    return(floor(coord) + 0.5 + txOffset) * texelSize.xy;
     #endif
     return coord;
 }
@@ -349,7 +349,7 @@ float simpleRimHelper(float power, float NdotV)
 	float absPower = abs(power);
 	if (absPower > 0.0001)
 	{
-		// d.NdotV is not guaranteed to be positive, so clamp it here. 
+		// d.NdotV is not guaranteed to be positive, so clamp it here.
 		float rimMask = saturate(pow(max(abs(NdotV), float(FLT_EPS)), absPower));
 		return power < 0.0 ? 1.0 - rimMask : rimMask;
 	}
@@ -425,13 +425,13 @@ static float getScreenAspectRatio()
 
     // Upper right corner, so (x, y) = (1, 1)
     // Since we want the near plane, z is dependant on API (0: DirectX, -1: OpenGL)
-    // And w is the near clip plane itself. 
+    // And w is the near clip plane itself.
     float4 projectionSpaceUpperRight = float4(1, 1, UNITY_NEAR_CLIP_VALUE, _ProjectionParams.y);
 
     // Apply the inverse projection matrix...
     float4 viewSpaceUpperRight = mul(unity_CameraInvProjection, projectionSpaceUpperRight);
 
-    // ...and the aspect ratio is width / height. 
+    // ...and the aspect ratio is width / height.
     return viewSpaceUpperRight.x / viewSpaceUpperRight.y;
 }
 
@@ -451,16 +451,16 @@ float4 SampleTexture2DBiplanar( sampler2D sam, float3 p, float3 n, float k )
                (n.y<n.z)            ? int3(1,2,0) :
                                       int3(2,0,1) ;
     // determine median axis (in x;  yz are following axis)
-    int3 me = clamp(3 - mi - ma, 0, 2); 
-    
+    int3 me = clamp(3 - mi - ma, 0, 2);
+
     // project+fetch
-    float4 x = tex2Dgrad( sam, float2(   p[ma.y],   p[ma.z]), 
-                               float2(dpdx[ma.y],dpdx[ma.z]), 
+    float4 x = tex2Dgrad( sam, float2(   p[ma.y],   p[ma.z]),
+                               float2(dpdx[ma.y],dpdx[ma.z]),
                                float2(dpdy[ma.y],dpdy[ma.z]) );
-    float4 y = tex2Dgrad( sam, float2(   p[me.y],   p[me.z]), 
+    float4 y = tex2Dgrad( sam, float2(   p[me.y],   p[me.z]),
                                float2(dpdx[me.y],dpdx[me.z]),
                                float2(dpdy[me.y],dpdy[me.z]) );
-    
+
     // blend factors
     float2 w = float2(n[ma.x],n[me.x]);
     // make local support
@@ -471,29 +471,30 @@ float4 SampleTexture2DBiplanar( sampler2D sam, float3 p, float3 n, float k )
     return (x*w.x + y*w.y) / (w.x + w.y);
 }
 
-
-void applyUnityFog(inout float4 col, float depth)
+void applyUnityFog(inout half4 col, half depth)
 {
-    float fogFactor = 1.0;
-    
-    if (unity_FogParams.x != 0.0f) // Is Exp2 fog active?
-    {
-        float exponent_val = unity_FogParams.x * depth;
-        fogFactor = exp2(-exponent_val * exponent_val);
-    }
-    else if (unity_FogParams.y != 0.0f) // Is Exp fog active?
-    {
-        float exponent = unity_FogParams.y * depth;
-        fogFactor = exp2(-exponent);
-    }
-    else if (unity_FogParams.z != unity_FogParams.w)
+    half fogFactor = 1.0;
+    int fogType = round(depth);
+    depth = frac(depth) * (_ProjectionParams.z + 32);
+
+    if (fogType == 1) // Is Linear fog active?
     {
         fogFactor = depth * unity_FogParams.z + unity_FogParams.w;
     }
-    
-    fixed3 appliedFogColor = unity_FogColor.rgb;
+    if (fogType == 0) // Is Exp fog active?
+    {
+        half exponent = unity_FogParams.y * depth;
+        fogFactor = exp2(-exponent);
+    }
+    if (fogType == -1) // Is Exp2 fog active?
+    {
+        half exponent_val = unity_FogParams.x * depth;
+        fogFactor = exp2(-exponent_val * exponent_val);
+    }
 
-    #if defined(UNITY_PASS_FORWARDADD) 
+    half3 appliedFogColor = unity_FogColor.rgb;
+
+    #if defined(UNITY_PASS_FORWARDADD)
         appliedFogColor = fixed3(0,0,0);
     #endif
 
@@ -504,34 +505,36 @@ void applyUnityFog(inout float4 col, float depth)
 // Helper functions for roughness
 //-----------------------------------------------------------------------------
 
-float RoughnessToPerceptualRoughness(float roughness)
+#ifndef UNITY_STANDARD_BRDF_INCLUDED
+half RoughnessToPerceptualRoughness(half roughness)
 {
     return sqrt(roughness);
 }
 
-float RoughnessToPerceptualSmoothness(float roughness)
+half RoughnessToPerceptualSmoothness(half roughness)
 {
     return 1.0 - sqrt(roughness);
 }
 
-float PerceptualSmoothnessToRoughness(float perceptualSmoothness)
+half PerceptualSmoothnessToRoughness(half perceptualSmoothness)
 {
     return (1.0 - perceptualSmoothness) * (1.0 - perceptualSmoothness);
 }
 
-float PerceptualSmoothnessToPerceptualRoughness(float perceptualSmoothness)
+half PerceptualSmoothnessToPerceptualRoughness(half perceptualSmoothness)
 {
     return (1.0 - perceptualSmoothness);
 }
 
-float PerceptualRoughnessToPerceptualSmoothness(float perceptualRoughness)
+half PerceptualRoughnessToPerceptualSmoothness(half perceptualRoughness)
 {
     return (1.0 - perceptualRoughness);
 }
+#endif // UNITY_STANDARD_BRDF_INCLUDED
 
 #define MIN_N_DOT_V 1e-4
 
-float clampNoV(float NoV) {
+half clampNoV(half NoV) {
     // Neubelt and Pettineo 2013, "Crafting a Next-gen Material Pipeline for The Order: 1886"
     return max(NoV, MIN_N_DOT_V);
 }
@@ -540,16 +543,16 @@ float clampNoV(float NoV) {
 // Helper functions for matcaps
 //-----------------------------------------------------------------------------
 
-half2 getMatcapUVs(float3 normal, float3 viewDir)
+half2 getMatcapUVs(half3 normal, half3 viewDir)
 {
     // Based on Masataka SUMI's implementation
-    half3 worldUp = float3(0, 1, 0);
+    half3 worldUp = half3(0, 1, 0);
     half3 worldViewUp = normalize(worldUp - viewDir * dot(viewDir, worldUp));
     half3 worldViewRight = normalize(cross(viewDir, worldViewUp));
     return half2(dot(worldViewRight, normal), dot(worldViewUp, normal)) * 0.5 + 0.5;
 }
 
-half2 getMatcapUVsOriented(float3 normal, float3 viewDir, float3 upDir)
+half2 getMatcapUVsOriented(half3 normal, half3 viewDir, half3 upDir)
 {
     // Based on Masataka SUMI's implementation
     half3 worldViewUp = normalize(upDir - viewDir * dot(viewDir, upDir));
@@ -558,9 +561,9 @@ half2 getMatcapUVsOriented(float3 normal, float3 viewDir, float3 upDir)
 }
 
 // Used for matcaps
-float3 applyBlendMode(int blendOp, half3 a, half3 b, half t)
+half3 applyBlendMode(int blendOp, half3 a, half3 b, half t)
 {
-    switch (blendOp) 
+    switch (blendOp)
     {
         default:
         case 0: return a + b * t;
@@ -569,7 +572,7 @@ float3 applyBlendMode(int blendOp, half3 a, half3 b, half t)
     }
 }
 
-float3 applyMatcapTint(half4 matcap, half4 tint)
+half3 applyMatcapTint(half4 matcap, half4 tint)
 {
     // An adjustment to make matcap colour settings more useful.
     // Tint alpha controls whether matcaps are multiplied or "screen" blended.
@@ -579,9 +582,9 @@ float3 applyMatcapTint(half4 matcap, half4 tint)
 }
 
 SamplerState sampler_MatcapTrilinearClampSampler;
-float3 applyMatcap(Texture2D src, half2 matcapUV, float3 dst, float4 tint, int blendMode, float blendStrength)
+half3 applyMatcap(Texture2D src, half2 matcapUV, half3 dst, half4 tint, int blendMode, half blendStrength)
 {
-	// Skip if intensity is zero. 
+	// Skip if intensity is zero.
 	if (blendStrength < 1.0/255.0) return dst;
 
     half4 matcap = src.Sample(sampler_MatcapTrilinearClampSampler, matcapUV);
@@ -592,25 +595,23 @@ float3 applyMatcap(Texture2D src, half2 matcapUV, float3 dst, float4 tint, int b
 // These functions rely on data or functions not available in the shadow pass
 //-----------------------------------------------------------------------------
 
-#if defined(UNITY_STANDARD_BRDF_INCLUDED)
-
-float IsotropicNDFFiltering(float3 normal, float roughness2) {
+half IsotropicNDFFiltering(half3 normal, half roughness2) {
     // Tokuyoshi and Kaplanyan 2021, "Stable Geometric Specular Antialiasing with
     // Projected-Space NDF Filtering"
-    float SIGMA2 = 0.15915494;
-    float KAPPA = 0.18;
-    float3 dndu = ddx(normal);
-    float3 dndv = ddy(normal);
-    float kernelRoughness2 = 2.0 * SIGMA2 * (dot(dndu, dndu) + dot(dndv, dndv));
-    float clampedKernelRoughness2 = min(kernelRoughness2, KAPPA);
-    float filteredRoughness2 = saturate(roughness2 + clampedKernelRoughness2);
+    half SIGMA2 = 0.15915494;
+    half KAPPA = 0.18;
+    half3 dndu = ddx(normal);
+    half3 dndv = ddy(normal);
+    half kernelRoughness2 = 2.0 * SIGMA2 * (dot(dndu, dndu) + dot(dndv, dndv));
+    half clampedKernelRoughness2 = min(kernelRoughness2, KAPPA);
+    half filteredRoughness2 = saturate(roughness2 + clampedKernelRoughness2);
     return filteredRoughness2;
 }
 
 // bgolus's method for "fixing" screen space directional shadows and anti-aliasing
 // https://forum.unity.com/threads/fixing-screen-space-directional-shadows-and-anti-aliasing.379902/
 // Searches the depth buffer for the depth closest to the current fragment to sample the shadow from.
-// This reduces the visible aliasing. 
+// This reduces the visible aliasing.
 
 void correctedScreenShadowsForMSAA(float4 _ShadowCoord, inout float shadow)
 {
@@ -709,7 +710,7 @@ void initScreenSpaceRay(out ScreenSpaceRay ray, float3 wsRayStart, float3 wsRayD
     ray.uvRay = uvRayEnd - ray.uvRayStart;
 }
 
-float screenSpaceContactShadow(float3 lightDirection, float3 shadingPosition, 
+float screenSpaceContactShadow(float3 lightDirection, float3 shadingPosition,
     float2 screenPosition, float kDistanceMax = 0.1, uint kStepCount = 8) {
     ScreenSpaceRay rayData;
     initScreenSpaceRay(rayData, shadingPosition, lightDirection, kDistanceMax);
@@ -754,7 +755,7 @@ float screenSpaceContactShadow(float3 lightDirection, float3 shadingPosition,
 
 	// soft occlusion, includes distance falloff
 	occlusion = saturate(softOcclusion * (1.0 - (firstHit / kStepCount)));
-    
+
     // we fade out the contribution of contact shadows towards the edge of the screen
     // because we don't have depth data there
     float2 fade = max(12.0 * abs(ray.xy - 0.5) - 5.0, 0.0);
@@ -766,8 +767,8 @@ float screenSpaceContactShadow(float3 lightDirection, float3 shadingPosition,
 // Source: https://github.com/michaldrobot/ShaderFastLibs/blob/master/ShaderFastMathLib.h
 
 #define IEEE_INT_RCP_SQRT_CONST_NR0         0x5f3759df
-#define IEEE_INT_RCP_SQRT_CONST_NR1         0x5F375A86 
-#define IEEE_INT_RCP_SQRT_CONST_NR2         0x5F375A86  
+#define IEEE_INT_RCP_SQRT_CONST_NR1         0x5F375A86
+#define IEEE_INT_RCP_SQRT_CONST_NR2         0x5F375A86
 
 // Approximate guess using integer float arithmetics based on IEEE floating point standard
 float rcpSqrtIEEEIntApproximation(float inX, const int inRcpSqrtConst)
@@ -823,79 +824,140 @@ float fastRcpSqrtNR2(float inX)
 	return xRcpSqrt;
 }
 
+// Computes x^5 using only multiply operations.
+half pow5(half x) {
+    half x2 = x * x;
+    return x2 * x2 * x;
+}
+
 // BRDF based on implementation in Filament.
 // https://github.com/google/filament
 
-float D_Ashikhmin(float linearRoughness, float NoH) {
-    // Ashikhmin 2007, "Distribution-based BRDFs"
-	float a2 = linearRoughness * linearRoughness;
-	float cos2h = NoH * NoH;
-	float sin2h = max(1.0 - cos2h, 0.0078125); // 2^(-14/2), so sin2h^2 > 0 in fp16
-	float sin4h = sin2h * sin2h;
-	float cot2 = -cos2h / (a2 * sin2h);
-	return 1.0 / (UNITY_PI * (4.0 * a2 + 1.0) * sin4h) * (4.0 * exp(cot2) + sin4h);
-}
+#ifdef TARGET_HALF
+#define PREVENT_DIV0(n, d, magic)   ((n) / max(d, magic))
+#else
+#define PREVENT_DIV0(n, d, magic)   ((n) / (d))
+#endif
 
-float D_Charlie(float linearRoughness, float NoH) {
-    // Estevez and Kulla 2017, "Production Friendly Microfacet Sheen BRDF"
-    float invAlpha  = 1.0 / linearRoughness;
-    float cos2h = NoH * NoH;
-    float sin2h = max(1.0 - cos2h, 0.0078125); // 2^(-14/2), so sin2h^2 > 0 in fp16
-    return (2.0 + invAlpha) * pow(sin2h, invAlpha * 0.5) / (2.0 * UNITY_PI);
-}
+half D_GGX(half roughness, half NoH, half3 NxH) {
+    // Walter et al. 2007, "Microfacet Models for Refraction through Rough Surfaces"
 
-float V_Neubelt(float NoV, float NoL) {
-    // Neubelt and Pettineo 2013, "Crafting a Next-gen Material Pipeline for The Order: 1886"
-    return saturate(1.0 / (4.0 * (NoL + NoV - NoL * NoV)));
-}
+    // In mediump, there are two problems computing 1.0 - NoH^2
+    // 1) 1.0 - NoH^2 suffers floating point cancellation when NoH^2 is close to 1 (highlights)
+    // 2) NoH doesn't have enough precision around 1.0
+    // Both problem can be fixed by computing 1-NoH^2 in highp and providing NoH in highp as well
 
+    // However, we can do better using Lagrange's identity:
+    //      ||a x b||^2 = ||a||^2 ||b||^2 - (a . b)^2
+    // since N and H are unit vectors: ||N x H||^2 = 1.0 - NoH^2
+    // This computes 1.0 - NoH^2 directly (which is close to zero in the highlights and has
+    // enough precision).
+    // Overall this yields better performance, keeping all computations in mediump
+#if defined(TARGET_MOBILE)
+    half oneMinusNoHSquared = dot(NxH, NxH);
+#else
+    half oneMinusNoHSquared = 1.0 - NoH * NoH;
+#endif
 
-float D_GGX(float roughness, float NoH) {
-    float oneMinusNoHSquared = 1.0f - NoH * NoH;
-    float a = NoH * roughness;
-    float a2 = a * a;
-    float k_denominator = oneMinusNoHSquared + a2;
-    float k = roughness / k_denominator;
-    float d = k * k * (1.0f / UNITY_PI);
+    half a = NoH * roughness;
+    half k = min(roughness / (oneMinusNoHSquared + a * a), 453.5); // 453.5 prevents fp16 overflow
+    half d = k * (k * (1.0 / UNITY_PI));
     return d;
 }
 
-float D_GGX_Anisotropic(float NoH, const float3 h,
-        const float3 t, const float3 b, float at, float ab) {
-    float ToH = dot(t, h);
-    float BoH = dot(b, h);
-    float a2 = at * ab;
-    float3 v = float3(ab * ToH, at * BoH, a2 * NoH);
-    float v2 = dot(v, v);
-    float w2 = a2 / max(v2, FLT_EPS);
-    return a2 * w2 * w2 * UNITY_INV_PI;
+half D_GGX_Anisotropic(half at, half ab, half ToH, half BoH, half NoH) {
+    // Burley 2012, "Physically-Based Shading at Disney"
+
+    // The values at and ab are perceptualRoughness^2, a2 is therefore perceptualRoughness^4
+    // The dot product below computes perceptualRoughness^8. We cannot fit in fp16 without clamping
+    // the roughness to too high values so we perform the dot product and the division in fp32
+    half a2 = at * ab;
+    float3 d = float3(ab * ToH, at * BoH, a2 * NoH);
+    float d2 = dot(d, d);
+    half b2 = a2 / d2;
+    return a2 * b2 * b2 * (1.0 / UNITY_PI);
 }
 
-float V_SmithGGXCorrelated_Anisotropic(float at, float ab, float ToV, float BoV,
-        float ToL, float BoL, float NoV, float NoL) {
+half D_Charlie(half roughness, half NoH) {
+    // Estevez and Kulla 2017, "Production Friendly Microfacet Sheen BRDF"
+    half invAlpha  = 1.0 / roughness;
+    half cos2h = NoH * NoH;
+    half sin2h = max(1.0 - cos2h, 0.0078125); // 2^(-14/2), so sin2h^2 > 0 in fp16
+    return (2.0 + invAlpha) * pow(sin2h, invAlpha * 0.5) / (2.0 * UNITY_PI);
+}
+
+half V_SmithGGXCorrelated(half roughness, half NoV, half NoL) {
     // Heitz 2014, "Understanding the Masking-Shadowing Function in Microfacet-Based BRDFs"
-    float lambdaV = NoL * length(float3(at * ToV, ab * BoV, NoV));
-    float lambdaL = NoV * length(float3(at * ToL, ab * BoL, NoL));
-    float v = 0.5 / (lambdaV + lambdaL + 1e-7f);
+    half a2 = roughness * roughness;
+    // TODO: lambdaV can be pre-computed for all the lights, it should be moved out of this function
+    half lambdaV = NoL * sqrt((NoV - a2 * NoV) * NoV + a2);
+    half lambdaL = NoV * sqrt((NoL - a2 * NoL) * NoL + a2);
+    // 0.0000077 = nextafter(0.5 / MEDIUMP_FLT_MAX, 1.0) in fp16, so we don't overflow
+    half v = PREVENT_DIV0(0.5, lambdaV + lambdaL, 0.0000077);
+    // a2=0 => v = 1 / 4*NoL*NoV   => min=1/4, max=+inf
+    // a2=1 => v = 1 / 2*(NoL+NoV) => min=1/4, max=+inf
     return v;
 }
 
+half V_SmithGGXCorrelated_Fast(half roughness, half NoV, half NoL) {
+    // Hammon 2017, "PBR Diffuse Lighting for GGX+Smith Microsurfaces"
+    // 0.0000077 = nextafter(0.5 / MEDIUMP_FLT_MAX, 1.0) in fp16, so we don't overflow
+    half v = PREVENT_DIV0(0.5, lerp(2.0 * NoL * NoV, NoL + NoV, roughness), 0.0000077);
+    return v;
+}
+
+half V_SmithGGXCorrelated_Anisotropic(half at, half ab, half ToV, half BoV,
+        half ToL, half BoL, half NoV, half NoL) {
+    // Heitz 2014, "Understanding the Masking-Shadowing Function in Microfacet-Based BRDFs"
+    // TODO: lambdaV can be pre-computed for all the lights, it should be moved out of this function
+    half lambdaV = NoL * length(half3(at * ToV, ab * BoV, NoV));
+    half lambdaL = NoV * length(half3(at * ToL, ab * BoL, NoL));
+    // 0.0000077 = nextafter(0.5 / MEDIUMP_FLT_MAX, 1.0) in fp16, so we don't overflow
+    half v = PREVENT_DIV0(0.5, lambdaV + lambdaL, 0.0000077);
+    return v;
+}
+
+half V_Kelemen(half LoH) {
+    // Kelemen 2001, "A Microfacet Based Coupled Specular-Matte BRDF Model with Importance Sampling"
+    // 0.0000039 = nextafter(0.25 / MEDIUMP_FLT_MAX, 1.0) in fp16, so we don't overflow
+    return PREVENT_DIV0(0.25, LoH * LoH, 0.0000039);
+}
+
+half V_Neubelt(half NoV, half NoL) {
+    // Neubelt and Pettineo 2013, "Crafting a Next-gen Material Pipeline for The Order: 1886"
+    // 0.00001532 = nextafter(1.0 / MEDIUMP_FLT_MAX, 1.0) in fp16, so we don't overflow
+    return PREVENT_DIV0(1.0, 4.0 * (NoL + NoV - NoL * NoV), 0.00001532);
+}
+
+half3 F_Schlick(const half3 f0, half f90, half VoH) {
+    // Schlick 1994, "An Inexpensive BRDF Model for Physically-Based Rendering"
+    return f0 + (f90 - f0) * pow5(1.0 - VoH);
+}
+
+half3 F_Schlick(const half3 f0, half VoH) {
+    half f = pow(1.0 - VoH, 5.0);
+    return f + f0 * (1.0 - f);
+}
+
+half F_Schlick(half f0, half f90, half VoH) {
+    return f0 + (f90 - f0) * pow5(1.0 - VoH);
+}
+
+
 // From "From mobile to high-end PC: Achieving high quality anime style rendering on Unity"
-float3 ShiftTangent (float3 T, float3 N, float shift) 
+half3 ShiftTangent (half3 T, half3 N, half shift)
 {
-	float3 shiftedT = T + shift * N;
+	half3 shiftedT = T + shift * N;
 	return normalize(shiftedT);
 }
 
-float StrandSpecular(float3 T, float3 H, float exponent, float strength)
+half StrandSpecular(half3 T, half3 H, half exponent, half strength)
 {
-	//float3 H = normalize(L+V);
-	float dotTH = dot(T, H);
-	float sinTH = sqrt(1.0-dotTH*dotTH);
-	float dirAtten = smoothstep(-1.0, 0.0, dotTH);
+	//half3 H = normalize(L+V);
+	half dotTH = dot(T, H);
+	half sinTH = sqrt(1.0-dotTH*dotTH);
+	half dirAtten = smoothstep(-1.0, 0.0, dotTH);
 	return dirAtten * pow(sinTH, exponent) * strength;
 }
-
-#endif // if UNITY_STANDARD_BRDF_INCLUDED
 
 #endif // SCSS_UTILS_INCLUDED

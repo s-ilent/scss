@@ -1,0 +1,159 @@
+#ifndef COMPAT_BIRP_INCLUDED
+#define COMPAT_BIRP_INCLUDED
+
+#include "UnityCG.cginc"
+#include "UnityLightingCommon.cginc"
+#include "AutoLight.cginc"
+#include "Lighting.cginc"
+#include "UnityGlobalIllumination.cginc"
+#include "SCSS_CompatLightingData.hlsl"
+
+// --------------------------------------------------------------------------
+// Macros
+// --------------------------------------------------------------------------
+#define SAMPLE_RAW_DEPTH(uv) SAMPLE_DEPTH_TEXTURE(_CameraDepthTexture, uv)
+#define UNITY_CALC_FOG_FACTOR_RAW(coord) UNITY_CALC_FOG_FACTOR(coord)
+#define SCSS_SAMPLE_SCREEN_COLOR(uv) tex2D(_CameraOpaqueTexture, uv)
+
+#if defined(SCSS_USE_HALF_FLOAT) && (defined(UNITY_COMPILER_HLSL) || defined(UNITY_COMPILER_DXC))
+#define half min16float
+#define half2 min16float2
+#define half3 min16float3
+#define half4 min16float4
+#define half2x2 min16float2x2
+#define half3x3 min16float3x3
+#define half4x4 min16float4x4
+#define half2x3 min16float2x3
+#define half2x4 min16float2x4
+#define half3x2 min16float3x2
+#define half3x4 min16float3x4
+#define half4x2 min16float4x2
+#define half4x3 min16float4x3
+#define TARGET_HALF // Require fp16 optimizations
+#define fixed min10float
+#define fixed2 min10float2
+#define fixed3 min10float3
+#define fixed4 min10float4
+#endif
+
+// --------------------------------------------------------------------------
+// Implementation
+// --------------------------------------------------------------------------
+
+CompatSHData CGetSHData(float3 positionWS, float3 normalWS)
+{
+    CompatSHData d;
+    d.SHAr = unity_SHAr;
+    d.SHAg = unity_SHAg;
+    d.SHAb = unity_SHAb;
+    d.SHBr = unity_SHBr;
+    d.SHBg = unity_SHBg;
+    d.SHBb = unity_SHBb;
+    d.SHC  = unity_SHC;
+    d.isAPV = false;
+    return d;
+}
+
+float3 CGetIndirectSpecular(float3 reflectionDir, float3 positionWS, float2 screenUV, float perceptualRoughness, float occlusion)
+{
+    // BIRP requires setting up the GI Input struct to get box projection logic
+    UnityGIInput d;
+    UNITY_INITIALIZE_OUTPUT(UnityGIInput, d);
+    d.worldPos = positionWS;
+    d.worldViewDir = -1; // Not needed for indirect spec if reflUVW is set
+    d.probeHDR[0] = unity_SpecCube0_HDR;
+    d.probeHDR[1] = unity_SpecCube1_HDR;
+    #if defined(UNITY_SPECCUBE_BOX_PROJECTION) || defined(UNITY_SPECCUBE_BLENDING)
+    d.boxMin[0] = unity_SpecCube0_BoxMin;
+    d.boxMin[1] = unity_SpecCube1_BoxMin;
+    d.boxMax[0] = unity_SpecCube0_BoxMax;
+    d.boxMax[1] = unity_SpecCube1_BoxMax;
+    d.probePosition[0] = unity_SpecCube0_ProbePosition;
+    d.probePosition[1] = unity_SpecCube1_ProbePosition;
+    #endif
+
+    Unity_GlossyEnvironmentData g;
+    g.roughness = perceptualRoughness;
+    g.reflUVW = reflectionDir;
+
+    return UnityGI_IndirectSpecular(d, occlusion, g);
+}
+
+CompatLight CGetMainLight(float3 positionWS, float2 screenUV, float4 shadowCoord, float4 shadowMask, float occlusion, float atten)
+{
+    CompatLight l;
+    bool isDirectional = _WorldSpaceLightPos0.w < 0.5;
+
+    if (isDirectional) {
+        l.direction = normalize(_WorldSpaceLightPos0.xyz);
+        l.attenuation = 1.0;
+    } else {
+        float3 lightVec = _WorldSpaceLightPos0.xyz - positionWS;
+        l.direction = normalize(lightVec);
+        l.attenuation = 1.0;
+    }
+
+    l.color = _LightColor0.rgb;
+    l.shadowAttenuation = atten; // Baked result of UNITY_LIGHT_ATTENUATION
+    l.layerMask = 0;
+    return l;
+}
+
+CompatLightIterator CInitLightLoop(float2 screenUV, float3 positionWS)
+{
+    CompatLightIterator iter;
+    iter.index = 0;
+
+    #if (defined(UNITY_PASS_FORWARDBASE) && defined(VERTEXLIGHT_ON))
+        iter.count = 4; // Loop 4 Vertex Lights
+    #else
+        iter.count = 0; // ForwardAdd handles lights via passes, so loop is 0
+    #endif
+
+    // Not used: URP only.
+    iter.instanceID = 0;
+    iter.tileData = 0;
+    return iter;
+}
+
+bool CGetNextLight(inout CompatLightIterator iter, float3 positionWS, float4 shadowMask, float occlusion, out CompatLight outLight)
+{
+    outLight = (CompatLight) 0;
+
+    #if (defined(UNITY_PASS_FORWARDBASE) && defined(VERTEXLIGHT_ON))
+    while (iter.index < iter.count)
+    {
+        int i = iter.index;
+        iter.index++;
+
+        if (any(unity_LightColor[i].rgb))
+        {
+            float3 lightPos = float3(unity_4LightPosX0[i], unity_4LightPosY0[i], unity_4LightPosZ0[i]);
+            float3 toLight = lightPos - positionWS;
+            float lengthSq = dot(toLight, toLight);
+            float attenSq = unity_4LightAtten0[i];
+
+            outLight.color = unity_LightColor[i].rgb;
+            outLight.direction = normalize(toLight);
+
+            // Unity Vertex Light Attenuation with pop-in fix. Thanks d4rkplay3r and error.mdl!
+            // unity_4LightAtten0 contains (25.0 / range^2).
+            // Standard Curve: 1.0 / (1.0 + 25.0 * (d/r)^2)
+            float atten = 1.0 / (1.0 + lengthSq * attenSq);
+
+            // Cutoff Curve: 1.0 - (25.0 * (d/r)^2) / 25.0  -> 1.0 - (d/r)^2
+            // This ensures attenuation hits exactly 0 at d = r.
+            float cutoff = saturate(1.0 - (lengthSq * attenSq / 25.0));
+
+            // Combine for smooth falloff without popping
+            outLight.attenuation = min(atten, cutoff * cutoff);
+            outLight.shadowAttenuation = 1.0;
+            outLight.layerMask = 0;
+            return true;
+        }
+    }
+    #endif
+    return false;
+}
+
+#endif

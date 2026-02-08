@@ -1,7 +1,7 @@
 #ifndef SCSS_AUDIOLINK_INCLUDED
 // UNITY_SHADER_NO_UPGRADE
 #define SCSS_AUDIOLINK_INCLUDED
-// Reference the documentation at 
+// Reference the documentation at
 // https://github.com/llealloo/vrc-udon-audio-link
 // for more info.
 
@@ -16,31 +16,31 @@ Texture2D<float4> _AudioTexture;
 SamplerState sampler_AudioGraph_Linear_Clamp;
 #endif
 
-uniform float _alModeR;
-uniform float _alModeG;
-uniform float _alModeB;
-uniform float _alModeA;
+uniform half _alModeR;
+uniform half _alModeG;
+uniform half _alModeB;
+uniform half _alModeA;
 
-uniform float _alBandR;
-uniform float _alBandG;
-uniform float _alBandB;
-uniform float _alBandA;
+uniform half _alBandR;
+uniform half _alBandG;
+uniform half _alBandB;
+uniform half _alBandA;
 
 uniform half4 _alColorR;
 uniform half4 _alColorG;
 uniform half4 _alColorB;
 uniform half4 _alColorA;
 
-uniform float _alTimeRangeR;
-uniform float _alTimeRangeG;
-uniform float _alTimeRangeB;
-uniform float _alTimeRangeA;
+uniform half _alTimeRangeR;
+uniform half _alTimeRangeG;
+uniform half _alTimeRangeB;
+uniform half _alTimeRangeA;
 
-uniform float _alUseFallback;
-uniform float _alFallbackBPM;
+uniform half _alUseFallback;
+uniform half _alFallbackBPM;
 
 
-float al_lerpstep( float a, float b, float t)
+half al_lerpstep( half a, half b, half t)
 {
     return saturate( ( t - a ) / ( b - a ) );
 }
@@ -57,27 +57,27 @@ float2 audioLinkModifyTexcoord(float4 texelSize , float2 p)
     return p;
 }
 
-float audioLinkRenderBar(float grad, float pulse)
+half audioLinkRenderBar(half grad, half pulse)
 {
-    float2 deriv = abs(fwidth(grad));
-    float step = deriv*0.5;
+    half2 deriv = abs(fwidth(grad));
+    half step = deriv*0.5;
     return al_lerpstep(pulse, pulse + step, grad);
 }
 
-float al_expImpulse( float x, float k )
+half al_expImpulse( half x, half k )
 {
-    const float h = k*x;
+    const half h = k*x;
     return h*exp(1.0-h);
 }
-float al_parabola( float x, float k )
+half al_parabola( half x, half k )
 {
     return pow( 4.0*x*(1.0-x), k );
 }
 
-// Samples the AudioLink texture. 
-float sampleAudioTexture(float band, float delay, float range)
+// Samples the AudioLink texture.
+half sampleAudioTexture(half band, half delay, half range)
 {
-    // Initialisation. 
+    // Initialisation.
     float2 audioLinkRes = 0;
     _AudioTexture.GetDimensions(audioLinkRes.x, audioLinkRes.y);
 
@@ -95,7 +95,7 @@ float sampleAudioTexture(float band, float delay, float range)
         return _AudioTexture.SampleLevel(sampler_AudioGraph_Linear_Clamp, alUV, 0);
         #endif
     } else {
-        if (_alUseFallback != 0) 
+        if (_alUseFallback != 0)
         {
             if (_alFallbackBPM == 0)
             {
@@ -108,10 +108,10 @@ float sampleAudioTexture(float band, float delay, float range)
         beat = (delay-_Time.y)*rowTiming*beat;
         beat = frac(-beat);
         beat = al_expImpulse(beat, 8.0);
-        float s; float c;
+        half s; half c;
         sincos(beat, s, c);
-        float final = saturate(s+(0.5+c));
-        // 
+        half final = saturate(s+(0.5+c));
+        //
         return final*beat;
         }
     }
@@ -119,7 +119,7 @@ float sampleAudioTexture(float band, float delay, float range)
     return 0;
 }
 
-float audioLinkGetLayer(float weight, const float range, const float band, const float mode)
+half audioLinkGetLayer(half weight, const half range, const half band, const half mode)
 {
     if (mode == 0) return weight * pow(sampleAudioTexture(band-1, 1-weight, range ), 2.0) * 2.0;
     if (mode == 1) return audioLinkRenderBar(weight, 1-sampleAudioTexture(band-1, 1-weight, range ));

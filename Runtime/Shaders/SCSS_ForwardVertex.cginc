@@ -27,67 +27,36 @@ half FurMask(float2 uv)
 	#endif
 }
 
-// Shade4PointLights from UnityCG.cginc but only returns their attenuation.
-float4 Shade4PointLightsAtten (
-    float4 lightPosX, float4 lightPosY, float4 lightPosZ,
-    float4 lightAttenSq,
-    float3 pos, float3 normal)
+half setupPackedFogData(half clipPosZ)
 {
-    // to light vectors
-    float4 toLightX = lightPosX - pos.x;
-    float4 toLightY = lightPosY - pos.y;
-    float4 toLightZ = lightPosZ - pos.z;
-    // squared lengths
-    float4 lengthSq = 0;
-    lengthSq += toLightX * toLightX;
-    lengthSq += toLightY * toLightY;
-    lengthSq += toLightZ * toLightZ;
-    // don't produce NaNs if some vertex position overlaps with the light
-    lengthSq = max(lengthSq, 0.000001);
+    // Store fog value mapped to 0..1 range.
+	half outFog = UNITY_Z_0_FAR_FROM_CLIPSPACE(clipPosZ) / (_ProjectionParams.z + 32.0);
 
-    // NdotL
-    float4 ndotl = 0;
-    ndotl += toLightX * normal.x;
-    ndotl += toLightY * normal.y;
-    ndotl += toLightZ * normal.z;
-    // correct NdotL
-    float4 corr = rsqrt(lengthSq);
-    ndotl = corr * (ndotl * 0.5 + 0.5); // Match with Forward for light ramp sampling
-    ndotl = max (float4(0,0,0,0), ndotl);
-    // attenuation
-    // Fixes popin. Thanks, d4rkplayer!
-    float4 atten = 1.0 / (1.0 + lengthSq * lightAttenSq);
-	float4 atten2 = saturate(1 - (lengthSq * lightAttenSq / 25));
-	atten = min(atten, atten2 * atten2);
-
-    float4 diff = ndotl * atten;
-    #if defined(SCSS_UNIMPORTANT_LIGHTS_FRAGMENT)
-    return atten;
-    #else
-    return diff;
-    #endif
-}
-
-// Based on Standard Shader's forwardbase vertex lighting calculations in VertexGIForward
-// This revision does not pass the light values themselves, but only their attenuation.
-half4 VertexLightContribution(float3 worldPos, half3 normalWorld)
-{
-	half4 vertexLight = 0;
-
-	// Static lightmapped materials are not allowed to have vertex lights.
-	#ifdef LIGHTMAP_ON
-		return 0;
-	#elif UNITY_SHOULD_SAMPLE_SH
-		#ifdef VERTEXLIGHT_ON
-			// Approximated illumination from non-important point lights
-			vertexLight = Shade4PointLightsAtten(
-				unity_4LightPosX0, unity_4LightPosY0, unity_4LightPosZ0,
-				unity_4LightAtten0, worldPos, normalWorld);
-		#endif
+	// Store fog type in integer component.
+	half fogTypeID = 0;
+	#if defined(FOG_EXP2)
+	fogTypeID = -1;
+	#elif defined(FOG_EXP)
+	fogTypeID = 0;
+	#elif defined(FOG_LINEAR)
+	fogTypeID = 1;
+	#else
+	return 0;
 	#endif
 
-	return vertexLight;
+	return outFog + fogTypeID;
 }
+
+half setupPackedFogData_geom(half clipPosZ, half fogTypeID)
+{
+    // Store fog value mapped to 0..1 range.
+	half outFog = UNITY_Z_0_FAR_FROM_CLIPSPACE(clipPosZ) / (_ProjectionParams.z + 32.0);
+
+	if (fogTypeID == 65504.0) return 0;
+
+	return outFog + fogTypeID;
+}
+
 
 inline float4 ObjectToClipPosRelative(float3 pos)
 {
@@ -161,7 +130,7 @@ VertexOutput vert(appdata_full_local v) {
 	// Object-space normal from vertex
 	float3 normalOS = normalize(v.normal);
 
-	// Object-space vertex position 
+	// Object-space vertex position
 	o.pos = v.vertex;
 
 	float3 normalDir = UnityObjectToWorldNormal(v.normal);
@@ -181,8 +150,8 @@ VertexOutput vert(appdata_full_local v) {
 	float4 objPos = mul(unity_ObjectToWorld, float4(0, 0, 0, 1));
 	o.worldPos = mul(unity_ObjectToWorld, v.vertex);
 
-	float variousData[7] = 
-	{ 
+	float variousData[7] =
+	{
 		0.0, // 0 Default - not used
 		1.0, // 1 Outline width
 		1.0, // 2 Occlusion
@@ -194,11 +163,11 @@ VertexOutput vert(appdata_full_local v) {
 
 	variousData[_VertexColorAType] *= v.color.a;
 
-	switch (_VertexColorType) 
+	switch (_VertexColorType)
 	{
 		case 1: // Outline colour
 		o.color = v.color;
-		o.color.a = variousData[5] * variousData[6]; // Can only be one at a time. 
+		o.color.a = variousData[5] * variousData[6]; // Can only be one at a time.
 		break;
 
 		case 2: // Additional data
@@ -212,32 +181,32 @@ VertexOutput vert(appdata_full_local v) {
 
 		case 3: // Ignore
 		o.color = 1.0;  // Reset
-		o.color.a = variousData[5] * variousData[6]; // Can only be one at a time. 
+		o.color.a = variousData[5] * variousData[6]; // Can only be one at a time.
 		break;
 
 		case 4: // Outline direction + width
 		o.color = 1.0; // Handled above
-		o.color.a = variousData[5] * variousData[6]; // Can only be one at a time. 
+		o.color.a = variousData[5] * variousData[6]; // Can only be one at a time.
 
 		// Outline direction needs to be transformed from tangent space to object space.
 		float3 bitangentDirOS = cross(v.normal.xyz, v.tangent.xyz) * tangentSign;
 		const float3x3 tangentToObject = float3x3(v.tangent.xyz, bitangentDirOS, v.normal.xyz);
-		outlineDir = mul((2.0 * v.color.xyz - 1.0), tangentToObject); 
+		outlineDir = mul((2.0 * v.color.xyz - 1.0), tangentToObject);
 		break;
-		
+
 		default: // Colour
 		o.color = v.color;
-		o.color.a = variousData[5] * variousData[6]; // Can only be one at a time. 
+		o.color.a = variousData[5] * variousData[6]; // Can only be one at a time.
 		break;
 	}
 
 	o.extraData = float4(
 		// Outline width
-		variousData[1], 
+		variousData[1],
 		// Softness/Ramp ID (inverted to start at 0 when colour is white)
-		1.0 - variousData[4], 
+		1.0 - variousData[4],
 		// Outline depth offset
-		variousData[3], 
+		variousData[3],
 		// Shade bias
 		variousData[2]);
 
@@ -255,11 +224,11 @@ VertexOutput vert(appdata_full_local v) {
 
 	o.extraData.x *= _outline_width * .01; // Apply outline width and convert to cm
 	o.extraData.z *= (1 - _OutlineZPush * 0.1); // Apply outline push parameter.
-	
+
 	// Scale outlines relative to the distance from the camera. Outlines close up look ugly in VR because
 	// they can have holes, being shells. This is also why it is clamped to not make them bigger.
-	// That looks good at a distance, but not perfect. 
-	
+	// That looks good at a distance, but not perfect.
+
 	// If the camera is orthographic, distance scaling doesn't need to apply.
     if (unity_OrthoParams.w == 0.0)
 	{
@@ -271,13 +240,13 @@ VertexOutput vert(appdata_full_local v) {
 		o.extraData.x *= lerp(_OutlineNearDistance, _OutlineFarDistance, distanceScale);
 	}
 	#endif
-	
+
 	#if defined(SCSS_FUR)
 	o.extraData.x *= FurMask(postTexcoords.uv[0]);
 	o.extraData.x *= _FurLength * 0.01;
 	#endif
 
-	// Todo: Does extraData.xz still need to be cleared? 
+	// Todo: Does extraData.xz still need to be cleared?
 
     // Simple inventory handling.
 	float2 inventoryTexcoord = postTexcoords.uv[_InventoryUVSec];
@@ -296,14 +265,22 @@ VertexOutput vert(appdata_full_local v) {
 		o.extraData.xz = inventoryMask ? o.extraData.xz : 0;
     }
 
-#if defined(VERTEXLIGHT_ON)
-	o.vertexLight = VertexLightContribution(o.worldPos, normalDir);
-#endif
+	// Unfortunately, we can't check the fog type while in geometry stage, so store it here.
+	#if defined(FOG_EXP2)
+	o.worldPos.w = -1;
+	#elif defined(FOG_EXP)
+	o.worldPos.w = 0;
+	#elif defined(FOG_LINEAR)
+	o.worldPos.w = 1;
+	#else
+	o.worldPos.w = 65504.0;
+	#endif
 
 	return o;
 }
 
-VertexOutput vert_nogeom(appdata_full_local v) {
+VertexOutput vert_nogeom(appdata_full_local v)
+{
 	VertexOutput o = (VertexOutput)0;
 
 	o = vert(v);
@@ -311,10 +288,10 @@ VertexOutput vert_nogeom(appdata_full_local v) {
 	o.pos = ObjectToClipPos(o.pos);
 
 	// Transfer non-squished Z for fog.
-	o.worldPos.w = o.pos.z;
+	o.worldPos.w = setupPackedFogData(o.pos.z);
 
 	o.pos = ApplyNearVertexSquishing(o.pos);
-	
+
 	UNITY_TRANSFER_SHADOW(o, v.texcoord1);
 
 	o.extraData.x = false;
@@ -323,7 +300,7 @@ VertexOutput vert_nogeom(appdata_full_local v) {
 
 void ObjectToClipAndTransferData(inout VertexOutput o)
 {
-	// Unity's shadow macros assume that we have 
+	// Unity's shadow macros assume that we have
 	// - a v struct, with v.vertex corresponding to position
 	// - a struct, with [structName].pos correpsonding to clip position
 	// This doesn't match our layout, but we don't want to mess around with the
@@ -335,8 +312,7 @@ void ObjectToClipAndTransferData(inout VertexOutput o)
 	o.pos = ObjectToClipPos(o.pos);
 	UNITY_TRANSFER_SHADOW(o, v.texcoord1);
 
-	// Transfer non-squished Z for fog.
-	o.worldPos.w = o.pos.z;
+	o.worldPos.w = setupPackedFogData_geom(o.pos.z, o.worldPos.w);
 }
 
 #if defined(SCSS_OUTLINE)
@@ -357,13 +333,13 @@ inline VertexOutput CalculateOutlineVertexClipPosition(VertexOutput v)
 			worldScale.y = length(unity_ObjectToWorld._m01_m11_m21);
 			worldScale.z = length(unity_ObjectToWorld._m02_m12_m22);
 
-			const float SCALE_EPSILON = 1e-6f; 
+			const float SCALE_EPSILON = 1e-6f;
 			worldScale = max(worldScale, SCALE_EPSILON);
 
 			float3 correctedOffsetOS = (1.0f / worldScale) * outlineWidth;
 
 			half3 localPosition = positionOS + normalOS * correctedOffsetOS;
-			
+
 			v.pos = ObjectToClipPos(localPosition);
 		}
 		break;
@@ -414,7 +390,7 @@ void geom(triangle VertexOutput IN[3], inout TriangleStream<VertexOutput> tristr
 		for (int ii = 0; ii < 3; ii++)
 		{
 			VertexOutput o = IN[ii];
-	    	UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(o); 
+	    	UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(o);
 
 			o.extraData.x = false;
 			ObjectToClipAndTransferData(o);
@@ -435,11 +411,10 @@ void geom(triangle VertexOutput IN[3], inout TriangleStream<VertexOutput> tristr
 			for (int i = 2; i >= 0; i--)
 			{
 				VertexOutput o = IN[i];
-	    		UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(o); 
+	    		UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(o);
 
 				o = CalculateOutlineVertexClipPosition(o);
-				// Transfer non-squished Z for fog.
-				o.worldPos.w = o.pos.z;
+				o.worldPos.w = setupPackedFogData_geom(o.pos.z, o.worldPos.w);
 				o.pos = ApplyOutlineZBias(o.pos, o.extraData.z);
 				o.pos = ApplyNearVertexSquishing(o.pos);
 				o.extraData.x = true;
@@ -449,14 +424,14 @@ void geom(triangle VertexOutput IN[3], inout TriangleStream<VertexOutput> tristr
 
 			tristream.RestartStrip();
 		}
-			
+
 		#if defined(USING_ALPHA_BLENDING)
 		// Generate base vertex
 		[unroll]
 		for (int ii = 0; ii < 3; ii++)
 		{
 			VertexOutput o = IN[ii];
-	    	UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(o); 
+	    	UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(o);
 
 			o.extraData.x = false;
 			ObjectToClipAndTransferData(o);
@@ -489,9 +464,9 @@ inline VertexOutput CalculateFurPosition(VertexOutput v, float furLength, int la
 	const float furLengthCm = layerID * furLength * furRange;
 
 	const half3 normalOS = float3(v.tangentToWorldAndPackedData[0][3], v.tangentToWorldAndPackedData[1][3], v.tangentToWorldAndPackedData[2][3]);
-	
+
 	v.pos.xyz = v.pos + normalOS * furLengthCm;
-	// Todo: Finish randomization. 
+	// Todo: Finish randomization.
 	v.pos.xyz += randomPointForFur(v.uvPack0.xy, v.uvPack0.yz) * _FurRandomization * furLengthCm;
 	v.pos.y -= _FurGravity * furLengthCm;
 
@@ -505,7 +480,7 @@ void geom_fur(triangle VertexOutput IN[3], inout TriangleStream<VertexOutput> tr
 	if ((IN[0].color.a + IN[1].color.a + IN[2].color.a) < 0) return;
 	// LOD scaling
 	const float lodScale = 1.0;
-	float layerCountScale = saturate(lodScale / (distance(IN[0].worldPos,_WorldSpaceCameraPos) )); 
+	float layerCountScale = saturate(lodScale / (distance(IN[0].worldPos,_WorldSpaceCameraPos) ));
 	// ref: https://discussions.unity.com/t/what-do-the-values-in-the-matrix4x4-for-camera-projectionmatrix-do/188320/2
 	float fovScale = -UNITY_MATRIX_P[1][1];
 

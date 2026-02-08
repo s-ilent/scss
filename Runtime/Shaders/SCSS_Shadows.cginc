@@ -3,13 +3,15 @@
 #define SCSS_SHADOWS_INCLUDED
 
 #pragma multi_compile_shadowcaster
-#pragma fragmentoption ARB_precision_hint_fastest
 
-#include "UnityCG.cginc"
-#include "UnityShaderVariables.cginc"
+#if defined(SCSS_IS_URP)
+    #include "SCSS_CompatURP.hlsl"
+#else
+    #include "SCSS_CompatBIRP.hlsl"
+#endif
 
 // In Standard, this is gated behind UNITY_USE_DITHER_MASK_FOR_ALPHABLENDED_SHADOWS but it's
-// better for us to avoid relying on unrelated project settings. 
+// better for us to avoid relying on unrelated project settings.
 #if (defined(_ALPHABLEND_ON) || defined(_ALPHAPREMULTIPLY_ON))
     #define SCSS_USE_DITHER_MASK 1
 #endif
@@ -63,7 +65,7 @@ void vertShadowCaster (VertexInputShadowCaster v
     #ifdef SCSS_USE_SHADOW_OUTPUT_STRUCT
         UNITY_TRANSFER_INSTANCE_ID(v, o);
     #endif
-    
+
     #ifdef SCSS_USE_STEREO_SHADOW_OUTPUT_STRUCT
         UNITY_INITIALIZE_VERTEX_OUTPUT_STEREO(os);
     #endif
@@ -87,7 +89,7 @@ void vertShadowCaster (VertexInputShadowCaster v
         opos.z =     inventoryMask ? opos.z : 1e+9;
         //o.vertex =    inventoryMask ? o.vertex : 1e+9;
     }
-    
+
     opos = ApplyNearVertexSquishing(opos);
 
     #if defined(SCSS_USE_SHADOW_UVS)
@@ -118,7 +120,7 @@ half4 fragShadowCaster (
     uvPack1 = i.uvPack1;
     #endif
     SCSS_TexCoords tc = initialiseTexCoords(uvPack0, uvPack1);
-    SCSS_Input material = 
+    SCSS_Input material =
     MaterialSetup(tc, /* color */ 1.0, /* extraData */ 1.0, /* isOutline */ 0.0, /* furDensity */ 0.0,
         /* facing */ true);
 
@@ -130,12 +132,12 @@ half4 fragShadowCaster (
 
     // When premultiplied mode is set, this will multiply the diffuse by the alpha component,
     // allowing to handle transparency in physically correct way - only diffuse component gets affected by alpha
-    float finalAlpha = material.alpha;
+    half finalAlpha = material.alpha;
     PreMultiplyAlpha_local (material.albedo, material.alpha, material.oneMinusReflectivity, /*out*/ finalAlpha);
 
     applyAlphaClip(finalAlpha, _Cutoff, vpos.xy, _AlphaSharp, true);
 
-    SHADOW_CASTER_FRAGMENT(i) 
+    SHADOW_CASTER_FRAGMENT(i)
 }
 
 #endif // SCSS_SHADOWS_INCLUDED

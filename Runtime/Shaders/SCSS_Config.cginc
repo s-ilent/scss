@@ -2,11 +2,6 @@
 // UNITY_SHADER_NO_UPGRADE
 #define SCSS_CONFIG_INCLUDED
 
-// Perform full-quality light calculations on unimportant lights.
-// Considering our target GPUs, this is a big visual improvement
-// for a small performance penalty.
-#define SCSS_UNIMPORTANT_LIGHTS_FRAGMENT 1
-
 // When rendered by a non-HDR camera, clamp incoming lighting.
 // This works around issues where scenes are set up incorrectly
 // for non-HDR.
@@ -20,7 +15,7 @@
 #define SCSS_SCREEN_SHADOW_FILTER 1
 
 // As objects become further and further from the origin point
-// (0, 0, 0) in world space, they become affected by the 
+// (0, 0, 0) in world space, they become affected by the
 // limitations of precision in floating point numbers.
 // For shaders, this manifests as polygons wobbling and warping
 // as they are further away from the origin point.
@@ -28,11 +23,11 @@
 // of polygons on screen seperately from their world-space
 // position, partly alleviating this issue. However, it interferes
 // with some of Unity's systems that expect the result of the
-// object to world transformation to be identical between shaders. 
+// object to world transformation to be identical between shaders.
 //#define SCSS_CAMERA_RELATIVE_VERTEX 1
 
 // When objects reach the nearest extent of the camera's frustrum,
-// they can intersect it and clip through. In VR, this can be a 
+// they can intersect it and clip through. In VR, this can be a
 // problem as frustrum extents which are suitable for most circumstances
 // will fall apart when close to an object - or, more commonly, another
 // person. This setting enables a tweak to squish objects before they can
@@ -42,14 +37,17 @@
 
 // When this is enabled, the shader will read voxelised light probes from
 // data stored using the "VRC Light Volumes" system. This is mainly available
-// for VRchat, but it's possible to implement on other platforms. See the 
-// SCSS_LightVolumes.cginc and LICENSE for more info. 
+// for VRchat, but it's possible to implement on other platforms. See the
+// SCSS_LightVolumes.cginc and LICENSE for more info.
 #define SCSS_USE_VRC_LIGHT_VOLUMES 1
 
 // When this is enabled, the shader will support Unity's fog. Normally this would be
 // controlled by the multi_compile_fog statement in the shader, but since fog was moved to
 // a new function to reduce the number of shader variants, it must be set here.
 #define SCSS_USE_UNITY_FOG 1
+
+// When this flag is enabled, the half data types are set to use flexible precision.
+#define SCSS_USE_HALF_FLOAT 1
 
 // Safety net for things that can't be used in Standard's codepaths on weaker hardware
 // Following implementation in Unity 2020's built-in pipeline

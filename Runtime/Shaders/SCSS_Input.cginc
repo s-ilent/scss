@@ -56,11 +56,11 @@ UNITY_DECLARE_TEX2D(_ClippingMask); uniform half4 _ClippingMask_ST;
 UNITY_DECLARE_TEX2D_NOSAMPLER(_ClippingMask); uniform half4 _ClippingMask_ST;
 #endif
 
-uniform float4 _EmissionColor;
-uniform float _EmissionRimPower;
+uniform half4 _EmissionColor;
+uniform half _EmissionRimPower;
 uniform half _EmissionMode;
-uniform float4 _EmissionColor2nd;
-uniform float _EmissionRimPower2nd;
+uniform half4 _EmissionColor2nd;
+uniform half _EmissionRimPower2nd;
 uniform half _EmissionMode2nd;
 
 
@@ -68,63 +68,63 @@ uniform half _EmissionMode2nd;
 UNITY_DECLARE_TEX2D_NOSAMPLER(_EmissionMap); uniform half4 _EmissionMap_ST; uniform half4 _EmissionMap_TexelSize;
 uniform half _EmissionUVSec;
 UNITY_DECLARE_TEX2D(_DetailEmissionMap); uniform half4 _DetailEmissionMap_ST; uniform half4 _DetailEmissionMap_TexelSize;
-uniform float _DetailEmissionUVSec;
-uniform float4 _EmissionDetailParams;
+uniform half _DetailEmissionUVSec;
+uniform half4 _EmissionDetailParams;
 #endif
 
 #if defined(_EMISSION_2ND)
 UNITY_DECLARE_TEX2D_NOSAMPLER(_EmissionMap2nd); uniform half4 _EmissionMap2nd_ST; uniform half4 _EmissionMap2nd_TexelSize;
 uniform half _EmissionUVSec2nd;
 UNITY_DECLARE_TEX2D(_DetailEmissionMap2nd); uniform half4 _DetailEmissionMap2nd_ST; uniform half4 _DetailEmissionMap2nd_TexelSize;
-uniform float _DetailEmissionUVSec2nd;
-uniform float4 _EmissionDetailParams2nd;
+uniform half _DetailEmissionUVSec2nd;
+uniform half4 _EmissionDetailParams2nd;
 #endif
 
-uniform float _UseEmissiveLightSense;
-uniform float _EmissiveLightSenseStart;
-uniform float _EmissiveLightSenseEnd;
+uniform half _UseEmissiveLightSense;
+uniform half _EmissiveLightSenseStart;
+uniform half _EmissiveLightSenseEnd;
 // Not implemented yet
-// uniform float _UseEmissiveLightSense2nd;
-// uniform float _EmissiveLightSenseStart2nd;
-// uniform float _EmissiveLightSenseEnd2nd;
+// uniform half _UseEmissiveLightSense2nd;
+// uniform half _EmissiveLightSenseStart2nd;
+// uniform half _EmissiveLightSenseEnd2nd;
 
 #if defined(_AUDIOLINK)
 UNITY_DECLARE_TEX2D_NOSAMPLER(_AudiolinkMaskMap); uniform half4 _AudiolinkMaskMap_ST;
 UNITY_DECLARE_TEX2D_NOSAMPLER(_AudiolinkSweepMap); uniform half4 _AudiolinkSweepMap_ST;
-uniform float _AudiolinkIntensity;
-uniform float _AudiolinkMaskMapUVSec;
-uniform float _AudiolinkSweepMapUVSec;
+uniform half _AudiolinkIntensity;
+uniform half _AudiolinkMaskMapUVSec;
+uniform half _AudiolinkSweepMapUVSec;
 // Not implemented yet
-// uniform float _UseAudiolinkLightSense;
-// uniform float _AudiolinkLightSenseStart;
-// uniform float _AudiolinkLightSenseEnd;
+// uniform half _UseAudiolinkLightSense;
+// uniform half _AudiolinkLightSenseStart;
+// uniform half _AudiolinkLightSenseEnd;
 #endif
 
 // _SpecColor is defined deep in Standard/UnityCG land, in UnityLightingCommon.cginc
 // For easy compatibility with Standard, we don't rename it.
 // This is a safety for the shadowcaster pass, which does not include it.
 #ifndef UNITY_LIGHTING_COMMON_INCLUDED
-float4 _SpecColor;
+half4 _SpecColor;
 #endif
 
 #if defined(_SPECULAR)
 UNITY_DECLARE_TEX2D_NOSAMPLER(_SpecGlossMap); uniform half4 _SpecGlossMap_ST;
-uniform float _UseMetallic;
-uniform float _SpecularType;
-uniform float _Smoothness;
-uniform float _UseEnergyConservation;
-uniform float _Anisotropy;
-uniform float _CelSpecularSoftness;
-uniform float _CelSpecularSteps;
+uniform half _UseMetallic;
+uniform half _SpecularType;
+uniform half _Smoothness;
+uniform half _UseEnergyConservation;
+uniform half _Anisotropy;
+uniform half _CelSpecularSoftness;
+uniform half _CelSpecularSteps;
 uniform fixed _SpecularHighlights;
 uniform fixed _GlossyReflections;
 UNITY_DECLARE_TEX2D_NOSAMPLER(_SpecIridescenceRamp);
-uniform float4 _SpecIridescenceRamp_TexelSize;
+uniform half4 _SpecIridescenceRamp_TexelSize;
 #else
 // Default to zero
-uniform float _SpecularType;
-uniform float _UseEnergyConservation;
-uniform float _Anisotropy; // Can not be removed yet.
+uniform half _SpecularType;
+uniform half _UseEnergyConservation;
+uniform half _Anisotropy; // Can not be removed yet.
 #endif
 
 #if defined(SCSS_CROSSTONE)
@@ -132,69 +132,69 @@ UNITY_DECLARE_TEX2D_NOSAMPLER(_1st_ShadeMap);
 UNITY_DECLARE_TEX2D_NOSAMPLER(_2nd_ShadeMap);
 UNITY_DECLARE_TEX2D_NOSAMPLER(_ShadingGradeMap);
 // CrossTone
-uniform float4 _1st_ShadeColor;
-uniform float4 _2nd_ShadeColor;
-uniform float _1st_ShadeColor_Step;
-uniform float _1st_ShadeColor_Feather;
-uniform float _2nd_ShadeColor_Step;
-uniform float _2nd_ShadeColor_Feather;
+uniform half4 _1st_ShadeColor;
+uniform half4 _2nd_ShadeColor;
+uniform half _1st_ShadeColor_Step;
+uniform half _1st_ShadeColor_Feather;
+uniform half _2nd_ShadeColor_Step;
+uniform half _2nd_ShadeColor_Feather;
 
-uniform float _Tweak_ShadingGradeMapLevel;
-uniform float _CrosstoneToneSeparation;
-uniform float _Crosstone2ndSeparation;
+uniform half _Tweak_ShadingGradeMapLevel;
+uniform half _CrosstoneToneSeparation;
+uniform half _Crosstone2ndSeparation;
 
-uniform float4 _ShadowBorderColor;
-uniform float _ShadowBorderRange;
+uniform half4 _ShadowBorderColor;
+uniform half _ShadowBorderRange;
 #else
-#define _CrosstoneToneSeparation float(0)
-#define _Crosstone2ndSeparation float(0)
+#define _CrosstoneToneSeparation half(0)
+#define _Crosstone2ndSeparation half(0)
 #endif
 
 #if !defined(SCSS_CROSSTONE)
 SamplerState _RampLinearClampSampler;
 UNITY_DECLARE_TEX2D_NOSAMPLER(_ShadowMask); uniform half4 _ShadowMask_ST;
 UNITY_DECLARE_TEX2D_NOSAMPLER(_Ramp); uniform half4 _Ramp_ST;
-uniform float _LightRampType;
-uniform float4 _ShadowMaskColor;
-uniform float _ShadowMaskType;
-uniform float _IndirectLightingBoost;
-uniform float _Shadow;
-uniform float _ShadowLift;
+uniform half _LightRampType;
+uniform half4 _ShadowMaskColor;
+uniform half _ShadowMaskType;
+uniform half _IndirectLightingBoost;
+uniform half _Shadow;
+uniform half _ShadowLift;
 #endif
 
-uniform float4 _Color;
+uniform half4 _Color;
 
 #if defined(_BACKFACE)
-uniform float4 _ColorBackface;
+uniform half4 _ColorBackface;
 #endif
 
-uniform float _BumpScale;
-uniform float _Cutoff;
-uniform float _AlphaSharp;
-uniform float _UVSec;
-uniform float _DetailNormalMapUVSec;
-uniform float _SpecularDetailMaskUVSec;
-uniform float _AlbedoAlphaMode;
-uniform float _Tweak_Transparency;
+uniform half _BumpScale;
+uniform half _Cutoff;
+uniform half _AlphaSharp;
+uniform half _UVSec;
+uniform half _DetailNormalMapUVSec;
+uniform half _SpecularDetailMaskUVSec;
+uniform half _AlbedoAlphaMode;
+uniform half _Tweak_Transparency;
 
-uniform float _ToggleHueControls;
-uniform float _ShiftHue;
-uniform float _ShiftSaturation;
-uniform float _ShiftValue;
+uniform half _ToggleHueControls;
+uniform half _ShiftHue;
+uniform half _ShiftSaturation;
+uniform half _ShiftValue;
 
-uniform float _UseFresnel;
-uniform float _UseFresnelLightMask;
-uniform float4 _FresnelTint;
-uniform float _FresnelWidth;
-uniform float _FresnelStrength;
-uniform float _FresnelLightMask;
-uniform float4 _FresnelTintInv;
-uniform float _FresnelWidthInv;
-uniform float _FresnelStrengthInv;
+uniform half _UseFresnel;
+uniform half _UseFresnelLightMask;
+uniform half4 _FresnelTint;
+uniform half _FresnelWidth;
+uniform half _FresnelStrength;
+uniform half _FresnelLightMask;
+uniform half4 _FresnelTintInv;
+uniform half _FresnelWidthInv;
+uniform half _FresnelStrengthInv;
 
-uniform float4 _CustomFresnelColor;
+uniform half4 _CustomFresnelColor;
 
-uniform float _LightingCalculationType;
+uniform half _LightingCalculationType;
 
 // Note: Sampler is declared in Utils
 UNITY_DECLARE_TEX2D_NOSAMPLER(_MatcapMask); uniform half4 _MatcapMask_ST;
@@ -203,30 +203,30 @@ UNITY_DECLARE_TEX2D_NOSAMPLER(_Matcap2); uniform half4 _Matcap2_ST;
 UNITY_DECLARE_TEX2D_NOSAMPLER(_Matcap3); uniform half4 _Matcap3_ST;
 UNITY_DECLARE_TEX2D_NOSAMPLER(_Matcap4); uniform half4 _Matcap4_ST;
 
-uniform float _UseMatcap;
-uniform float _Matcap1Strength;
-uniform float _Matcap2Strength;
-uniform float _Matcap3Strength;
-uniform float _Matcap4Strength;
-uniform float _Matcap1Blend;
-uniform float _Matcap2Blend;
-uniform float _Matcap3Blend;
-uniform float _Matcap4Blend;
-uniform float4 _Matcap1Tint;
-uniform float4 _Matcap2Tint;
-uniform float4 _Matcap3Tint;
-uniform float4 _Matcap4Tint;
+uniform half _UseMatcap;
+uniform half _Matcap1Strength;
+uniform half _Matcap2Strength;
+uniform half _Matcap3Strength;
+uniform half _Matcap4Strength;
+uniform half _Matcap1Blend;
+uniform half _Matcap2Blend;
+uniform half _Matcap3Blend;
+uniform half _Matcap4Blend;
+uniform half4 _Matcap1Tint;
+uniform half4 _Matcap2Tint;
+uniform half4 _Matcap3Tint;
+uniform half4 _Matcap4Tint;
 
 #if defined(_SUBSURFACE)
 UNITY_DECLARE_TEX2D_NOSAMPLER(_ThicknessMap);
-uniform float _UseSubsurfaceScattering;
-uniform float _ThicknessMapPower;
-uniform float _ThicknessMapInvert;
-uniform float3 _SSSCol;
-uniform float _SSSIntensity;
-uniform float _SSSPow;
-uniform float _SSSDist;
-uniform float _SSSAmbient;
+uniform half _UseSubsurfaceScattering;
+uniform half _ThicknessMapPower;
+uniform half _ThicknessMapInvert;
+uniform half3 _SSSCol;
+uniform half _SSSIntensity;
+uniform half _SSSPow;
+uniform half _SSSDist;
+uniform half _SSSAmbient;
 #endif
 
 #if defined(_HATCHING)
@@ -239,28 +239,28 @@ half _HatchingRimAdd;
 half _HatchingAlbedoMul;
 #endif
 
-float _UseAlphaFresnel;
-float _AlphaFresnelWidth;
-float _AlphaFresnelSharpness;
-float _AlphaFresnelStrength;
-float _AlphaFresnelInvert;
-float _AlphaFresnelThreshold;
+half _UseAlphaFresnel;
+half _AlphaFresnelWidth;
+half _AlphaFresnelSharpness;
+half _AlphaFresnelStrength;
+half _AlphaFresnelInvert;
+half _AlphaFresnelThreshold;
 
-uniform float4 _LightSkew;
-uniform float _PixelSampleMode;
-uniform float _VertexColorType;
-uniform float _VertexColorRType;
-uniform float _VertexColorGType;
-uniform float _VertexColorBType;
-uniform float _VertexColorAType;
+uniform half4 _LightSkew;
+uniform half _PixelSampleMode;
+uniform half _VertexColorType;
+uniform half _VertexColorRType;
+uniform half _VertexColorGType;
+uniform half _VertexColorBType;
+uniform half _VertexColorAType;
 
-uniform float _DiffuseGeomShadowFactor;
-uniform float _LightWrappingCompensationFactor;
-uniform float _IndirectShadingType;
+uniform half _DiffuseGeomShadowFactor;
+uniform half _LightWrappingCompensationFactor;
+uniform half _IndirectShadingType;
 
 // Animation
-uniform float _UseAnimation;
-uniform float _AnimationSpeed;
+uniform half _UseAnimation;
+uniform half _AnimationSpeed;
 uniform int _TotalFrames;
 uniform int _FrameNumber;
 uniform int _Columns;
@@ -268,7 +268,7 @@ uniform int _Rows;
 
 struct SCSS_AnimData
 {
-	float speed;
+	half speed;
 	int totalFrames;
 	int offset;
 	int columns;
@@ -314,27 +314,27 @@ float2 AnimateTexcoords(float2 texcoord, SCSS_AnimData anim)
 }
 
 // Vanishing
-uniform float _UseVanishing;
-uniform float _VanishingStart;
-uniform float _VanishingEnd;
+uniform half _UseVanishing;
+uniform half _VanishingStart;
+uniform half _VanishingEnd;
 
-void applyVanishing (inout float alpha) {
-    const fixed3 baseWorldPos = unity_ObjectToWorld._m03_m13_m23;
+void applyVanishing (inout half alpha) {
+    const float3 baseWorldPos = unity_ObjectToWorld._m03_m13_m23;
     float closeDist = distance(_WorldSpaceCameraPos, baseWorldPos);
-    float vanishing = saturate(lerpstep(_VanishingStart, _VanishingEnd, closeDist));
+    half vanishing = saturate(lerpstep(_VanishingStart, _VanishingEnd, closeDist));
     alpha = lerp(alpha, alpha * vanishing, _UseVanishing);
 }
 
 // Proximity Shadow
 // A neat gimmick to darken meshes that are right up against the camera, to fake
 // the shadows from your camera/face being up against them.
-uniform float _UseProximityShadow;
-uniform float _ProximityShadowDistance;
-uniform float _ProximityShadowDistancePower;
-uniform float4 _ProximityShadowFrontColor;
-uniform float4 _ProximityShadowBackColor;
+uniform half _UseProximityShadow;
+uniform half _ProximityShadowDistance;
+uniform half _ProximityShadowDistancePower;
+uniform half4 _ProximityShadowFrontColor;
+uniform half4 _ProximityShadowBackColor;
 
-float4 getNearShading(float3 worldPos, bool isFrontFace)
+half4 getNearShading(float3 worldPos, bool isFrontFace)
 {
 #if defined(UNITY_STANDARD_BRDF_INCLUDED)
 	// Disable in mirrors.
@@ -342,24 +342,24 @@ float4 getNearShading(float3 worldPos, bool isFrontFace)
 #endif
     if (_UseProximityShadow == 0) return 0;
 
-    float depth = distance(_WorldSpaceCameraPos, worldPos);
+    half depth = distance(_WorldSpaceCameraPos, worldPos);
     // Transform clip pos depth into linear depth. Then, remove the near-clip plane.
 
     depth = max(0, depth/_ProximityShadowDistance);
     depth = saturate(depth);
     depth = 1.0 - pow(depth, abs(_ProximityShadowDistancePower));
 
-    float4 shadowColor = isFrontFace ? _ProximityShadowFrontColor : _ProximityShadowBackColor;
+    half4 shadowColor = isFrontFace ? _ProximityShadowFrontColor : _ProximityShadowBackColor;
     depth *= shadowColor.a;
 
-    return float4(shadowColor.rgb, depth);
+    return half4(shadowColor.rgb, depth);
 }
 
 // Inventory
 uniform fixed _UseInventory;
 uniform fixed _InventoryUVSec;
 #if (defined(SHADER_STAGE_VERTEX) || defined(SHADER_STAGE_GEOMETRY))
-uniform float _InventoryStride;
+uniform half _InventoryStride;
 uniform fixed _InventoryItem01Animated;
 uniform fixed _InventoryItem02Animated;
 uniform fixed _InventoryItem03Animated;
@@ -378,16 +378,16 @@ uniform fixed _InventoryItem15Animated;
 uniform fixed _InventoryItem16Animated;
 #endif
 
-inline float getInventoryMask(float2 in_texcoord)
+inline half getInventoryMask(float2 in_texcoord)
 {
     // Initialise mask. This will cut things out.
-    float inventoryMask = 0.0;
+    half inventoryMask = 0.0;
 #if (defined(SHADER_STAGE_VERTEX) || defined(SHADER_STAGE_GEOMETRY))
     // Which UV section are we in?
     uint itemID = floor((in_texcoord.x) / _InventoryStride);
 
     // Create an array to store the _InventoryItemAnimated values
-    float _InventoryItemAnimated[17] =
+    half _InventoryItemAnimated[17] =
 	{
 		1,
 		_InventoryItem01Animated,
@@ -424,13 +424,13 @@ inline float getInventoryMask(float2 in_texcoord)
 }
 
 // Light adjustment
-uniform float _LightMultiplyAnimated;
-uniform float _LightClampAnimated;
-uniform float _LightAddAnimated;
+uniform half _LightMultiplyAnimated;
+uniform half _LightClampAnimated;
+uniform half _LightAddAnimated;
 
 // Contact shadows
 #if defined(_CONTACTSHADOWS)
-uniform float _ContactShadowDistance;
+uniform half _ContactShadowDistance;
 uniform uint _ContactShadowSteps;
 #endif
 
@@ -442,10 +442,10 @@ uniform sampler2D _DetailMap1; uniform half4 _DetailMap1_ST; uniform half4 _Deta
 uniform sampler2D _DetailMap2; uniform half4 _DetailMap2_ST; uniform half4 _DetailMap2_TexelSize;
 uniform sampler2D _DetailMap3; uniform half4 _DetailMap3_ST; uniform half4 _DetailMap3_TexelSize;
 uniform sampler2D _DetailMap4; uniform half4 _DetailMap4_ST; uniform half4 _DetailMap4_TexelSize;
-uniform float _DetailMap1UV; uniform float _DetailMap1Type; uniform float _DetailMap1Blend; uniform float _DetailMap1Strength;
-uniform float _DetailMap2UV; uniform float _DetailMap2Type; uniform float _DetailMap2Blend; uniform float _DetailMap2Strength;
-uniform float _DetailMap3UV; uniform float _DetailMap3Type; uniform float _DetailMap3Blend; uniform float _DetailMap3Strength;
-uniform float _DetailMap4UV; uniform float _DetailMap4Type; uniform float _DetailMap4Blend; uniform float _DetailMap4Strength;
+uniform half _DetailMap1UV; uniform half _DetailMap1Type; uniform half _DetailMap1Blend; uniform half _DetailMap1Strength;
+uniform half _DetailMap2UV; uniform half _DetailMap2Type; uniform half _DetailMap2Blend; uniform half _DetailMap2Strength;
+uniform half _DetailMap3UV; uniform half _DetailMap3Type; uniform half _DetailMap3Blend; uniform half _DetailMap3Strength;
+uniform half _DetailMap4UV; uniform half _DetailMap4Type; uniform half _DetailMap4Blend; uniform half _DetailMap4Strength;
 #endif
 
 // SDF options
@@ -464,33 +464,33 @@ uniform int _SDFRightVector;
 // Outline options
 #if defined(SCSS_OUTLINE)
 UNITY_DECLARE_TEX2D(_OutlineMask); uniform half4 _OutlineMask_ST;
-uniform float _OutlineZPush;
-uniform float _outline_width;
-uniform float _OutlineCalculationMode;
-uniform float _OutlineNearDistance;
-uniform float _OutlineFarDistance;
+uniform half _OutlineZPush;
+uniform half _outline_width;
+uniform half _OutlineCalculationMode;
+uniform half _OutlineNearDistance;
+uniform half _OutlineFarDistance;
 #endif
 // Fur options
 #if defined(SCSS_FUR)
 UNITY_DECLARE_TEX2D(_FurMask);
-uniform float _FurLength;
-uniform float _FurMode;
-uniform float _FurLayerCount;
-uniform float _FurRandomization;
-uniform float _FurGravity;
+uniform half _FurLength;
+uniform half _FurMode;
+uniform half _FurLayerCount;
+uniform half _FurRandomization;
+uniform half _FurGravity;
 #endif
 #endif
 
 #if defined(SCSS_OUTLINE)
-uniform float _OutlineMode;
-uniform float4 _outline_color;
+uniform half _OutlineMode;
+uniform half4 _outline_color;
 #else
-float4 _outline_color = float4(0,0,0,0);
+half4 _outline_color = half4(0,0,0,0);
 #endif
 
 #if defined(SCSS_FUR)
-UNITY_DECLARE_TEX2D_NOSAMPLER(_FurNoise); float4 _FurNoise_ST;
-uniform float _FurThickness;
+UNITY_DECLARE_TEX2D_NOSAMPLER(_FurNoise); half4 _FurNoise_ST;
+uniform half _FurThickness;
 #endif
 
 //-------------------------------------------------------------------------------------
@@ -498,31 +498,27 @@ uniform float _FurThickness;
 
 struct SCSS_ShadingParam
 {
-	float3  position;         // world-space position
 	float3x3 tangentToWorld;  // TBN matrix
-    float3  normal;           // normalized transformed normal, in world space
-	float3  view;             // normalized vector from the fragment to the eye
-    float3  geometricNormal;  // normalized geometric normal, in world space
-    float3  reflected;        // reflection of view about normal
-    float NoV;                // dot(normal, view), always strictly >= MIN_N_DOT_V
+	float3  position;         // world-space position
+    half3  normal;           // normalized transformed normal, in world space
+	half3  view;             // normalized vector from the fragment to the eye
+    half3  geometricNormal;  // normalized geometric normal, in world space
+    half3  reflected;        // reflection of view about normal
+    half NoV;                // dot(normal, view), always strictly >= MIN_N_DOT_V
 
-    float2 normalizedViewportCoord;
+    half2 normalizedViewportCoord;
 	#if (defined(LIGHTMAP_ON) || defined(DYNAMICLIGHTMAP_ON))
-    	float2 lightmapUV;
+    	half4 lightmapUV;
     #endif
-    float attenuation;
-    float isOutline;
-	float furDepth;
-    float3 ambient;
-
-	#if defined(VERTEXLIGHT_ON)
-		half4 vertexLight;
-	#endif
+    half attenuation;
+    half isOutline;
+	half furDepth;
+    half3 ambient;
 };
 
 void computeShadingParams (inout SCSS_ShadingParam shading, VertexOutput i, bool frontFacing)
 {
-    float3x3 tangentToWorld;
+    half3x3 tangentToWorld;
     tangentToWorld[0] = i.tangentToWorldAndPackedData[0].xyz;
     tangentToWorld[1] = i.tangentToWorldAndPackedData[1].xyz;
     tangentToWorld[2] = i.tangentToWorldAndPackedData[2].xyz;
@@ -553,7 +549,7 @@ void computeShadingParams (inout SCSS_ShadingParam shading, VertexOutput i, bool
 	#endif
 
     #if (defined(LIGHTMAP_ON) || defined(DYNAMICLIGHTMAP_ON))
-    	float2 lightmapUV = i.uvPack0.zw * unity_LightmapST.xy + unity_LightmapST.zw;
+    	half2 lightmapUV = i.uvPack0.zw * unity_LightmapST.xy + unity_LightmapST.zw;
     #endif
 
     UNITY_LIGHT_ATTENUATION(atten, i, shading.position)
@@ -575,7 +571,7 @@ void computeShadingParams (inout SCSS_ShadingParam shading, VertexOutput i, bool
 		// Only calculate contact shadows if we're not in shadow.
 		if (atten > 0)
 		{
-			float contactShadows = screenSpaceContactShadow(lightPos, i.worldPos.xyz, i.pos.xy, _ContactShadowDistance, _ContactShadowSteps);
+			half contactShadows = screenSpaceContactShadow(lightPos, i.worldPos.xyz, i.pos.xy, _ContactShadowDistance, _ContactShadowSteps);
 			contactShadows = 1.0 - contactShadows;
 			contactShadows = _LightShadowData.r + contactShadows * (1-_LightShadowData.r);
 			atten *= contactShadows * contactShadows;
@@ -586,10 +582,6 @@ void computeShadingParams (inout SCSS_ShadingParam shading, VertexOutput i, bool
     #if (defined(LIGHTMAP_ON) || defined(DYNAMICLIGHTMAP_ON))
     	GetBakedAttenuation(atten, lightmapUV, shading.position);
     #endif
-
-	#if defined(VERTEXLIGHT_ON)
-		shading.vertexLight = i.vertexLight;
-	#endif
 
     shading.attenuation = atten;
 
@@ -624,7 +616,7 @@ struct SCSS_Input
 {
 	half3 albedo;
 	half alpha;
-	float3 normalTangent;
+	half3 normalTangent;
 
 	half occlusion;
 	half2 sdf;
@@ -633,7 +625,7 @@ struct SCSS_Input
 
 	half3 specColor; half specOcclusion;
 	half3 anisotropyDirection;
-	float oneMinusReflectivity, smoothness, perceptualRoughness;
+	half oneMinusReflectivity, smoothness, perceptualRoughness;
 
 	half softness;
 	half3 thickness;
@@ -652,7 +644,7 @@ void initMaterial(out SCSS_Input material)
 	material = (SCSS_Input) 0;
 	material.albedo = 1.0;
 	material.alpha = 1.0;
-	material.normalTangent = float3(0.0, 0.0, 1.0);
+	material.normalTangent = half3(0.0, 0.0, 1.0);
 	material.occlusion = 1.0;
 	material.specColor = 0.0;
 	material.specOcclusion = 1.0;
@@ -728,10 +720,10 @@ half3 AlbedoHQ(float2 coord)
 
     offset *= _MainTex_TexelSize.xxyy;
 
-    float4 sample0 = UNITY_SAMPLE_TEX2D(_MainTex, offset.xz);
-    float4 sample1 = UNITY_SAMPLE_TEX2D(_MainTex, offset.yz);
-    float4 sample2 = UNITY_SAMPLE_TEX2D(_MainTex, offset.xw);
-    float4 sample3 = UNITY_SAMPLE_TEX2D(_MainTex, offset.yw);
+    half4 sample0 = UNITY_SAMPLE_TEX2D(_MainTex, offset.xz);
+    half4 sample1 = UNITY_SAMPLE_TEX2D(_MainTex, offset.yz);
+    half4 sample2 = UNITY_SAMPLE_TEX2D(_MainTex, offset.xw);
+    half4 sample3 = UNITY_SAMPLE_TEX2D(_MainTex, offset.yw);
 
     float sx = s.x / (s.x + s.y);
     float sy = s.z / (s.z + s.w);
@@ -741,7 +733,7 @@ half3 AlbedoHQ(float2 coord)
         lerp(sample1, sample0, sx), sy);
 }
 
-float3 applyDetailBlendMode(int blendOp, half3 a, half3 b, half t)
+half3 applyDetailBlendMode(int blendOp, half3 a, half3 b, half t)
 {
     switch(blendOp)
     {
@@ -756,10 +748,12 @@ float3 applyDetailBlendMode(int blendOp, half3 a, half3 b, half t)
             return lerp(a, b, t);
         case 4: // Screen
             return max(a + (b - a * b) * t, a);
+        case 5: // Subtract
+            return max(0, a - b * t);
     }
 }
 
-void applyDetail(inout SCSS_Input c, sampler2D src, half2 detailUV, const int destMode, const int blendMode, float blendStrength)
+void applyDetail(inout SCSS_Input c, sampler2D src, half2 detailUV, const int destMode, const int blendMode, half blendStrength)
 {
     // Detail has to target multiple things due to tone maps and specular properties
     // Albedo:   c.albedo, c.tone[0], c.tone[1]
@@ -796,17 +790,17 @@ void applyDetail(inout SCSS_Input c, sampler2D src, half2 detailUV, const int de
     }
 }
 
-float2 applyScaleOffset(float2 uv, float4 scaleOffset)
+float2 applyScaleOffset(float2 uv, half4 scaleOffset)
 {
 	// Potential future expansion? Right now, just makes code cleaner.
 	return uv * scaleOffset.xy + scaleOffset.zw;
 }
 
 
-float getAlphaFresnel(float NdotV, float width, float sharpness, float strength, bool invert, float mask)
+half getAlphaFresnel(half NdotV, half width, half sharpness, half strength, bool invert, half mask)
 {
-    float rimRaw = smoothstep(min(sharpness, width), width, NdotV);
-    float rim = saturate(1.0 - rimRaw);
+    half rimRaw = smoothstep(min(sharpness, width), width, NdotV);
+    half rim = saturate(1.0 - rimRaw);
 
     rim = lerp(1.0, rim, strength);
     if (invert)
@@ -816,15 +810,15 @@ float getAlphaFresnel(float NdotV, float width, float sharpness, float strength,
     return lerp(1.0, rim, mask);
 }
 
-void applyAlphaFresnel(inout float inAlpha, float NoV)
+void applyAlphaFresnel(inout half inAlpha, half NoV)
 {
     if (_UseAlphaFresnel)
     {
-        float feather = 0.05;
-        float cutOff = smoothstep(_AlphaFresnelThreshold, _AlphaFresnelThreshold + feather, inAlpha);
-        float mask = 1.0 - cutOff;
+        half feather = 0.05;
+        half cutOff = smoothstep(_AlphaFresnelThreshold, _AlphaFresnelThreshold + feather, inAlpha);
+        half mask = 1.0 - cutOff;
 
-        float fresnelFactor = getAlphaFresnel(
+        half fresnelFactor = getAlphaFresnel(
             NoV,
             _AlphaFresnelWidth,
             _AlphaFresnelSharpness,

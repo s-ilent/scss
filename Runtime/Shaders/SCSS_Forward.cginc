@@ -34,13 +34,13 @@ half ClippingMask(float2 uv)
 	return saturate(alpha + _Tweak_Transparency);
 }
 
-half4 Iridescence(float NoV, float rampID)
+half4 Iridescence(half NoV, half rampID)
 {
 #if defined(_SPECULAR)
 	if (any(_SpecIridescenceRamp_TexelSize.zw > 6.0))
 	{
-		float rampIDUV = (1.0 - (floor(rampID * _SpecIridescenceRamp_TexelSize.w) + 0.5) * _SpecIridescenceRamp_TexelSize.y);
-		float2 rampUV = float2(NoV, rampIDUV);
+		half rampIDUV = (1.0 - (floor(rampID * _SpecIridescenceRamp_TexelSize.w) + 0.5) * _SpecIridescenceRamp_TexelSize.y);
+		half2 rampUV = float2(NoV, rampIDUV);
 		// Colour multiplies specular colour, alpha attenuates albedo.
 		return UNITY_SAMPLE_TEX2D_SAMPLER(_SpecIridescenceRamp, _MainTex, rampUV);
 	}
@@ -48,14 +48,14 @@ half4 Iridescence(float NoV, float rampID)
 	return 1.0;
 }
 
-float3 applyMaskedHSVToAlbedo(float3 albedo, float mask, float shiftHue, float shiftSat, float shiftVal)
+half3 applyMaskedHSVToAlbedo(half3 albedo, half mask, half shiftHue, half shiftSat, half shiftVal)
 {
 	// HSV tinting, masked by tint mask
-	float3 warpedAlbedo = TransformHSV(albedo, shiftHue, shiftSat, shiftVal);
+	half3 warpedAlbedo = TransformHSV(albedo, shiftHue, shiftSat, shiftVal);
 	return lerp(albedo, saturate(warpedAlbedo), mask);
 }
 
-void applySpecularGloss(inout SCSS_Input material, float2 uv, float oneMinusOutline)
+void applySpecularGloss(inout SCSS_Input material, float2 uv, half oneMinusOutline)
 {
     half4 specGloss;
 #if defined(_SPECULAR)
@@ -107,7 +107,7 @@ void applySpecularGloss(inout SCSS_Input material, float2 uv, float oneMinusOutl
 half3 NormalInTangentSpace(float2 uv)
 {
 	#if defined(UNITY_STANDARD_BRDF_INCLUDED)
-		float3 normalTangent = UnpackScaleNormal(
+		half3 normalTangent = UnpackScaleNormal(
 			UNITY_SAMPLE_TEX2D_SAMPLER(_BumpMap, _MainTex,
 				uv), _BumpScale);
 	    return normalTangent;
@@ -120,7 +120,7 @@ half3 NormalInTangentSpace(float2 uv)
 SCSS_TonemapInput LightrampTonemap(float2 uv)
 {
 	SCSS_TonemapInput t = (SCSS_TonemapInput)0;
-	float4 _ShadowMask_var = UNITY_SAMPLE_TEX2D_SAMPLER(_ShadowMask, _MainTex, uv.xy);
+	half4 _ShadowMask_var = UNITY_SAMPLE_TEX2D_SAMPLER(_ShadowMask, _MainTex, uv.xy);
 
 	switch (_ShadowMaskType)
 	{
@@ -135,7 +135,7 @@ SCSS_TonemapInput LightrampTonemap(float2 uv)
 			t.bias = _ShadowMaskColor.a*_ShadowMask_var.a;
 			break;
 		case 2: // Auto-Tone
-			float3 albedo = UNITY_SAMPLE_TEX2D(_MainTex, uv);
+			half3 albedo = UNITY_SAMPLE_TEX2D(_MainTex, uv);
 			t.col = saturate(AutoToneMapping(albedo)+_IndirectLightingBoost) * _ShadowMaskColor.rgb;
 			t.bias = _ShadowMaskColor.a*_ShadowMask_var.r;
 			break;
@@ -155,7 +155,7 @@ SCSS_TonemapInput LightrampTonemap(float2 uv)
 // Midpoint/width is handled in the application function.
 SCSS_TonemapInput CrosstoneTonemap1st (float2 uv)
 {
-	float4 tonemap = UNITY_SAMPLE_TEX2D_SAMPLER(_1st_ShadeMap, _MainTex, uv.xy);
+	half4 tonemap = UNITY_SAMPLE_TEX2D_SAMPLER(_1st_ShadeMap, _MainTex, uv.xy);
 	tonemap.rgb = tonemap * _1st_ShadeColor;
 	SCSS_TonemapInput t = (SCSS_TonemapInput)1;
 	t.col = tonemap.rgb;
@@ -166,7 +166,7 @@ SCSS_TonemapInput CrosstoneTonemap1st (float2 uv)
 }
 SCSS_TonemapInput CrosstoneTonemap2nd (float2 uv)
 {
-	float4 tonemap = UNITY_SAMPLE_TEX2D_SAMPLER(_2nd_ShadeMap, _MainTex, uv.xy);
+	half4 tonemap = UNITY_SAMPLE_TEX2D_SAMPLER(_2nd_ShadeMap, _MainTex, uv.xy);
 	tonemap.rgb *= _2nd_ShadeColor;
 	SCSS_TonemapInput t = (SCSS_TonemapInput)1;
 	t.col = tonemap.rgb;
@@ -176,26 +176,26 @@ SCSS_TonemapInput CrosstoneTonemap2nd (float2 uv)
 	return t;
 }
 
-float adjustShadeMap(float x, float y)
+half adjustShadeMap(half x, half y)
 {
 	// Might be changed later.
 	return (x * (1+y));
 }
 
-float CrosstoneShadingGradeMap (float2 uv)
+half CrosstoneShadingGradeMap (float2 uv)
 {
-	float tonemap = UNITY_SAMPLE_TEX2D_SAMPLER(_ShadingGradeMap, _MainTex, uv.xy).r;
+	half tonemap = UNITY_SAMPLE_TEX2D_SAMPLER(_ShadingGradeMap, _MainTex, uv.xy).r;
 	// Red to match UCTS
 	return adjustShadeMap(tonemap, _Tweak_ShadingGradeMapLevel);
 }
 #endif
 
-void applyVertexColour(float4 color, inout SCSS_Input c)
+void applyVertexColour(half4 color, inout SCSS_Input c)
 {
 	// Outline width/etc is passed through extraData, and alpha is passed through alpha.
 	// But if we're in custom data mode, the outline alpha will be in the vertex red channel instead.
-	float vertexAlpha = _VertexColorAType == 5 ? color.a : 1.0;
-	float outlineAlpha = _VertexColorAType == 6 ? color.a : 1.0;
+	half vertexAlpha = _VertexColorAType == 5 ? color.a : 1.0;
+	half outlineAlpha = _VertexColorAType == 6 ? color.a : 1.0;
 	switch (_VertexColorType)
 	{
 		// Color
@@ -228,7 +228,7 @@ void applyVertexColour(float4 color, inout SCSS_Input c)
 	}
 }
 
-float3 applyOutlineColor(float3 col, float3 outlineCol, float is_outline)
+half3 applyOutlineColor(half3 col, half3 outlineCol, half is_outline)
 {
 	#if defined(SCSS_OUTLINE)
 	switch (_OutlineMode)
@@ -249,7 +249,7 @@ float3 applyOutlineColor(float3 col, float3 outlineCol, float is_outline)
 	#endif
 }
 
-float applyOutlineAlpha(float alpha, float outlineAlpha, float is_outline)
+half applyOutlineAlpha(half alpha, half outlineAlpha, half is_outline)
 {
 	#if defined(SCSS_OUTLINE)
 	switch (_OutlineMode)
@@ -270,7 +270,7 @@ float applyOutlineAlpha(float alpha, float outlineAlpha, float is_outline)
 	#endif
 }
 
-void applyOutline(inout SCSS_Input c, float is_outline)
+void applyOutline(inout SCSS_Input c, half is_outline)
 {
 	c.albedo = applyOutlineColor(c.albedo, c.outlineCol, is_outline);
     if (_CrosstoneToneSeparation) c.tone[0].col = applyOutlineColor(c.tone[0].col, c.outlineCol, is_outline);
@@ -278,19 +278,19 @@ void applyOutline(inout SCSS_Input c, float is_outline)
 	c.alpha = applyOutlineAlpha(c.alpha, c.outlineCol.a, is_outline);
 }
 
-void applyFur(inout SCSS_Input material, SCSS_TexCoords tc, float furDepth)
+void applyFur(inout SCSS_Input material, SCSS_TexCoords tc, half furDepth)
 {
 	#if defined(SCSS_FUR)
-	float furNoise = UNITY_SAMPLE_TEX2D_SAMPLER(_FurNoise, _MainTex, applyScaleOffset(tc.uv[0], _FurNoise_ST));
+	half furNoise = UNITY_SAMPLE_TEX2D_SAMPLER(_FurNoise, _MainTex, applyScaleOffset(tc.uv[0], _FurNoise_ST));
 	if (furDepth > 0)
 	{
-		float furFalloff = pow((1.0 - furDepth), abs(_FurThickness));
+		half furFalloff = pow((1.0 - furDepth), abs(_FurThickness));
 		material.alpha = material.alpha * furNoise;
 		// Alpha sharpen is used for the cutoff, but we can use it here too.
 		applyAlphaSharpen(material.alpha, 1.0 - furFalloff);
 	}
 
-	float furAO = depthBlend(furDepth, furNoise);
+	half furAO = depthBlend(furDepth, furNoise);
 	material.albedo *= gtaoMultiBounce(furAO, material.albedo);
 	if (_CrosstoneToneSeparation) material.tone[0].col *= gtaoMultiBounce(furAO, material.tone[0].col);
 	if (_Crosstone2ndSeparation) material.tone[1].col *= gtaoMultiBounce(furAO, material.tone[1].col);
@@ -302,7 +302,7 @@ void applyMaskedDetail (inout SCSS_Input material, SCSS_TexCoords tc)
 {
 	#if defined(_DETAIL)
     {
-        float4 _DetailMask_var = UNITY_SAMPLE_TEX2D_SAMPLER (_DetailAlbedoMask, _MainTex, tc.uv[0]);
+        half4 _DetailMask_var = UNITY_SAMPLE_TEX2D_SAMPLER (_DetailAlbedoMask, _MainTex, tc.uv[0]);
         if (any(_DetailMap1_TexelSize > 4.0)) applyDetail(material, _DetailMap1, applyScaleOffset(tc.uv[_DetailMap1UV], _DetailMap1_ST),
 			_DetailMap1Type, _DetailMap1Blend, _DetailMap1Strength * _DetailMask_var[0]);
         if (any(_DetailMap2_TexelSize > 4.0)) applyDetail(material, _DetailMap2, applyScaleOffset(tc.uv[_DetailMap2UV], _DetailMap2_ST),
@@ -315,7 +315,7 @@ void applyMaskedDetail (inout SCSS_Input material, SCSS_TexCoords tc)
 	#endif
 }
 
-void applyMatcaps(inout float3 albedo, float3 normal, float3 viewDir, float3 bitangentDir, float2 matcapMaskUVs)
+void applyMatcaps(inout half3 albedo, half3 normal, half3 viewDir, half3 bitangentDir, float2 matcapMaskUVs)
 {
 	if (_UseMatcap >= 1)
 	{
@@ -331,7 +331,7 @@ void applyMatcaps(inout float3 albedo, float3 normal, float3 viewDir, float3 bit
 	}
 }
 
-void applyEmission(inout SCSS_Input material, SCSS_TexCoords tc, float outlineDarken, float ndotv)
+void applyEmission(inout SCSS_Input material, SCSS_TexCoords tc, half outlineDarken, half ndotv)
 {
     half3 emission = 1.0;
     half4 emissionDetail = 1.0;
@@ -365,7 +365,7 @@ void applyEmission(inout SCSS_Input material, SCSS_TexCoords tc, float outlineDa
     material.emission += half4(emission, 0.0);
 }
 
-void applyEmission2nd(inout SCSS_Input material, SCSS_TexCoords tc, float outlineDarken, float ndotv)
+void applyEmission2nd(inout SCSS_Input material, SCSS_TexCoords tc, half outlineDarken, half ndotv)
 {
     half3 emission = 1.0;
     half4 emissionDetail = 1.0;
@@ -427,29 +427,30 @@ void applyEmissiveAudioLink(inout SCSS_Input material, SCSS_TexCoords tc)
 #endif
 }
 
-void applyRimLight(inout SCSS_Input material, float NdotH, float rlPow4, float outlineDarken)
+void applyRimLight(inout SCSS_Input material, half NdotH, half rlPow4, half outlineDarken)
 {
 	if (_UseFresnel)
 	{
-		float fresnelLightMaskBase = LerpOneTo_local(NdotH, _UseFresnelLightMask);
-		float fresnelLightMask =
+		half fresnelLightMaskBase = LerpOneTo_local(NdotH, _UseFresnelLightMask);
+		half fresnelLightMask =
 			saturate(pow(saturate( fresnelLightMaskBase), _FresnelLightMask));
-		float fresnelLightMaskInv =
+		half fresnelLightMaskInv =
 			saturate(pow(saturate(-fresnelLightMaskBase), _FresnelLightMask));
 
 		// Refactored to use more ifs because the compiler is smarter than me.
-		float rimBase = sharpenLighting(rlPow4 * material.rim.width * fresnelLightMask, material.rim.power) * material.rim.alpha;
-		float3 rimCol = rimBase * material.rim.tint;
+		half rimBase = sharpenLighting(rlPow4 * material.rim.width * fresnelLightMask, material.rim.power) * material.rim.alpha;
+		half3 rimCol = rimBase * material.rim.tint;
 
-		float rimInv = sharpenLighting(rlPow4 * material.rim.invWidth * fresnelLightMaskInv,
+		half rimInv = sharpenLighting(rlPow4 * material.rim.invWidth * fresnelLightMaskInv,
 			material.rim.invPower) * _FresnelLightMask * material.rim.invAlpha;
-		float3 rimInvCol = rimInv * material.rim.invTint;
+		half3 rimInvCol = rimInv * material.rim.invTint;
 
-		float3 rimFinal = rimCol + rimInvCol;
+		half3 rimFinal = rimCol + rimInvCol;
+		if (1) rimFinal *= material.specColor;
 
-		float applyToAlbedo = (_UseFresnel == 1) + (_UseFresnel == 4);
-		float applyToFinal = (_UseFresnel == 2);
-		float applyToLightBias = (_UseFresnel == 3) + (_UseFresnel == 4);
+		half applyToAlbedo = (_UseFresnel == 1) + (_UseFresnel == 4);
+		half applyToFinal = (_UseFresnel == 2);
+		half applyToLightBias = (_UseFresnel == 3) + (_UseFresnel == 4);
 		// Lit
 		if (applyToAlbedo) material.albedo += material.albedo * rimFinal * outlineDarken;
 		// AmbientAlt
@@ -460,7 +461,7 @@ void applyRimLight(inout SCSS_Input material, float NdotH, float rlPow4, float o
 	}
 }
 
-void applyHatching(inout SCSS_Input material, float3 viewDir, float3 worldPos)
+void applyHatching(inout SCSS_Input material, half3 viewDir, float3 worldPos)
 {
 	#if defined(_HATCHING)
 	float4 baseWorldPos = mul(unity_ObjectToWorld,float4( 0,0,0,1 ));
@@ -471,7 +472,7 @@ void applyHatching(inout SCSS_Input material, float3 viewDir, float3 worldPos)
 
 	float3 hatchingPos = _HatchingScale * viewDir * floor( distance( baseWorldPos , float4( _WorldSpaceCameraPos , 0.0 ) ) );
 
-	float4 hatchingTex = SampleTexture2DBiplanar(_HatchingTex, hatchingOffset+hatchingPos, viewDir, 16.0);
+	half4 hatchingTex = SampleTexture2DBiplanar(_HatchingTex, hatchingOffset+hatchingPos, viewDir, 16.0);
 
 	material.occlusion = material.occlusion * LerpWhiteTo_local(hatchingTex.g, _HatchingShadingMul) + (hatchingTex.g * _HatchingShadingAdd);
 	material.rim.width *= 1 + (hatchingTex.g * _HatchingRimAdd * 10);
@@ -482,7 +483,7 @@ void applyHatching(inout SCSS_Input material, float3 viewDir, float3 worldPos)
 #include "SCSS_Lighting.cginc"
 
 inline SCSS_Input MaterialSetup(SCSS_TexCoords tc,
-	float4 i_color, float4 i_extraData, float p_isOutline, float p_furDepth, uint facing)
+	half4 i_color, half4 i_extraData, half p_isOutline, half p_furDepth, uint facing)
 {
 	SCSS_Input material = (SCSS_Input)0;
 	initMaterial(material);
@@ -496,16 +497,16 @@ inline SCSS_Input MaterialSetup(SCSS_TexCoords tc,
     half outlineDarken = 1-p_isOutline;
 
 	// Setup albedo
-	float4 mainTex = UNITY_SAMPLE_TEX2D (_MainTex, mainUVs);
+	half4 mainTex = UNITY_SAMPLE_TEX2D (_MainTex, mainUVs);
 	#if defined(_BACKFACE)
 		if (!facing) mainTex = UNITY_SAMPLE_TEX2D_SAMPLER (_MainTexBackface, _MainTex, mainUVs);
 	#endif
 	material.albedo = mainTex.rgb;
 
 	#if defined(_BACKFACE)
-	float4 tintColorAlpha = facing? _Color : _ColorBackface;
+	half4 tintColorAlpha = facing? _Color : _ColorBackface;
 	#else
-	float4 tintColorAlpha = _Color;
+	half4 tintColorAlpha = _Color;
 	#endif
 
 	// Setup alpha
@@ -517,13 +518,13 @@ inline SCSS_Input MaterialSetup(SCSS_TexCoords tc,
 	}
 
 	// Workaround for Unity's bad BC7 texture encoding that makes opaque areas slightly transparent
-	const float alphaFix = 1.0 / ((255.0 - 8.0)/255.0);
+	const half alphaFix = 1.0 / ((255.0 - 8.0)/255.0);
 	material.alpha = saturate(material.alpha * alphaFix);
 
 	// Setup misc. masks
-	float4 colorMaskTex = UNITY_SAMPLE_TEX2D_SAMPLER (_ColorMask, _MainTex, mainUVs);
-	float tintMask = colorMaskTex.g;
-	float rimMask = colorMaskTex.b;
+	half4 colorMaskTex = UNITY_SAMPLE_TEX2D_SAMPLER (_ColorMask, _MainTex, mainUVs);
+	half tintMask = colorMaskTex.g;
+	half rimMask = colorMaskTex.b;
 
 	// Setup normal map
     material.normalTangent = NormalInTangentSpace(mainUVs);
@@ -549,16 +550,16 @@ inline SCSS_Input MaterialSetup(SCSS_TexCoords tc,
 		#define SDF_SOURCE _ShadowMask
 		#endif
 		case 1:
-		float sdfL = UNITY_SAMPLE_TEX2D_SAMPLER(SDF_SOURCE, _MainTex, mainUVs).r;
-		float sdfR = UNITY_SAMPLE_TEX2D_SAMPLER(SDF_SOURCE, _MainTex, mainUVs * float2(-1, 1)).r;
-		material.sdf = float2(sdfL, sdfR);
+		half sdfL = UNITY_SAMPLE_TEX2D_SAMPLER(SDF_SOURCE, _MainTex, mainUVs).r;
+		half sdfR = UNITY_SAMPLE_TEX2D_SAMPLER(SDF_SOURCE, _MainTex, mainUVs * half2(-1, 1)).r;
+		material.sdf = half2(sdfL, sdfR);
 		material.occlusion = 1.0;
 		material.sdfSmoothness = _SDFSmoothness;
 		material.sdfMask = 0;
 		break;
 
 		case 2:
-		float4 sdfMaskTex = UNITY_SAMPLE_TEX2D_SAMPLER(SDF_SOURCE, _MainTex, mainUVs);
+		half4 sdfMaskTex = UNITY_SAMPLE_TEX2D_SAMPLER(SDF_SOURCE, _MainTex, mainUVs);
 		material.sdf = sdfMaskTex.rg;
 		material.occlusion = 1.0;
 		material.sdfSmoothness = _SDFSmoothness;
@@ -608,18 +609,19 @@ inline SCSS_Input MaterialSetup(SCSS_TexCoords tc,
 #if !defined(UNITY_PASS_SHADOWCASTER)
 inline void MaterialSetupPostParams(inout SCSS_Input material, SCSS_ShadingParam p, SCSS_TexCoords tc)
 {
+    material.occlusion = SpecularAO_Lagarde(p.NoV, material.occlusion, 1.0 - material.smoothness);
 	// Local light parameters. These are a bit redundant, but maybe there's a way to clean them out.
 
 	// Darken some effects on outlines.
 	// Note that MSAA means this isn't a strictly binary thing.
     half outlineDarken = 1-p.isOutline;
 
-	SCSS_Light l = MainLight(p.position.xyz);
-	SCSS_LightParam d = initialiseLightParam(l, p);
+    // Todo: This is only used for NdotV and NdotH, passing no light seems a bit weird.
+	SCSS_LightParam d = initialiseLightParam((CompatLight)0, p);
 
 	// Todo: Clean this up
-	float rlPow4 = Pow4(1 - p.NoV);
-	float3 bitangentDir = p.tangentToWorld[1].xyz;
+	half rlPow4 = Pow4(1 - p.NoV);
+	half3 bitangentDir = p.tangentToWorld[1].xyz;
 
 	applyEmission(material, tc, outlineDarken, d.NdotV);
 	applyEmission2nd(material, tc, outlineDarken, d.NdotV);
@@ -627,7 +629,7 @@ inline void MaterialSetupPostParams(inout SCSS_Input material, SCSS_ShadingParam
 
 	#if defined(_SPECULAR)
 	{
-		float4 specIrid = Iridescence(p.NoV, 0);
+		half4 specIrid = Iridescence(p.NoV, 0);
 		material.specColor *= specIrid;
 		// This looks ugly, but it's useful
 		material.albedo *= lerp(specIrid.a, 1.0, material.oneMinusReflectivity);
@@ -643,7 +645,7 @@ inline void MaterialSetupPostParams(inout SCSS_Input material, SCSS_ShadingParam
 	applyMatcaps(material.albedo, p.normal, p.view, bitangentDir, tc.uv[0]);
 }
 
-float4 frag(VertexOutput i, uint facing : SV_IsFrontFace
+half4 frag(VertexOutput i, uint facing : SV_IsFrontFace
     #if defined(USING_COVERAGE_OUTPUT)
 	, out uint cov : SV_Coverage
 	#endif
@@ -698,12 +700,12 @@ float4 frag(VertexOutput i, uint facing : SV_IsFrontFace
         /*out*/ outputAlpha);
 
 	// Lighting handling
-	float3 finalColor = SCSS_ApplyLighting(material, p);
+	half3 finalColor = SCSS_ApplyLighting(material, p);
 
 	// Workaround a compiler issue when albedo is not needed but its sampler is.
 	finalColor += material.albedo * FLT_EPS;
 
-	float4 nearShading = getNearShading(i.worldPos.xyz, facing);
+	half4 nearShading = getNearShading(i.worldPos.xyz, facing);
 	finalColor.rgb = lerp(finalColor, nearShading.rgb, nearShading.a);
 
     #if defined(USING_COVERAGE_OUTPUT)
@@ -721,10 +723,10 @@ float4 frag(VertexOutput i, uint facing : SV_IsFrontFace
 		outputAlpha = 1;
 	#endif
 
-	fixed4 finalRGBA = fixed4(finalColor, outputAlpha);
+	half4 finalRGBA = half4(finalColor, outputAlpha);
 
 	#if defined(SCSS_USE_UNITY_FOG)
-	applyUnityFog(finalRGBA, UNITY_Z_0_FAR_FROM_CLIPSPACE(i.worldPos.w));
+	applyUnityFog(finalRGBA, i.worldPos.w);
 	#endif
 
 	return finalRGBA;
