@@ -37,6 +37,68 @@
 #endif
 
 // --------------------------------------------------------------------------
+// Helpers (Available to shaders, but NOT used by the API below)
+// --------------------------------------------------------------------------
+
+// bgolus's method for "fixing" screen space directional shadows and anti-aliasing
+// https://forum.unity.com/threads/fixing-screen-space-directional-shadows-and-anti-aliasing.379902/
+// Searches the depth buffer for the depth closest to the current fragment to sample the shadow from.
+// This reduces the visible aliasing.
+
+void correctedScreenShadowsForMSAA(float4 _ShadowCoord, inout float shadow)
+{
+    #ifdef SHADOWS_SCREEN
+    #ifdef SHADOWMAPSAMPLER_AND_TEXELSIZE_DEFINED
+
+    float2 screenUV = _ShadowCoord.xy / _ShadowCoord.w;
+    shadow = tex2D(_ShadowMapTexture, screenUV).r;
+
+    float fragDepth = _ShadowCoord.z / _ShadowCoord.w;
+    float depth_raw = tex2D(_CameraDepthTexture, screenUV).r;
+
+    float depthDiff = abs(fragDepth - depth_raw);
+    float diffTest = 1.0 / 100000.0;
+
+    if (depthDiff > diffTest)
+    {
+        float2 texelSize = _CameraDepthTexture_TexelSize.xy;
+        float4 offsetDepths = 0;
+
+        float2 uvOffsets[5] = {
+            float2(1.0, 0.0) * texelSize,
+            float2(-1.0, 0.0) * texelSize,
+            float2(0.0, 1.0) * texelSize,
+            float2(0.0, -1.0) * texelSize,
+            float2(0.0, 0.0)
+        };
+
+        offsetDepths.x = tex2D(_CameraDepthTexture, screenUV + uvOffsets[0]).r;
+        offsetDepths.y = tex2D(_CameraDepthTexture, screenUV + uvOffsets[1]).r;
+        offsetDepths.z = tex2D(_CameraDepthTexture, screenUV + uvOffsets[2]).r;
+        offsetDepths.w = tex2D(_CameraDepthTexture, screenUV + uvOffsets[3]).r;
+
+        float4 offsetDiffs = abs(fragDepth - offsetDepths);
+
+        float diffs[4] = {offsetDiffs.x, offsetDiffs.y, offsetDiffs.z, offsetDiffs.w};
+
+        int lowest = 4;
+        float tempDiff = depthDiff;
+        for (int i=0; i<4; i++)
+        {
+            if(diffs[i] < tempDiff)
+            {
+                tempDiff = diffs[i];
+                lowest = i;
+            }
+        }
+
+        shadow = tex2D(_ShadowMapTexture, screenUV + uvOffsets[lowest]).r;
+    }
+    #endif //SHADOWMAPSAMPLER_AND_TEXELSIZE_DEFINED
+    #endif //SHADOWS_SCREEN
+}
+
+// --------------------------------------------------------------------------
 // Implementation
 // --------------------------------------------------------------------------
 
