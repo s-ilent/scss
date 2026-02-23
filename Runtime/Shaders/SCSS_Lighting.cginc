@@ -500,10 +500,10 @@ half3 AutoToneMapping(half3 color)
 }
 
 // Maps an index 0-5 to the primary cardinal axes
-half3 GetCardinal(int i)
+half3 GetCardinal(uint i)
 {
     // Cycle through 0 to 5 to prevent out-of-bounds
-    int index = i % 6;
+    uint index = i % 6;
 
     // Define the 6 cardinal directions
     static const half3 directions[6] = {
