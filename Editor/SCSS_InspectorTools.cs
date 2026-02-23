@@ -8,7 +8,7 @@ using Object = UnityEngine.Object;
 using System.Linq;
 
 // Parts of this file are based on https://github.com/Microsoft/MixedRealityToolkit-Unity/
-// licensed under the MIT license. 
+// licensed under the MIT license.
 
 namespace SilentCelShading.Unity
 {
@@ -30,12 +30,13 @@ namespace SilentCelShading.Unity
 
 		public enum SpecularType
 		{
-			Disable,
-			Standard,
-			Cloth,
-			Anisotropic,
-			Cel,
-			CelStrand
+			Disable = 0,
+			Standard = 1,
+			Cloth = 2,
+			Anisotropic = 3,
+			Cel = 4,
+			CelStrand = 5,
+			Glinty = 6
 		}
 
 		public enum LightingCalculationType
@@ -43,7 +44,7 @@ namespace SilentCelShading.Unity
 			Unbiased = 0,
 			Standard = 1,
 			Cubed = 2,
-			Directional = 3, 
+			Directional = 3,
 			Biased = 4
 		}
 
@@ -112,7 +113,7 @@ namespace SilentCelShading.Unity
 			if (inspectorLanguageSetting == null)
 			{
 				inspectorLanguage = Application.systemLanguage;
-			} 
+			}
 			// Load editor language
 			else
 			{
@@ -140,15 +141,15 @@ namespace SilentCelShading.Unity
 				string[] records = inspectorData.text.Split(recordSep, System.StringSplitOptions.RemoveEmptyEntries);
 				foreach (string record in records)
 				{
-					string[] fields = record.Split(fieldSep, 3, System.StringSplitOptions.None); 
+					string[] fields = record.Split(fieldSep, 3, System.StringSplitOptions.None);
 					if (fields.Length != 3) {Debug.LogWarning("Field " + fields[0] + " only has " + fields.Length + " fields!");};
-					if (fields[0] != null) styles[fields[0]] = new GUIContent(fields[1], fields[2]);  
-					
-				}	
-			}		
+					if (fields[0] != null) styles[fields[0]] = new GUIContent(fields[1], fields[2]);
+
+				}
+			}
 		}
 
-		// Selectable languages 
+		// Selectable languages
 		public enum InspectorLanguageSelection
 		{
 			English, 日本語
@@ -176,7 +177,7 @@ namespace SilentCelShading.Unity
 			LoadInspectorData();
 
 		}
-		
+
 		public static void DrawInspectorLanguageDropdown()
 		{
 			InspectorLanguageSelection selectedLanguage = InspectorLanguageSelection.English;
@@ -184,14 +185,14 @@ namespace SilentCelShading.Unity
 			switch(inspectorLanguage)
 			{
 				case SystemLanguage.English:
-					selectedLanguage = InspectorLanguageSelection.English; 
-					break; 
+					selectedLanguage = InspectorLanguageSelection.English;
+					break;
 				case SystemLanguage.Japanese:
 					selectedLanguage = InspectorLanguageSelection.日本語;
 					break;
 			}
 
-			if (WithChangeCheck(() => 
+			if (WithChangeCheck(() =>
 			{
             	selectedLanguage = (InspectorLanguageSelection)EditorGUILayout.EnumPopup("Language", selectedLanguage);
 			}))
@@ -199,7 +200,7 @@ namespace SilentCelShading.Unity
 				UpdateInspectorLanguage(selectedLanguage);
 			}
 		}
-		
+
         internal static bool ButtonWithDropdownList(GUIContent content, string[] buttonNames, GenericMenu.MenuFunction2 callback) {
             var style = new GUIStyle("DropDownButton");
             var rect = GUILayoutUtility.GetRect(content, style);
@@ -284,7 +285,7 @@ namespace SilentCelShading.Unity
 			return new Material[0];
 
 		}
-		
+
 		public static Material[] WithMaterialPropertyDropdownNoLabel(MaterialProperty prop, string[] options, MaterialEditor editor)
 		{
 			int selection = (int)prop.floatValue;
@@ -301,7 +302,7 @@ namespace SilentCelShading.Unity
 			return new Material[0];
 
 		}
-		
+
 		protected float? GetSerializedMaterialFloat(Material material, string propName)
 		{
 			float? floatVal = new SerializedObject(material).FindProperty("m_SavedProperties.m_Floats." + propName).floatValue;

@@ -944,7 +944,15 @@ namespace SilentCelShading.Unity
                             ph.ShaderProperty("_Anisotropy");
                             ph.ShaderProperty("_UseEnergyConservation");
                             break;
+                        case SpecularType.Glinty:
+                            ph.ShaderProperty("_Smoothness");
+                            ph.ShaderProperty("_Anisotropy");
+                            ph.ShaderProperty("_SpecularGlintSize");
+                            ph.ShaderProperty("_SpecularGlintDensity");
+                            ph.ShaderProperty("_UseEnergyConservation");
+                            break;
                         case SpecularType.Disable:
+                            break;
                         default:
                             break;
                     }
@@ -1997,37 +2005,39 @@ namespace SilentCelShading.Unity
             // It's only a coincidence that the metallic map needs to be present.
             // Note: _SPECGLOSSMAP is used to switch to a version that doesn't sample
             // reflection probes.
+            //
+            material.DisableKeyword("_METALLICGLOSSMAP");
+            material.DisableKeyword("_SPECGLOSSMAP");
+            material.DisableKeyword("_SPEC_GLINTY");
+
             switch ((SpecularType)material.GetFloat("_SpecularType"))
             {
                 case SpecularType.Standard:
                     material.SetFloat("_SpecularType", 1);
                     material.EnableKeyword("_METALLICGLOSSMAP");
-                    material.DisableKeyword("_SPECGLOSSMAP");
                     break;
                 case SpecularType.Cloth:
                     material.SetFloat("_SpecularType", 2);
                     material.EnableKeyword("_METALLICGLOSSMAP");
-                    material.DisableKeyword("_SPECGLOSSMAP");
                     break;
                 case SpecularType.Anisotropic:
                     material.SetFloat("_SpecularType", 3);
                     material.EnableKeyword("_METALLICGLOSSMAP");
-                    material.DisableKeyword("_SPECGLOSSMAP");
                     break;
                 case SpecularType.Cel:
                     material.SetFloat("_SpecularType", 4);
                     material.EnableKeyword("_SPECGLOSSMAP");
-                    material.DisableKeyword("_METALLICGLOSSMAP");
                     break;
                 case SpecularType.CelStrand:
                     material.SetFloat("_SpecularType", 5);
                     material.EnableKeyword("_SPECGLOSSMAP");
-                    material.DisableKeyword("_METALLICGLOSSMAP");
+                    break;
+                case SpecularType.Glinty:
+                    material.SetFloat("_SpecularType", 6);
+                    material.EnableKeyword("_SPEC_GLINTY");
                     break;
                 case SpecularType.Disable:
                     material.SetFloat("_SpecularType", 0);
-                    material.DisableKeyword("_METALLICGLOSSMAP");
-                    material.DisableKeyword("_SPECGLOSSMAP");
                     break;
                 default:
                     break;

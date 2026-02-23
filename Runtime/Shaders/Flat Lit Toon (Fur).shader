@@ -83,6 +83,8 @@ Shader "Silent's Cel Shading/Lightramp (Fur)"
 		_CelSpecularSoftness ("Softness", Range(1, 0)) = 0.02
 		_CelSpecularSteps("Steps", Range(1, 4)) = 1
 		_Anisotropy("Anisotropy", Range(-1,1)) = 0.8
+		_SpecularGlintSize("Glint Size", Range(0, 1)) = 0.5
+		_SpecularGlintDensity("Glint Density", Range(0, 1)) = 0.5
 		_SpecIridescenceRamp ("Iridescence Ramp", 2D) = "white" {}
 		//[Space]
 		[Enum(MatcapType)]_UseMatcap ("Matcap Type", Float) = 0.0
@@ -344,7 +346,7 @@ Shader "Silent's Cel Shading/Lightramp (Fur)"
 
         CGINCLUDE
 		#pragma target 5.0
-		#pragma shader_feature _ _ALPHATEST_ON _ALPHABLEND_ON _ALPHAPREMULTIPLY_ON
+		#pragma shader_feature_fragment _ _ALPHATEST_ON _ALPHABLEND_ON _ALPHAPREMULTIPLY_ON
 		#pragma shader_feature_local_vertex _ FOG_EXP FOG_EXP2 FOG_LINEAR
         #pragma multi_compile_instancing
         #pragma skip_variants DYNAMICLIGHTMAP_ON LIGHTMAP_ON LIGHTMAP_SHADOW_MIXING DIRLIGHTMAP_COMBINED SHADOWS_SHADOWMASK
@@ -376,7 +378,7 @@ Shader "Silent's Cel Shading/Lightramp (Fur)"
 			#pragma shader_feature_local_fragment _EMISSION_2ND
 
 			#pragma shader_feature_local_fragment _DETAIL_MULX2
-			#pragma shader_feature_local _ _METALLICGLOSSMAP _SPECGLOSSMAP
+			#pragma shader_feature_local_fragment _ _METALLICGLOSSMAP _SPECGLOSSMAP _SPEC_GLINTY
 			#pragma shader_feature_local_fragment _SUNDISK_NONE
 			#pragma shader_feature_local_fragment _BACKFACE
 			#pragma shader_feature_local_fragment _AUDIOLINK
@@ -413,7 +415,7 @@ Shader "Silent's Cel Shading/Lightramp (Fur)"
 			#pragma multi_compile_fragment _ UNITY_HDR_ON
 
 			#pragma shader_feature_local_fragment _DETAIL_MULX2
-			#pragma shader_feature_local _ _METALLICGLOSSMAP _SPECGLOSSMAP
+			#pragma shader_feature_local_fragment _ _METALLICGLOSSMAP _SPECGLOSSMAP _SPEC_GLINTY
 			#pragma shader_feature_local_fragment _SUNDISK_NONE
 			#pragma shader_feature_local_fragment _BACKFACE
 			#pragma shader_feature_local_fragment _CONTACTSHADOWS
@@ -448,7 +450,7 @@ Shader "Silent's Cel Shading/Lightramp (Fur)"
 
 			#pragma multi_compile_shadowcaster
 
-			#pragma shader_feature_local _ _METALLICGLOSSMAP _SPECGLOSSMAP
+			#pragma shader_feature_local_fragment _ _METALLICGLOSSMAP _SPECGLOSSMAP _SPEC_GLINTY
 
 			#include "SCSS_Shadows.cginc"
 

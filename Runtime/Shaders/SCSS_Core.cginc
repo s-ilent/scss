@@ -11,6 +11,7 @@
 #include "SCSS_Config.cginc"
 #include "SCSS_UnityGI.cginc"
 #include "SCSS_Utils.cginc"
+#include "SCSS_BRDF_Glint.cginc"
 #include "SCSS_Attributes.cginc"
 #include "SCSS_Input.cginc"
 #include "SCSS_Lighting.cginc"
@@ -192,19 +193,16 @@ half3 getDirectSpecular(SCSS_Input c, SCSS_ShadingParam p, SCSS_LightParam d, Co
 
     half specularTerm = 0;
 
+    half roughness = PerceptualRoughnessToRoughness(c.perceptualRoughness);
+    roughness = max(roughness, 0.002);
+
     // PBR Specular (GGX, Anisotropic, Cloth)
     #if defined(_METALLICGLOSSMAP)
-        half roughness = PerceptualRoughnessToRoughness(c.perceptualRoughness);
-        roughness = max(roughness, 0.002);
-
         d = saturate(d);
 
         half V = 0;
         half D = 0;
 
-        #ifdef SCSS_HLSL_COMPAT
-        [call]
-        #endif
         switch((int)_SpecularType)
         {
         case 1: // GGX
@@ -222,10 +220,10 @@ half3 getDirectSpecular(SCSS_Input c, SCSS_ShadingParam p, SCSS_LightParam d, Co
             half at = max(roughness * (1.0 + anisotropy), 0.002);
             half ab = max(roughness * (1.0 - anisotropy), 0.002);
 
-            half3 t = p.tangentToWorld[0];
-            half3 b = p.tangentToWorld[1];
-
             // Todo: Move to d?
+            const half3 t = p.tangentToWorld[0];
+            const half3 b = p.tangentToWorld[1];
+
             half ToH = dot(t, d.halfDir);
             half BoH = dot(b, d.halfDir);
 
@@ -271,6 +269,39 @@ half3 getDirectSpecular(SCSS_Input c, SCSS_ShadingParam p, SCSS_LightParam d, Co
 
         return specularTerm * c.specColor * l.color * attenuation * _SpecularHighlights;
     #endif
+
+    #if defined(_SPEC_GLINTY)
+        d = saturate(d);
+
+        half V = 0;
+        half D = 0;
+
+        half2x2 jacobian = half2x2(ddx(p.uv.xy), ddy(p.uv.xy));
+        half2x2 uv_ellipsoid = get_uv_ellipsoid(jacobian);
+
+        // H in tangent-space
+        half3 tangentH = mul(d.halfDir, p.tangentToWorld);
+
+        // 0.001 to 0.1
+        half internal_glint_alpha = lerp(0.001, 0.1, _SpecularGlintSize * _SpecularGlintSize);
+
+        // 0 maps to 10^3 (1,000) particles
+        // 1 maps to 10^9 (1,000,000,000) particles
+        half internal_density = pow(10.0, lerp(3.0, 9.0, _SpecularGlintDensity));
+
+        const half filter_size = 0.8;
+
+        V = V_SmithGGXCorrelated(roughness, d.NdotV, d.NdotL);
+        D = EvaluateGlintyNDF(tangentH, roughness, internal_glint_alpha,
+            p.uv.xy, uv_ellipsoid,
+            internal_density, filter_size
+        );
+
+        specularTerm = V * D * UNITY_PI; // Torrance-Sparrow
+        specularTerm = max(0, specularTerm * d.NdotL);
+
+        return specularTerm * l.color * attenuation * FresnelTerm(c.specColor, d.LdotH) * _SpecularHighlights;
+    #endif // _SPEC_GLINTY
 
     return 0.0;
 }
@@ -334,7 +365,7 @@ half3 SCSS_ShadeBase(const SCSS_Input c, const SCSS_ShadingParam p, CompatLight 
 				1.0, c.thickness) * c.albedo;
 		#endif
 
-		#if (defined(_METALLICGLOSSMAP) || defined(_SPECGLOSSMAP))
+		#if (defined(_SPECULAR))
 		half3 indirectSpecular = CGetIndirectSpecular(d.reflDir, p.position, p.normalizedViewportCoord, c.perceptualRoughness, c.occlusion);
 		half3 directSpec   = getDirectSpecular(c, p, fD, fL, 1.0);
         half3 indirectSpec = getIndirectSpecular(c, p, d, indirectSpecular);
@@ -377,7 +408,7 @@ half3 SCSS_ShadeLight(const SCSS_Input c, const SCSS_ShadingParam p, const Compa
 			totalAtten, c.thickness);
 		#endif
 
-		#if (defined(_METALLICGLOSSMAP) || defined(_SPECGLOSSMAP))
+		#if (defined(_SPECULAR))
         half3 directSpec   = getDirectSpecular(c, p, d, l, totalAtten);
         finalColor += directSpec;
         #endif

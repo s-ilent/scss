@@ -12,7 +12,7 @@
     #define _DETAIL
 #endif
 
-#if (defined(_METALLICGLOSSMAP) || defined(_SPECGLOSSMAP))
+#if (defined(_METALLICGLOSSMAP) || defined(_SPECGLOSSMAP) || defined(_SPEC_GLINTY))
 	#define _SPECULAR
 #else
 	#define _SPECULARHIGHLIGHTS_OFF
@@ -116,8 +116,10 @@ uniform half _UseEnergyConservation;
 uniform half _Anisotropy;
 uniform half _CelSpecularSoftness;
 uniform half _CelSpecularSteps;
-uniform fixed _SpecularHighlights;
-uniform fixed _GlossyReflections;
+uniform half _SpecularGlintSize;
+uniform half _SpecularGlintDensity;
+uniform bool _SpecularHighlights;
+uniform bool _GlossyReflections;
 UNITY_DECLARE_TEX2D_NOSAMPLER(_SpecIridescenceRamp);
 uniform half4 _SpecIridescenceRamp_TexelSize;
 #else
@@ -507,13 +509,13 @@ struct SCSS_ShadingParam
     half NoV;                // dot(normal, view), always strictly >= MIN_N_DOT_V
 
     half2 normalizedViewportCoord;
+    half4 uv;
 	#if (defined(LIGHTMAP_ON) || defined(DYNAMICLIGHTMAP_ON))
     	half4 lightmapUV;
     #endif
     half attenuation;
     half isOutline;
 	half furDepth;
-    half3 ambient;
 };
 
 void computeShadingParams (inout SCSS_ShadingParam shading, VertexOutput i, bool frontFacing)
@@ -547,6 +549,8 @@ void computeShadingParams (inout SCSS_ShadingParam shading, VertexOutput i, bool
 	#else
 		shading.furDepth = false;
 	#endif
+
+	shading.uv = i.uvPack0;
 
     #if (defined(LIGHTMAP_ON) || defined(DYNAMICLIGHTMAP_ON))
     	half2 lightmapUV = i.uvPack0.zw * unity_LightmapST.xy + unity_LightmapST.zw;
