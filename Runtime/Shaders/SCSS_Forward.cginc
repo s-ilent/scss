@@ -589,10 +589,6 @@ inline SCSS_Input MaterialSetup(SCSS_TexCoords tc,
 	material.softness *= i_extraData.g;
 	material.occlusion *= i_extraData.a;
 
-	applyOutline(material, p_isOutline);
-
-	applyFur(material, tc, p_furDepth);
-
     // Rim lighting parameters.
 	material.rim = initialiseRimParam();
 	material.rim.alpha *= rimMask;
@@ -602,6 +598,10 @@ inline SCSS_Input MaterialSetup(SCSS_TexCoords tc,
 	applySpecularGloss(material, tc.uv[0], outlineDarken);
 
 	applyMaskedDetail(material, tc);
+
+	applyOutline(material, p_isOutline);
+
+	applyFur(material, tc, p_furDepth);
 
 	return material;
 }
