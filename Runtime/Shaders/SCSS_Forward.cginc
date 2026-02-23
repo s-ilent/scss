@@ -446,7 +446,7 @@ void applyRimLight(inout SCSS_Input material, half NdotH, half rlPow4, half outl
 		half3 rimInvCol = rimInv * material.rim.invTint;
 
 		half3 rimFinal = rimCol + rimInvCol;
-		if (1) rimFinal *= material.specColor;
+		// if (1) rimFinal *= material.specColor;
 
 		half applyToAlbedo = (_UseFresnel == 1) + (_UseFresnel == 4);
 		half applyToFinal = (_UseFresnel == 2);
