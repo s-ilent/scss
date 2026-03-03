@@ -362,21 +362,38 @@ half3 SCSS_ShadeBase(const SCSS_Input c, const SCSS_ShadingParam p, CompatLight 
 	if (p.isOutline <= 0)
 	{
 		#if defined(_SUBSURFACE)
-			#if defined(USING_DIRECTIONAL_LIGHT)
-			finalColor += getSubsurfaceScatteringLight(l, p.normal, p.view,
-				totalShadow, c.thickness) * c.albedo;
-			#endif
-		finalColor += getSubsurfaceScatteringLight(iL, p.normal, p.view,
-				1.0, c.thickness) * c.albedo;
+		half3 sssContrib = 0;
+		#if defined(USING_DIRECTIONAL_LIGHT)
+		sssContrib += getSubsurfaceScatteringLight(l, p.normal, p.view, totalShadow, c.thickness);
+		#endif
+		sssContrib += getSubsurfaceScatteringLight(iL, p.normal, p.view, 1.0, c.thickness);
+		finalColor += sssContrib * c.albedo;
 		#endif
 
-		#if (defined(_SPECULAR))
-		half3 indirectSpecular = CGetIndirectSpecular(d.reflDir, p.position, p.normalizedViewportCoord, c.perceptualRoughness, c.occlusion);
+		#if defined(_SPECULAR)
+        half3 reflDir = d.reflDir;
+        half roughness = PerceptualRoughnessToRoughness(c.perceptualRoughness);
+        roughness = max(roughness, 0.002);
+
+        if ((int)_SpecularType == 3)
+        {
+            half3  anisoDir   = p.anisotropy >= 0.0 ? p.anisotropicB : p.anisotropicT;
+            half3  anisoTan   = cross(anisoDir, p.view);
+            half3  anisoNrm   = cross(anisoTan, anisoDir);
+            half   bendFactor = abs(p.anisotropy) * saturate(5.0 * c.perceptualRoughness);
+            half3  bentNormal = normalize(lerp(p.normal, anisoNrm, bendFactor));
+
+            reflDir = reflect(-p.view, bentNormal);
+        }
+        reflDir = getSpecularDominantDirection(p.normal, reflDir, roughness);
+
+		half3 indirectSpecular = CGetIndirectSpecular(reflDir, p.position, p.normalizedViewportCoord, c.perceptualRoughness, c.occlusion);
 		half3 directSpec   = getDirectSpecular(c, p, fD, fL, 1.0);
         half3 indirectSpec = getIndirectSpecular(c, p, d, indirectSpecular);
         finalColor += directSpec + indirectSpec;
         #endif
     };
+
 
     return finalColor;
 }
