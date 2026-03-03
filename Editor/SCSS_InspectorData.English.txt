@@ -31,6 +31,8 @@ _CelSpecularSoftness	Softness	Sets the softness of the falloff of cel specular h
 _CelSpecularSteps	Steps	Sets the number of steps in cel specular highlights.
 _UseIridescenceRamp	Iridescent Specular	Applies an iridescence effect on specular reflections.
 _SpecIridescenceRamp	Iridescence Ramp	Controls the color variation of the iridescence effect based on the viewing angle. 
+_SpecularGlintSize	Glint Size	Controls the sharpness of individual sparkles. Lower values result in tiny glints, while higher values make the sparkles appear larger and more diffused.
+_SpecularGlintDensity	Glint Density	Sets the concentration of glint particles. Lower values create a sparse, scattered sparkle effect (like snow or coarse glitter), while higher values result in a dense, shimmering field (like metallic car paint or polished granite).
 _UseFresnel	Rim Lighting Style	Applies a customisable rim lighting effect.
 _FresnelWidth	Rim Width	Sets the width of the rim lighting.
 _FresnelStrength	Rim Softness	Sets the sharpness of the rim edge.
