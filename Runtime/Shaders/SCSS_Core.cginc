@@ -245,11 +245,12 @@ half3 getDirectSpecular(SCSS_Input c, SCSS_ShadingParam p, SCSS_LightParam d, Co
 
         if (_SpecularType == 4) // Cel Standard
         {
-            half spec = max(d.NdotH, 0);
-            spec = pow(spec, c.smoothness * 40.0) * _CelSpecularSteps;
+            half specMask = sharpenLighting(saturate(d.NdotH), _CelSpecularSoftness);
+            half spec = 0.5 * d.NdotH + 0.5;
+            spec = pow(spec, max(c.smoothness * 80.0, 0.02)) * _CelSpecularSteps;
             spec = sharpenLighting(frac(spec), _CelSpecularSoftness) + floor(spec);
             spec = max(0.02, spec);
-            specularTerm = spec * UNITY_PI * rcp(_CelSpecularSteps);
+            specularTerm = spec * UNITY_PI * rcp(_CelSpecularSteps) * specMask;
         }
         else if (_SpecularType == 5) // Cel Strand (Hair)
         {
