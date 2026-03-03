@@ -52,6 +52,7 @@ half setupPackedFogData_geom(half clipPosZ, half fogTypeID)
     // Store fog value mapped to 0..1 range.
 	half outFog = UNITY_Z_0_FAR_FROM_CLIPSPACE(clipPosZ) / (_ProjectionParams.z + 32.0);
 
+	// Indicates no fog.;
 	if (fogTypeID == 65504.0) return 0;
 
 	return outFog + fogTypeID;
@@ -215,6 +216,8 @@ VertexOutput vert(appdata_full_local v) {
 	o.tangentToWorldAndPackedData[2].w = outlineDir.z;
 
 	#if defined(SCSS_OUTLINE)
+	o.extraData.z *= (1 - _OutlineZPush * 0.1); // Apply outline push parameter.
+
 	#if defined(SCSS_USE_OUTLINE_TEXTURE)
 	// Calculate the transformed texture coordinates so that the
 	// outline mask matches with the scale/offset of the main texture.
@@ -222,8 +225,7 @@ VertexOutput vert(appdata_full_local v) {
 	o.extraData.x *= OutlineMask(outlineUVs);
 	#endif
 
-	o.extraData.x *= _outline_width * .01; // Apply outline width and convert to cm
-	o.extraData.z *= (1 - _OutlineZPush * 0.1); // Apply outline push parameter.
+	o.extraData.x *= _outline_width * 0.01; // Apply outline width and convert to cm
 
 	// Scale outlines relative to the distance from the camera. Outlines close up look ugly in VR because
 	// they can have holes, being shells. This is also why it is clamped to not make them bigger.
@@ -236,8 +238,8 @@ VertexOutput vert(appdata_full_local v) {
 		float fov = atan(1.0 / unity_CameraProjection._11) * 1.14591559;
 
 		float distanceFactor = distance(o.worldPos, _WorldSpaceCameraPos) * fov;
-		float distanceScale = saturate((distanceFactor - _OutlineNearDistance) / (_OutlineFarDistance - _OutlineNearDistance));
-		o.extraData.x *= lerp(_OutlineNearDistance, _OutlineFarDistance, distanceScale);
+		float finalScale = clamp(distanceFactor, _OutlineNearDistance, _OutlineFarDistance);
+		o.extraData.x *= finalScale;
 	}
 	#endif
 
