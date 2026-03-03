@@ -309,6 +309,7 @@ half3 getDirectSpecular(SCSS_Input c, SCSS_ShadingParam p, SCSS_LightParam d, Co
 half3 SCSS_ShadeBase(const SCSS_Input c, const SCSS_ShadingParam p, CompatLight l, SCSS_LightParam d)
 {
 	half3 finalColor;
+	bool hasMainLight = length(l.color) > 0;
 
     half remappedLight = getRemappedLight(c.perceptualRoughness, d);
 	remappedLight = remappedLight * 0.5 + 0.5;
@@ -339,7 +340,7 @@ half3 SCSS_ShadeBase(const SCSS_Input c, const SCSS_ShadingParam p, CompatLight 
     finalColor += calcDiffuseBase(c.albedo, shadingData, totalShadow, l.color, remappedLight);
 
     half directionality = max(0.001, length(indirectDominantDir));
-    half3 indirectKeyLight = directLighting * directionality;
+    half3 indirectKeyLight = directLighting;
 
 	// Prepare fake light params for subsurface scattering.
 	CompatLight iL = l;
@@ -348,10 +349,15 @@ half3 SCSS_ShadeBase(const SCSS_Input c, const SCSS_ShadingParam p, CompatLight 
 	SCSS_LightParam iD = recalculateLightParamLight(iL, p, d);
 
 	// Prepare fake light params for spec/fresnel which simulate specular.
-	CompatLight fL = l;
-	fL.color = totalShadow * fL.color + indirectKeyLight;
-	fL.direction = Unity_SafeNormalize(fL.direction + indirectDominantDir);
-	SCSS_LightParam fD = recalculateLightParamLight(fL, p, d);
+	CompatLight fL = iL;
+	SCSS_LightParam fD = iD;
+
+	if (hasMainLight)
+	{
+    	fL.color = l.color + indirectKeyLight;
+    	fL.direction = Unity_SafeNormalize(l.direction + indirectDominantDir * directionality);
+    	fD = recalculateLightParamLight(fL, p, d);
+	}
 
 	if (p.isOutline <= 0)
 	{
