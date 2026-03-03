@@ -16,6 +16,7 @@
 #define SCSS_SAMPLE_SCREEN_COLOR(uv) tex2D(_CameraOpaqueTexture, uv)
 
 #if defined(SCSS_USE_HALF_FLOAT) && (defined(UNITY_COMPILER_HLSL) || defined(UNITY_COMPILER_DXC))
+#define TARGET_HALF // Require fp16 optimizations
 #define half min16float
 #define half2 min16float2
 #define half3 min16float3
@@ -29,7 +30,6 @@
 #define half3x4 min16float3x4
 #define half4x2 min16float4x2
 #define half4x3 min16float4x3
-#define TARGET_HALF // Require fp16 optimizations
 #define fixed min10float
 #define fixed2 min10float2
 #define fixed3 min10float3

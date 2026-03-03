@@ -164,6 +164,10 @@ half3 calcDiffuseAdd(half3 albedo, SCSS_CrosstoneData data, half3 lightColor, ha
 }
 
 #if defined(_SPECULAR)
+half3 getSpecularDominantDirection(const half3 n, const half3 r, half roughness) {
+    return lerp(r, n, roughness * roughness);
+}
+
 half3 getIndirectSpecular(SCSS_Input c, SCSS_ShadingParam p, SCSS_LightParam d, half3 indirectColor)
 {
     #if !defined(_METALLICGLOSSMAP)
@@ -216,19 +220,14 @@ half3 getDirectSpecular(SCSS_Input c, SCSS_ShadingParam p, SCSS_LightParam d, Co
             break;
 
         case 3: // GGX Anisotropic
-            half anisotropy = _Anisotropy;
-            half at = max(roughness * (1.0 + anisotropy), 0.002);
-            half ab = max(roughness * (1.0 - anisotropy), 0.002);
+            half at = max(roughness * (1.0 + p.anisotropy), 0.002);
+            half ab = max(roughness * (1.0 - p.anisotropy), 0.002);
 
-            // Todo: Move to d?
-            const half3 t = p.tangentToWorld[0];
-            const half3 b = p.tangentToWorld[1];
+            const half3 t = p.anisotropicT;
+            const half3 b = p.anisotropicB;
 
             half ToH = dot(t, d.halfDir);
             half BoH = dot(b, d.halfDir);
-
-            // Todo: Anisotropy direction
-            // i.e. half3 anisotropicT = normalize(mul(p.tangentToWorld, direction));
 
             V = V_SmithGGXCorrelated(roughness, d.NdotV, d.NdotL);
             D = D_GGX_Anisotropic(at, ab, ToH, BoH, d.NdotH);

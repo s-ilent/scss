@@ -508,6 +508,10 @@ struct SCSS_ShadingParam
     half3  reflected;        // reflection of view about normal
     half NoV;                // dot(normal, view), always strictly >= MIN_N_DOT_V
 
+    half anisotropy;
+    half3 anisotropicT;
+    half3 anisotropicB;
+
     half2 normalizedViewportCoord;
     half4 uv;
 	#if (defined(LIGHTMAP_ON) || defined(DYNAMICLIGHTMAP_ON))
@@ -628,8 +632,10 @@ struct SCSS_Input
 	half sdfMask;
 
 	half3 specColor; half specOcclusion;
-	half3 anisotropyDirection;
 	half oneMinusReflectivity, smoothness, perceptualRoughness;
+
+	half anisotropy;
+	half3 anisotropyDirection;
 
 	half softness;
 	half3 thickness;
@@ -658,6 +664,9 @@ void initMaterial(out SCSS_Input material)
 	material.softness = 0.0;
 	material.emission = 0.0;
 	material.thickness = 1.0;
+
+	material.anisotropy = 0;
+	material.anisotropyDirection = half3(1.0, 0.0, 0.0);
 
 	SCSS_RimLightInput rim = (SCSS_RimLightInput) 0;
 	rim.width = 0.0;

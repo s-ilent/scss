@@ -4,11 +4,17 @@
 
 #include "SCSS_Attributes.cginc"
 #include "SCSS_ForwardVertex.cginc"
+#include "SCSS_Lighting.cginc"
 
 void prepareMaterial (inout SCSS_ShadingParam shading, const SCSS_Input material) {
     shading.normal = normalize(mul(shading.tangentToWorld, material.normalTangent));
     shading.NoV = clampNoV(dot(shading.normal, shading.view));
     shading.reflected = reflect(-shading.view, shading.normal);
+
+    half3 direction = material.anisotropyDirection;
+    shading.anisotropy = material.anisotropy;
+    shading.anisotropicT = normalize(mul(direction, shading.tangentToWorld));
+    shading.anisotropicB = normalize(cross(shading.geometricNormal, shading.anisotropicT));
 }
 
 half3 Thickness(float2 uv)
@@ -101,6 +107,8 @@ void applySpecularGloss(inout SCSS_Input material, float2 uv, half oneMinusOutli
 		if (_Crosstone2ndSeparation)  material.tone[1].col = material.tone[1].col * (material.oneMinusReflectivity);
 	}
 
+	material.anisotropy = _Anisotropy;
+	material.anisotropyDirection = half3(0, 0, 1);
 #endif
 }
 
@@ -480,8 +488,6 @@ void applyHatching(inout SCSS_Input material, half3 viewDir, float3 worldPos)
 	#endif
 }
 
-#include "SCSS_Lighting.cginc"
-
 inline SCSS_Input MaterialSetup(SCSS_TexCoords tc,
 	half4 i_color, half4 i_extraData, half p_isOutline, half p_furDepth, uint facing)
 {
@@ -658,6 +664,7 @@ half4 frag(VertexOutput i, uint facing : SV_IsFrontFace
 
 	// Note that discard applies even to pixels that are opaque, but it's safe
 	// to perform here because any pixel with a front-facing outline has something behind it.
+	// Unfortunately, this prevents us from using [earlydepthstencil].
 	if (p.isOutline && !facing) discard;
 
 	// Ideally, we should pass all input to lighting functions through the
