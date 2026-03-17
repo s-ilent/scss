@@ -7,6 +7,28 @@
 // for non-HDR.
 #define SCSS_CLAMP_IN_NON_HDR 1
 
+// When objects reach the nearest extent of the camera's frustrum,
+// they can intersect it and clip through. In VR, this can be a
+// problem as frustrum extents which are suitable for most circumstances
+// will fall apart when close to an object - or, more commonly, another
+// person. This setting enables a tweak to squish objects before they can
+// intersect with the frustrum, giving them the appearance of a
+// closer clipping plane on the camera.
+#define SCSS_NEAR_SQUISH 1
+
+// When this is enabled, the shader will support Unity's fog. Normally this would be
+// controlled by the multi_compile_fog statement in the shader, but since fog was moved to
+// a new function to reduce the number of shader variants, it must be set here.
+#define SCSS_USE_UNITY_FOG 1
+
+// When this flag is enabled, the half data types are set to use flexible precision.
+#define SCSS_USE_HALF_FLOAT 1
+
+// When this is enabled, AudioLink features are enabled. 
+#define SCSS_USE_AUDIOLINK 1
+
+// BIRP only options.
+#if !defined(SCSS_IS_URP)
 // When screen-space shadows are used in the scene, performs a
 // search to find the best sampling point for the shadow
 // using the camera's depth buffer. This filters away many aliasing
@@ -26,63 +48,16 @@
 // object to world transformation to be identical between shaders.
 //#define SCSS_CAMERA_RELATIVE_VERTEX 1
 
-// When objects reach the nearest extent of the camera's frustrum,
-// they can intersect it and clip through. In VR, this can be a
-// problem as frustrum extents which are suitable for most circumstances
-// will fall apart when close to an object - or, more commonly, another
-// person. This setting enables a tweak to squish objects before they can
-// intersect with the frustrum, giving them the appearance of a
-// closer clipping plane on the camera.
-#define SCSS_NEAR_SQUISH 1
-
 // When this is enabled, the shader will read voxelised light probes from
 // data stored using the "VRC Light Volumes" system. This is mainly available
 // for VRchat, but it's possible to implement on other platforms. See the
 // SCSS_LightVolumes.cginc and LICENSE for more info.
+// Not supported in URP. 
 #define SCSS_USE_VRC_LIGHT_VOLUMES 1
-
-// When this is enabled, the shader will support Unity's fog. Normally this would be
-// controlled by the multi_compile_fog statement in the shader, but since fog was moved to
-// a new function to reduce the number of shader variants, it must be set here.
-#define SCSS_USE_UNITY_FOG 1
-
-// When this flag is enabled, the half data types are set to use flexible precision.
-#define SCSS_USE_HALF_FLOAT 1
-
-// Safety net for things that can't be used in Standard's codepaths on weaker hardware
-// Following implementation in Unity 2020's built-in pipeline
-
-#if defined(SHADER_TARGET_SURFACE_ANALYSIS)
-    // For surface shader code analysis pass, disable some features that don't affect inputs/outputs
-    #undef UNITY_SPECCUBE_BOX_PROJECTION
-    #undef UNITY_SPECCUBE_BLENDING
-    #undef UNITY_USE_DITHER_MASK_FOR_ALPHABLENDED_SHADOWS
-#elif SHADER_TARGET < 30
-    #undef UNITY_SPECCUBE_BOX_PROJECTION
-    #undef UNITY_SPECCUBE_BLENDING
-    #undef UNITY_ENABLE_DETAIL_NORMALMAP
-    #ifdef _PARALLAXMAP
-        #undef _PARALLAXMAP
-    #endif
-#endif
-#if (SHADER_TARGET < 30) || defined(SHADER_API_GLES)
-    #undef UNITY_USE_DITHER_MASK_FOR_ALPHABLENDED_SHADOWS
-#endif
-
-#ifndef UNITY_SAMPLE_FULL_SH_PER_PIXEL
-    // Lightmap UVs and ambient color from SHL2 are shared in the vertex to pixel interpolators. Do full SH evaluation in the pixel shader when static lightmap and LIGHTPROBE_SH is enabled.
-    #define UNITY_SAMPLE_FULL_SH_PER_PIXEL (LIGHTMAP_ON && LIGHTPROBE_SH)
-
-    // Shaders might fail to compile due to shader instruction count limit. Leave only baked lightmaps on SM20 hardware.
-    #if UNITY_SAMPLE_FULL_SH_PER_PIXEL && (SHADER_TARGET < 25)
-        #undef UNITY_SAMPLE_FULL_SH_PER_PIXEL
-        #undef LIGHTPROBE_SH
-    #endif
-#endif
 
 #if !defined(UNITY_COMPILER_HLSLCC) && !defined(UNITY_COMPILER_HLSL2GLSL) && !defined(SHADER_TARGET_GLSL)
 	#define SCSS_HLSL_COMPAT
 #endif
-
+#endif
 
 #endif // SCSS_CONFIG_INCLUDED

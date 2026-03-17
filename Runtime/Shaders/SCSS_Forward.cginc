@@ -120,7 +120,11 @@ half3 NormalInTangentSpace(float2 uv)
 				uv), _BumpScale);
 	    return normalTangent;
 	#else
-		return float3(1, 1, 0);
+	#if defined(SCSS_IS_URP)
+		float4 normalTangent = UNITY_SAMPLE_TEX2D_SAMPLER(_BumpMap, _MainTex, uv);
+		return UnpackNormalScale(normalTangent, _BumpScale);
+	#endif
+		return float3(0, 0, 1);
 	#endif
 }
 
@@ -472,7 +476,7 @@ void applyRimLight(inout SCSS_Input material, half NdotH, half rlPow4, half outl
 void applyHatching(inout SCSS_Input material, half3 viewDir, float3 worldPos)
 {
 	#if defined(_HATCHING)
-	float4 baseWorldPos = mul(unity_ObjectToWorld,float4( 0,0,0,1 ));
+	float4 baseWorldPos = mul(GetObjectToWorldMatrix(), float4( 0,0,0,1 ));
 
 	float3 hatchingOffset = (_HatchingMovementFPS > 0)
 		? r3_modified(floor(_Time.y * _HatchingMovementFPS), baseWorldPos)
@@ -503,10 +507,16 @@ inline SCSS_Input MaterialSetup(SCSS_TexCoords tc,
     half outlineDarken = 1-p_isOutline;
 
 	// Setup albedo
+	#if defined(_BICUBIC)
+	half4 mainTex = AlbedoHQ (mainUVs);
+	#else
 	half4 mainTex = UNITY_SAMPLE_TEX2D (_MainTex, mainUVs);
+	#endif
+
 	#if defined(_BACKFACE)
 		if (!facing) mainTex = UNITY_SAMPLE_TEX2D_SAMPLER (_MainTexBackface, _MainTex, mainUVs);
 	#endif
+
 	material.albedo = mainTex.rgb;
 
 	#if defined(_BACKFACE)
@@ -612,7 +622,7 @@ inline SCSS_Input MaterialSetup(SCSS_TexCoords tc,
 	return material;
 }
 
-#if !defined(UNITY_PASS_SHADOWCASTER)
+#if !defined(UNITY_PASS_SHADOWCASTER) && !defined(SCSS_SHADOWS_INCLUDED)
 inline void MaterialSetupPostParams(inout SCSS_Input material, SCSS_ShadingParam p, SCSS_TexCoords tc)
 {
     material.occlusion = SpecularAO_Lagarde(p.NoV, material.occlusion, 1.0 - material.smoothness);
@@ -657,6 +667,7 @@ half4 frag(VertexOutput i, uint facing : SV_IsFrontFace
 	#endif
 	) : SV_Target
 {
+    UNITY_SETUP_INSTANCE_ID(i);
     UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(i);
 
 	SCSS_ShadingParam p = (SCSS_ShadingParam) 0;
@@ -735,6 +746,31 @@ half4 frag(VertexOutput i, uint facing : SV_IsFrontFace
 	#if defined(SCSS_USE_UNITY_FOG)
 	applyUnityFog(finalRGBA, i.worldPos.w);
 	#endif
+
+	// Todo: The URP passes should probably be in a seperate frag function, similar to the shadowcaster.
+	// But we cannot use the shadowcaster directly for URP, since it does not support outlines. 
+	// Outlines must render to DepthOnly and DepthNormals in order to render in URP. 
+
+    #if defined(SCSS_DEPTH_ONLY_PASS)
+		// Workaround a compiler issue when albedo is not needed but its sampler is.
+		half fakeAlpha = material.albedo.x * FLT_EPS;
+        return half4(0, 0, 0, fakeAlpha);
+    #endif
+
+    #if defined(SCSS_DEPTH_NORMALS_PASS)
+		// Workaround a compiler issue when albedo is not needed but its sampler is.
+		half fakeAlpha = material.albedo.x * FLT_EPS;
+        // DepthNormals pass logic for URP
+        float3 normalWS = NormalizeNormalPerPixel(p.normal);
+        #if defined(_GBUFFER_NORMALS_OCT)
+            float2 octNormalWS = PackNormalOctQuadEncode(normalWS);
+            float2 remappedOctNormalWS = saturate(octNormalWS * 0.5 + 0.5);
+            half3 packedNormalWS = PackFloat2To888(remappedOctNormalWS);
+            return half4(packedNormalWS, fakeAlpha);
+        #else
+            return half4(normalWS, fakeAlpha);
+        #endif
+    #endif
 
 	return finalRGBA;
 }

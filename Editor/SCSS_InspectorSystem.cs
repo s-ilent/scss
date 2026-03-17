@@ -13,7 +13,6 @@ public class MaterialPropertyHandler
 {
     private Dictionary<string, MaterialProperty> props = new Dictionary<string, MaterialProperty>();
     private MaterialEditor editor;
-    
 
     public void Refresh(MaterialProperty[] matProps, MaterialEditor materialEditor)
     {
@@ -41,7 +40,7 @@ public class MaterialPropertyHandler
 		if (props.TryGetValue(i, out prop))
 		{
 			return prop;
-		} 
+		}
 		return null;
 	}
 
@@ -71,8 +70,8 @@ public class MaterialPropertyHandler
 		{
 			editor.ShaderProperty(prop, style);
 			return true;
-		} 
-        else 
+		}
+        else
         {
 			DisabledLabel(style);
 		}
@@ -94,7 +93,7 @@ public class MaterialPropertyHandler
 		EditorGUI.EndDisabledGroup();
 		return rect;
 	}
-	
+
     public Rect GetControlRectForSingleLine()
     {
         const float extraSpacing = 2f; // The shader properties needs a little more vertical spacing due to the mini texture field (looks cramped without)
@@ -107,7 +106,7 @@ public class MaterialPropertyHandler
 		MaterialProperty prop = Property(i);
 		GUIContent style = Content(i);
         // Can't return Rect as Editor function does not support it.
-		if (prop != null) 
+		if (prop != null)
 		{
             editor.TextureScaleOffsetProperty(prop);
         } else {
@@ -119,7 +118,7 @@ public class MaterialPropertyHandler
 	{
 		MaterialProperty prop = Property(i);
 		GUIContent style = Content(i);
-		if (prop != null) 
+		if (prop != null)
 		{
 			return editor.TexturePropertySingleLine(style, prop);
 		} else {
@@ -132,7 +131,7 @@ public class MaterialPropertyHandler
 		GUIContent style = Content(i);
 		MaterialProperty prop = Property(i);
 		MaterialProperty prop2 = Property(i2);
-		if (prop != null) 
+		if (prop != null)
 		{
 			return editor.TexturePropertySingleLine(style, prop, prop2);
 		} else {
@@ -146,25 +145,25 @@ public class MaterialPropertyHandler
 		MaterialProperty prop = Property(i);
 		MaterialProperty prop2 = Property(i2);
 		MaterialProperty prop3 = Property(i3);
-		if (prop != null) 
+		if (prop != null)
 		{
 			return editor.TexturePropertySingleLine(style, prop, prop2, prop3);
 		} else {
 			return DisabledLabel(style);
 		}
 	}
-	
+
 	public Rect TextureColorPropertyWithColorReset(string tex, string col)
 	{
 		MaterialProperty texProp = Property(tex);
 		MaterialProperty colProp = Property(col);
-		
+
 		if (texProp == null || colProp == null)
 			return DisabledLabel(Content(tex));
 
 		bool hadTexture = texProp.textureValue != null;
 		Rect returnRect = TexturePropertySingleLine(tex, col);
-		
+
 		float brightness = colProp.colorValue.maxColorComponent;
 		if (texProp.textureValue != null && !hadTexture && brightness <= 0f)
 			colProp.colorValue = Color.white;
@@ -176,13 +175,13 @@ public class MaterialPropertyHandler
 		MaterialProperty texProp = Property(tex);
 		MaterialProperty colProp = Property(col);
 		MaterialProperty propProp = Property(prop);
-		
+
 		if (texProp == null || colProp == null || propProp == null)
 			return DisabledLabel(Content(tex));
 
 		bool hadTexture = texProp.textureValue != null;
 		Rect returnRect = TexturePropertySingleLine(tex, col, prop);
-		
+
 		float brightness = colProp.colorValue.maxColorComponent;
 		if (texProp.textureValue != null && !hadTexture && brightness <= 0f)
 			colProp.colorValue = Color.white;
@@ -195,7 +194,7 @@ public class MaterialPropertyHandler
 		GUIContent style = Content(i);
 		MaterialProperty prop = Property(i);
 		MaterialProperty prop2 = Property(i2);
-		if (prop != null) 
+		if (prop != null)
 		{
 			return editor.TexturePropertyWithHDRColor(style, prop, prop2, false);
 		} else {
@@ -206,7 +205,15 @@ public class MaterialPropertyHandler
 	// Match to UnityCsReference
     public void ExtraPropertyAfterTexture(Rect r, MaterialProperty property, bool adjustLabelWidth = true)
     {
-        if (adjustLabelWidth && (property.type == MaterialProperty.PropType.Float || property.type == MaterialProperty.PropType.Color) && r.width > EditorGUIUtility.fieldWidth)
+        #if UNITY_6000_0_OR_NEWER
+            // Newer Unity versions use propertyType and ShaderPropertyType
+            bool isFloatOrColor = (property.propertyType == ShaderPropertyType.Float || property.propertyType == ShaderPropertyType.Color);
+        #else
+            // Older Unity versions use type and MaterialProperty.PropType
+            bool isFloatOrColor = (property.type == MaterialProperty.PropType.Float || property.type == MaterialProperty.PropType.Color);
+        #endif
+
+        if (adjustLabelWidth && isFloatOrColor && r.width > EditorGUIUtility.fieldWidth)
         {
             float oldLabelWidth = EditorGUIUtility.labelWidth;
             EditorGUIUtility.labelWidth = r.width - EditorGUIUtility.fieldWidth;
@@ -217,7 +224,7 @@ public class MaterialPropertyHandler
 
         editor.ShaderProperty(r, property, string.Empty);
     }
-	
+
 
     static public Rect GetRectAfterLabelWidth(Rect r)
     {
@@ -280,7 +287,7 @@ public class MaterialPropertyHandler
 		if (props.TryGetValue(i, out prop))
 		{
 			editor.ShaderProperty(r, prop, " ");
-		} 
+		}
     }
 
     protected static void Vector2Property(MaterialProperty property, GUIContent name, int index1, int index2)

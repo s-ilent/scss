@@ -382,6 +382,7 @@ Shader "Silent's Cel Shading/Lightramp"
 			#pragma shader_feature_local_fragment _AUDIOLINK
 			#pragma shader_feature_local_fragment _CONTACTSHADOWS
 			#pragma shader_feature_local_fragment _HATCHING
+			#pragma shader_feature_local_fragment _BICUBIC
 
 			#include "SCSS_Core.cginc"
 
@@ -416,6 +417,7 @@ Shader "Silent's Cel Shading/Lightramp"
 			#pragma shader_feature_local_fragment _BACKFACE
 			#pragma shader_feature_local_fragment _CONTACTSHADOWS
 			#pragma shader_feature_local_fragment _HATCHING
+			#pragma shader_feature_local_fragment _BICUBIC
 
 			#include "SCSS_Core.cginc"
 

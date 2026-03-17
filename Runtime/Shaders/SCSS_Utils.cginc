@@ -8,7 +8,7 @@
     #endif
 #endif
 
-#if defined (SHADOWS_SHADOWMASK) || defined (SHADOWS_SCREEN) || ( defined (SHADOWS_DEPTH) && defined (SPOT) ) || defined (SHADOWS_CUBE) || (defined (UNITY_LIGHT_PROBE_PROXY_VOLUME) && UNITY_VERSION<600)
+#if defined (SHADOWS_SHADOWMASK) || defined (SHADOWS_SCREEN) || ( defined (SHADOWS_DEPTH) && defined (SPOT) ) || defined (SHADOWS_CUBE) || (defined (UNITY_LIGHT_PROBE_PROXY_VOLUME) && UNITY_VERSION<600) || defined(_MAIN_LIGHT_SHADOWS) || defined(_MAIN_LIGHT_SHADOWS_CASCADE) || defined(_MAIN_LIGHT_SHADOWS_SCREEN)
     #define USING_SHADOWS_UNITY
 #endif
 
@@ -28,8 +28,11 @@
     #define UNITY_POSITION(pos) float4 pos : SV_POSITION
 #endif
 
+// URP defines _CameraDepthTexture in DeclareDepthTexture.cginc
+#if !defined(SCSS_IS_URP)
 sampler2D_float _CameraDepthTexture;
 float4 _CameraDepthTexture_TexelSize;
+#endif
 
 #define sRGB_Luminance float3(0.2126, 0.7152, 0.0722)
 
@@ -37,8 +40,10 @@ half luminance(const float3 linearCol) {
     return dot(linearCol, sRGB_Luminance);
 }
 
+#ifndef FLT_EPS
 // Epsilon value for floating point numbers that we can't allow to reach 0
 #define FLT_EPS 1e-5
+#endif
 
 bool inMirror()
 {
@@ -236,6 +241,7 @@ half LerpOneTo_local(half b, half t)
     half oneMinusT = 1 - t;
     return oneMinusT + b * t;
 }
+#define LerpOneTo LerpOneTo_local
 
 half3 LerpWhiteTo_local(half3 b, half t)
 {
@@ -319,7 +325,7 @@ float simpleSharpen (float x, float width, float mid, const float smoothnessMode
     float rf = (dot(dx, dx)*2);
     width = max(width, rf);
 
-    [flatten]
+    UNITY_FLATTEN
     switch (smoothnessMode)
     {
         case 0: x = lerpstep(mid-width, mid, x); break;
@@ -505,33 +511,6 @@ void applyUnityFog(inout half4 col, half depth)
 // Helper functions for roughness
 //-----------------------------------------------------------------------------
 
-#ifndef UNITY_STANDARD_BRDF_INCLUDED
-half RoughnessToPerceptualRoughness(half roughness)
-{
-    return sqrt(roughness);
-}
-
-half RoughnessToPerceptualSmoothness(half roughness)
-{
-    return 1.0 - sqrt(roughness);
-}
-
-half PerceptualSmoothnessToRoughness(half perceptualSmoothness)
-{
-    return (1.0 - perceptualSmoothness) * (1.0 - perceptualSmoothness);
-}
-
-half PerceptualSmoothnessToPerceptualRoughness(half perceptualSmoothness)
-{
-    return (1.0 - perceptualSmoothness);
-}
-
-half PerceptualRoughnessToPerceptualSmoothness(half perceptualRoughness)
-{
-    return (1.0 - perceptualRoughness);
-}
-#endif // UNITY_STANDARD_BRDF_INCLUDED
-
 #define MIN_N_DOT_V 1e-4
 
 half clampNoV(half NoV) {
@@ -681,7 +660,18 @@ float screenSpaceContactShadow(float3 lightDirection, float3 shadingPosition,
         ray = rayData.uvRayStart + rayData.uvRay * t;
         float2 sampleUV = uvToRenderTargetUV(ray.xy);
         sampleUV = TransformStereoScreenSpaceTex(sampleUV, 1.0);
+
+        // In URP, _CameraDepthTexture is float; in BIRP sampler2D_float.
+        #if defined(SCSS_IS_URP)
+        // Use URP's SampleSceneDepth (assumes this file is included after Core.cginc/DeclareDepthTexture.cginc in URP context)
+        // But SCSS_Utils is included early. We rely on the fact that DeclareDepthTexture is included in SCSS_CompatURP.cginc
+        // However, we cannot use URP functions here if they are not defined yet or conflicts occur.
+        // We will assume _CameraDepthTexture is available as a texture object in URP context.
+        float z = SAMPLE_TEXTURE2D_LOD(_CameraDepthTexture, sampler_LinearClamp, sampleUV, 0.0).r;
+        #else
         float z = tex2Dlod(_CameraDepthTexture, float4(sampleUV, 0.0, 0.0)).r;
+        #endif
+
         float dz = z - ray.z;
         if (abs(tolerance - dz) < tolerance) {
 			firstHit = min(firstHit, float(i));
@@ -820,6 +810,7 @@ half D_GGX_Anisotropic(half at, half ab, half ToH, half BoH, half NoH) {
     return a2 * b2 * b2 * (1.0 / UNITY_PI);
 }
 
+#if !defined(SCSS_IS_URP)
 half D_Charlie(half roughness, half NoH) {
     // Estevez and Kulla 2017, "Production Friendly Microfacet Sheen BRDF"
     half invAlpha  = 1.0 / roughness;
@@ -827,6 +818,7 @@ half D_Charlie(half roughness, half NoH) {
     half sin2h = max(1.0 - cos2h, 0.0078125); // 2^(-14/2), so sin2h^2 > 0 in fp16
     return (2.0 + invAlpha) * pow(sin2h, invAlpha * 0.5) / (2.0 * UNITY_PI);
 }
+#endif
 
 half V_SmithGGXCorrelated(half roughness, half NoV, half NoL) {
     // Heitz 2014, "Understanding the Masking-Shadowing Function in Microfacet-Based BRDFs"
@@ -876,6 +868,7 @@ half3 F_Schlick(const half3 f0, half f90, half VoH) {
     return f0 + (f90 - f0) * pow5(1.0 - VoH);
 }
 
+#if !defined(SCSS_IS_URP)
 half3 F_Schlick(const half3 f0, half VoH) {
     half f = pow(1.0 - VoH, 5.0);
     return f + f0 * (1.0 - f);
@@ -885,13 +878,13 @@ half F_Schlick(half f0, half f90, half VoH) {
     return f0 + (f90 - f0) * pow5(1.0 - VoH);
 }
 
-
 // From "From mobile to high-end PC: Achieving high quality anime style rendering on Unity"
 half3 ShiftTangent (half3 T, half3 N, half shift)
 {
 	half3 shiftedT = T + shift * N;
 	return normalize(shiftedT);
 }
+#endif
 
 half StrandSpecular(half3 T, half3 H, half exponent, half strength)
 {

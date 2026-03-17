@@ -61,7 +61,7 @@ half setupPackedFogData_geom(half clipPosZ, half fogTypeID)
 
 inline float4 ObjectToClipPosRelative(float3 pos)
 {
-	float4x4 matrixM = unity_ObjectToWorld;
+	float4x4 matrixM = GetObjectToWorldMatrix();
 	float4x4 matrixV = UNITY_MATRIX_V; // todo: verify
 	matrixM._m03_m13_m23 -= _WorldSpaceCameraPos.xyz;
 	matrixV._m03_m13_m23 = 0.0;
@@ -83,7 +83,7 @@ inline float4 ObjectToClipPosRelative(float3 pos)
 
 inline float4 WorldToClipPosRelative(float3 posWS)
 {
-	float4x4 matrixM = unity_ObjectToWorld;
+	float4x4 matrixM = GetObjectToWorldMatrix();
 	float4x4 matrixV = UNITY_MATRIX_V; // todo: verify
 	matrixM._m03_m13_m23 -= _WorldSpaceCameraPos.xyz;
 	matrixV._m03_m13_m23 = 0.0;
@@ -134,6 +134,14 @@ VertexOutput vert(appdata_full_local v) {
 	// Object-space vertex position
 	o.pos = v.vertex;
 
+	#if defined(SCSS_IS_URP)
+	VertexNormalInputs normalInput = GetVertexNormalInputs(v.normal, v.tangent);
+	half tangentSign = v.tangent.w * GetOddNegativeScale();
+
+	o.tangentToWorldAndPackedData[0].xyz = normalInput.tangentWS;
+	o.tangentToWorldAndPackedData[1].xyz = normalInput.bitangentWS;
+	o.tangentToWorldAndPackedData[2].xyz = normalInput.normalWS;
+	#else
 	float3 normalDir = UnityObjectToWorldNormal(v.normal);
 	float3 tangentDir = UnityObjectToWorldDir(v.tangent.xyz);
     half tangentSign = v.tangent.w * unity_WorldTransformParams.w;
@@ -142,14 +150,15 @@ VertexOutput vert(appdata_full_local v) {
 	o.tangentToWorldAndPackedData[0].xyz = tangentDir;
 	o.tangentToWorldAndPackedData[1].xyz = bitangentDir;
 	o.tangentToWorldAndPackedData[2].xyz = normalDir;
+	#endif
 
 	// Previously this was the object-space normal, which was only used for outline direction;
 	// so it makes sense to use it as outline direction directly.
 
 	float3 outlineDir = normalOS;
 
-	float4 objPos = mul(unity_ObjectToWorld, float4(0, 0, 0, 1));
-	o.worldPos = mul(unity_ObjectToWorld, v.vertex);
+	float4 objPos = mul(GetObjectToWorldMatrix(), float4(0, 0, 0, 1));
+	o.worldPos = mul(GetObjectToWorldMatrix(), v.vertex);
 
 	float variousData[7] =
 	{
@@ -294,7 +303,9 @@ VertexOutput vert_nogeom(appdata_full_local v)
 
 	o.pos = ApplyNearVertexSquishing(o.pos);
 
+	#if defined(USING_SHADOWS_UNITY) && defined(UNITY_SHADOW_COORDS)
 	UNITY_TRANSFER_SHADOW(o, v.texcoord1);
+	#endif
 
 	o.extraData.x = false;
 	return o;
@@ -312,7 +323,9 @@ void ObjectToClipAndTransferData(inout VertexOutput o)
 	v.texcoord1 = o.uvPack0.zwzw;
 
 	o.pos = ObjectToClipPos(o.pos);
+	#if defined(USING_SHADOWS_UNITY) && defined(UNITY_SHADOW_COORDS)
 	UNITY_TRANSFER_SHADOW(o, v.texcoord1);
+	#endif
 
 	o.worldPos.w = setupPackedFogData_geom(o.pos.z, o.worldPos.w);
 }
@@ -331,9 +344,9 @@ inline VertexOutput CalculateOutlineVertexClipPosition(VertexOutput v)
 			const half3 normalOS = float3(v.tangentToWorldAndPackedData[0][3], v.tangentToWorldAndPackedData[1][3], v.tangentToWorldAndPackedData[2][3]);
 
 			float3 worldScale;
-			worldScale.x = length(unity_ObjectToWorld._m00_m10_m20);
-			worldScale.y = length(unity_ObjectToWorld._m01_m11_m21);
-			worldScale.z = length(unity_ObjectToWorld._m02_m12_m22);
+			worldScale.x = length(GetObjectToWorldMatrix()._m00_m10_m20);
+			worldScale.y = length(GetObjectToWorldMatrix()._m01_m11_m21);
+			worldScale.z = length(GetObjectToWorldMatrix()._m02_m12_m22);
 
 			const float SCALE_EPSILON = 1e-6f;
 			worldScale = max(worldScale, SCALE_EPSILON);
@@ -347,7 +360,7 @@ inline VertexOutput CalculateOutlineVertexClipPosition(VertexOutput v)
 		break;
 		case 1:
 		{
-        	const float3 positionWS = mul(unity_ObjectToWorld, float4(v.pos.xyz, 1)).xyz;
+        	const float3 positionWS = mul(GetObjectToWorldMatrix(), float4(v.pos.xyz, 1)).xyz;
         	const half aspect = getScreenAspectRatio();
 
 			float4 positionCS = ObjectToClipPos(v.pos.xyz);
@@ -388,10 +401,11 @@ void geom(triangle VertexOutput IN[3], inout TriangleStream<VertexOutput> tristr
 	{
 		#if !defined(USING_ALPHA_BLENDING)
 		// Generate base vertex
-		[unroll]
+		UNITY_UNROLL
 		for (int ii = 0; ii < 3; ii++)
 		{
 			VertexOutput o = IN[ii];
+			UNITY_SETUP_INSTANCE_ID(o);
 	    	UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(o);
 
 			o.extraData.x = false;
@@ -409,10 +423,11 @@ void geom(triangle VertexOutput IN[3], inout TriangleStream<VertexOutput> tristr
 		// If the outline triangle is too small, don't emit it.
 		if ((IN[0].extraData.r + IN[1].extraData.r + IN[2].extraData.r) >= 1.e-9)
 		{
-			[unroll]
+			UNITY_UNROLL
 			for (int i = 2; i >= 0; i--)
 			{
 				VertexOutput o = IN[i];
+				UNITY_SETUP_INSTANCE_ID(o);
 	    		UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(o);
 
 				o = CalculateOutlineVertexClipPosition(o);
@@ -429,10 +444,11 @@ void geom(triangle VertexOutput IN[3], inout TriangleStream<VertexOutput> tristr
 
 		#if defined(USING_ALPHA_BLENDING)
 		// Generate base vertex
-		[unroll]
+		UNITY_UNROLL
 		for (int ii = 0; ii < 3; ii++)
 		{
 			VertexOutput o = IN[ii];
+			UNITY_SETUP_INSTANCE_ID(o);
 	    	UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(o);
 
 			o.extraData.x = false;
@@ -497,10 +513,12 @@ void geom_fur(triangle VertexOutput IN[3], inout TriangleStream<VertexOutput> tr
 	#endif
 
 	// Generate base vertex
-	[unroll]
+	UNITY_UNROLL
 	for (int ii = 0; ii < 3; ii++)
 	{
 		VertexOutput o = IN[ii];
+		UNITY_SETUP_INSTANCE_ID(o);
+	    UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(o);
 
 		int currentLayer = instanceID;
 

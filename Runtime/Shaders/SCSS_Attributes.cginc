@@ -8,32 +8,16 @@
     #include "SCSS_CompatBIRP.hlsl"
 #endif
 
-// Testing using a lower precision format for the vertex data.
-// This could increase performance in situations where there is a lot of GPU load,`
-// at the cost of some GPU load.
-
-#if 1
-#define v_half  min16float
-#define v_half2 min16float2
-#define v_half3 min16float3
-#define v_half4 min16float4
-#else
-#define v_half  half
-#define v_half2 half2
-#define v_half3 half3
-#define v_half4 half4
-#endif
-
 struct appdata_full_local
 {
-    v_half4 vertex : POSITION;
-    v_half4 tangent : TANGENT;
-    v_half3 normal : NORMAL;
-    v_half4 texcoord : TEXCOORD0;
-    v_half4 texcoord1 : TEXCOORD1;
-    v_half4 texcoord2 : TEXCOORD2;
-    v_half4 texcoord3 : TEXCOORD3;
-    v_half4 color : COLOR;
+    half4 vertex : POSITION;
+    half4 tangent : TANGENT;
+    half3 normal : NORMAL;
+    half4 texcoord : TEXCOORD0;
+    half4 texcoord1 : TEXCOORD1;
+    half4 texcoord2 : TEXCOORD2;
+    half4 texcoord3 : TEXCOORD3;
+    half4 color : COLOR;
 	// uint vid : SV_VertexID;
     UNITY_VERTEX_INPUT_INSTANCE_ID
 };
@@ -44,13 +28,13 @@ struct VertexOutput
     UNITY_VERTEX_OUTPUT_STEREO
 
 	float4 pos : SV_POSITION; // UnityCG macro specified name. Technically "positionCS"
-	v_half4 color : COLOR0_centroid;
-	v_half4 uvPack0 : TEXCOORD0;
-	v_half4 uvPack1 : TEXCOORD1;
+	centroid half4 color : COLOR0_centroid;
+	half4 uvPack0 : TEXCOORD0;
+	half4 uvPack1 : TEXCOORD1;
 	float4 worldPos : TEXCOORD2;
-    v_half4 tangentToWorldAndPackedData[3] : TEXCOORD3;    // [3x3:tangentToWorld | 1x3: outlineDir]
+    half4 tangentToWorldAndPackedData[3] : TEXCOORD3;    // [3x3:tangentToWorld | 1x3: outlineDir]
 
-	v_half4 extraData : EXTRA_DATA;
+	half4 extraData : EXTRA_DATA;
 
 	// Pass-through the shadow coordinates if this pass has shadows.
 	// Note the workaround for UNITY_SHADOW_COORDS issue.
@@ -61,14 +45,14 @@ struct VertexOutput
 
 struct VertexInputShadowCaster
 {
-    v_half4 vertex   : POSITION;
-    v_half3 normal   : NORMAL;
+    half4 vertex   : POSITION;
+    half3 normal   : NORMAL;
     // Required for inventory
-	v_half2 texcoord  : TEXCOORD0;
+	half2 texcoord  : TEXCOORD0;
 	#if defined(SCSS_USE_SHADOW_UVS)
-		v_half2 texcoord1 : TEXCOORD1;
-		v_half2 texcoord2 : TEXCOORD2;
-		v_half2 texcoord3 : TEXCOORD3;
+		half2 texcoord1 : TEXCOORD1;
+		half2 texcoord2 : TEXCOORD2;
+		half2 texcoord3 : TEXCOORD3;
     #endif
     UNITY_VERTEX_INPUT_INSTANCE_ID
 };
@@ -78,8 +62,8 @@ struct VertexOutputShadowCaster
 {
     V2F_SHADOW_CASTER_NOPOS
     #if defined(SCSS_USE_SHADOW_UVS)
-		v_half4 uvPack0 : TEXCOORD0;
-		v_half4 uvPack1 : TEXCOORD1;
+		half4 uvPack0 : TEXCOORD0;
+		half4 uvPack1 : TEXCOORD1;
     #endif
     UNITY_VERTEX_INPUT_INSTANCE_ID
 };

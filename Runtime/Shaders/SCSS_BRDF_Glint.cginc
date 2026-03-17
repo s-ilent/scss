@@ -3,8 +3,9 @@
 
 // "Evaluating and Sampling Glinty NDFs in Constant Time"
 // Based on Kemppinen et al. 2025
-static const float GLINT_PI = 3.14159265358979;
-static const half HALF_PI = 3.14159265h;
+
+#define GLINT_PI UNITY_PI
+#define GLINT_HALF_PI half(UNITY_PI)
 
 // --- Internal Utilities ---
 
@@ -89,7 +90,7 @@ half fast_erf(half x) {
     half e = exp(-x * x);
     half sign_x = sign(x);
     // Constants pre-calculated to half precision
-    half scale = sqrt((1.0h - e) / HALF_PI);
+    half scale = sqrt((1.0h - e) / GLINT_HALF_PI);
     half poly = 0.886226h + 0.155h * e - 0.042625h * e * e; // (sqrt(pi)/2), (31/200), (341/8000)
     return sign_x * 2.0h * scale * poly;
 }

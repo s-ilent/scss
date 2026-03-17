@@ -419,7 +419,7 @@ half3 SCSS_ShadeLight(const SCSS_Input c, const SCSS_ShadingParam p, const Compa
     SCSS_LightrampData shadingData = initaliseLightrampParam(c);
 	#endif
 
-    finalColor = calcDiffuseAdd(c.albedo, shadingData, l.color, remappedLight);
+    finalColor = calcDiffuseAdd(c.albedo, shadingData, l.color, remappedLight * l.attenuation);
 
     half totalAtten = l.attenuation * l.shadowAttenuation;
     finalColor *= totalAtten;
@@ -452,10 +452,9 @@ half3 SCSS_ApplyLighting(SCSS_Input c, SCSS_ShadingParam p)
 	#endif
 
 	// Todo: Add in the other parameters needed by URP.
-    // - shadowCoord: 0 tells CompatURP to calculate it from World Position.
     // - shadowMask: 1.0 assumes no baked shadow mask for now (ShadowMask support would require reading lightmap UVs here).
 	CompatLight l = CGetMainLight(p.position.xyz, p.normalizedViewportCoord,
-	    /* shadowCoord */ 0, /* shadowMask */ 1.0,
+	    p.shadowCoord, /* shadowMask */ 1.0,
 		c.occlusion, p.attenuation);
 
     CompatSHData compatSH = CGetSHData(p.position, p.normal);
@@ -508,6 +507,7 @@ half3 SCSS_ApplyLighting(SCSS_Input c, SCSS_ShadingParam p)
     // Iterate additional Lights (URP: all others, BIRP: vertex Lights)
     CompatLightIterator iter = CInitLightLoop(p.normalizedViewportCoord, p.position);
     CompatLight addLight;
+    UNITY_LOOP
     while(CGetNextLight(iter, p.position, /*shadowMask*/ 1.0, c.occlusion, addLight))
     {
         if (getLightClampActive()) addLight.color = saturate(addLight.color);

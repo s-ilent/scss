@@ -521,7 +521,7 @@ half3 GetCardinal(uint i)
 // Based on lilxyzw's implementation
 half getSDFLighting(half3 lightDir, half2 sdfLR, half shadowFlatBlur) {
     // Compute the right face direction in world space
-    half3 rightFaceDirection = mul((half3x3)unity_ObjectToWorld, GetCardinal(_SDFRightVector));
+    half3 rightFaceDirection = mul((half3x3)GetObjectToWorldMatrix(), GetCardinal(_SDFRightVector));
     half lightDotRightFace = dot(lightDir.xz, rightFaceDirection.xz);
 
     // Flip SDF based on the light direction
@@ -529,7 +529,7 @@ half getSDFLighting(half3 lightDir, half2 sdfLR, half shadowFlatBlur) {
     half hardShadow = saturate(max(sdfLR.x, sdfLR.y)*10);
 
     // Compute the forward face direction in world space
-    half3 forwardFaceDirection = mul((half3x3)unity_ObjectToWorld, GetCardinal(_SDFFrontVector)).xyz;
+    half3 forwardFaceDirection = mul((half3x3)GetObjectToWorldMatrix(), GetCardinal(_SDFFrontVector)).xyz;
     forwardFaceDirection.y *= shadowFlatBlur;
     forwardFaceDirection = dot(forwardFaceDirection, forwardFaceDirection) == 0 ? 0 : normalize(forwardFaceDirection);
 

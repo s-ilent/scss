@@ -13,7 +13,9 @@
 // --------------------------------------------------------------------------
 #define SAMPLE_RAW_DEPTH(uv) SAMPLE_DEPTH_TEXTURE(_CameraDepthTexture, uv)
 #define UNITY_CALC_FOG_FACTOR_RAW(coord) UNITY_CALC_FOG_FACTOR(coord)
-#define SCSS_SAMPLE_SCREEN_COLOR(uv) tex2D(_CameraOpaqueTexture, uv)
+#define SCSS_SAMPLE_SCREEN_COLOR(uv) tex2D(_CameraOpaqueTexture, uv)// Wrappers
+#define SCSS_GET_SHADOW_COORD(i) i._ShadowCoord
+#define SCSS_LIGHT_ATTENUATION(destName, input, worldPos) UNITY_LIGHT_ATTENUATION(destName, input, worldPos)
 
 #if defined(SCSS_USE_HALF_FLOAT) && (defined(UNITY_COMPILER_HLSL) || defined(UNITY_COMPILER_DXC))
 #define TARGET_HALF // Require fp16 optimizations
@@ -36,9 +38,45 @@
 #define fixed4 min10float4
 #endif
 
+// Safety net for things that can't be used in Standard's codepaths on weaker hardware
+// Following implementation in Unity 2020's built-in pipeline
+
+#if defined(SHADER_TARGET_SURFACE_ANALYSIS)
+    // For surface shader code analysis pass, disable some features that don't affect inputs/outputs
+    #undef UNITY_SPECCUBE_BOX_PROJECTION
+    #undef UNITY_SPECCUBE_BLENDING
+    #undef UNITY_USE_DITHER_MASK_FOR_ALPHABLENDED_SHADOWS
+#elif SHADER_TARGET < 30
+    #undef UNITY_SPECCUBE_BOX_PROJECTION
+    #undef UNITY_SPECCUBE_BLENDING
+    #undef UNITY_ENABLE_DETAIL_NORMALMAP
+    #ifdef _PARALLAXMAP
+        #undef _PARALLAXMAP
+    #endif
+#endif
+#if (SHADER_TARGET < 30) || defined(SHADER_API_GLES)
+    #undef UNITY_USE_DITHER_MASK_FOR_ALPHABLENDED_SHADOWS
+#endif
+
+#ifndef UNITY_SAMPLE_FULL_SH_PER_PIXEL
+    // Lightmap UVs and ambient color from SHL2 are shared in the vertex to pixel interpolators. Do full SH evaluation in the pixel shader when static lightmap and LIGHTPROBE_SH is enabled.
+    #define UNITY_SAMPLE_FULL_SH_PER_PIXEL (LIGHTMAP_ON && LIGHTPROBE_SH)
+
+    // Shaders might fail to compile due to shader instruction count limit. Leave only baked lightmaps on SM20 hardware.
+    #if UNITY_SAMPLE_FULL_SH_PER_PIXEL && (SHADER_TARGET < 25)
+        #undef UNITY_SAMPLE_FULL_SH_PER_PIXEL
+        #undef LIGHTPROBE_SH
+    #endif
+#endif
+
 // --------------------------------------------------------------------------
 // Helpers (Available to shaders, but NOT used by the API below)
 // --------------------------------------------------------------------------
+
+float4x4 GetObjectToWorldMatrix()
+{
+    return unity_ObjectToWorld;
+}
 
 // bgolus's method for "fixing" screen space directional shadows and anti-aliasing
 // https://forum.unity.com/threads/fixing-screen-space-directional-shadows-and-anti-aliasing.379902/
@@ -97,6 +135,50 @@ void correctedScreenShadowsForMSAA(float4 _ShadowCoord, inout float shadow)
     #endif //SHADOWMAPSAMPLER_AND_TEXELSIZE_DEFINED
     #endif //SHADOWS_SCREEN
 }
+
+#ifndef UNITY_STANDARD_BRDF_INCLUDED
+half RoughnessToPerceptualRoughness(half roughness)
+{
+    return sqrt(roughness);
+}
+
+half RoughnessToPerceptualSmoothness(half roughness)
+{
+    return 1.0 - sqrt(roughness);
+}
+
+half PerceptualSmoothnessToRoughness(half perceptualSmoothness)
+{
+    return (1.0 - perceptualSmoothness) * (1.0 - perceptualSmoothness);
+}
+
+half PerceptualSmoothnessToPerceptualRoughness(half perceptualSmoothness)
+{
+    return (1.0 - perceptualSmoothness);
+}
+
+half PerceptualRoughnessToPerceptualSmoothness(half perceptualRoughness)
+{
+    return (1.0 - perceptualRoughness);
+}
+#endif // UNITY_STANDARD_BRDF_INCLUDED
+
+float2 GetNormalizedScreenSpaceUV(float4 positionCS)
+{
+    float2 normalizedUV = positionCS.xy / _ScreenParams.xy;
+
+    #if UNITY_UV_STARTS_AT_TOP
+        normalizedUV.y = 1.0 - normalizedUV.y;
+    #endif
+
+    return normalizedUV;
+}
+
+float2 GetNormalizedScreenSpaceUV(float2 positionCS)
+{
+    return GetNormalizedScreenSpaceUV(float4(positionCS.x, positionCS.y, 0.0, 0.0));
+}
+
 
 // --------------------------------------------------------------------------
 // Implementation

@@ -7,16 +7,14 @@ using System.IO;
 using System.Text.RegularExpressions;
 using System.Text;
 using System.Globalization;
+using System.Linq;
 
 // Based on Kaj Shader Optimizer, v9, licensed under MIT license
 // https://github.com/DarthShader/Kaj-Unity-Shaders/blob/master/Shaders/Kaj/Editor/KajShaderOptimizer.cs
 // Thanks, Kaj!
 
-// Some parts of this code have not been fully integrated yet. 
-
 namespace SilentCelShading.Unity.Baking
 {
-    
     public enum LightMode
     {
         Always=1,
@@ -32,55 +30,20 @@ namespace SilentCelShading.Unity.Baking
         VertexLM=1024
     }
 
-    // Static methods to generate new shader files with in-place constants based on a material's properties
-    // and link that new shader to the material automatically
     public class ShaderOptimizer
     {
-        // For some reason, 'if' statements with replaced constant (literal) conditions cause some compilation error
-        // So until that is figured out, branches will be removed by default
-        // Set to false if you want to keep UNITY_BRANCH and [branch]
         public static bool RemoveUnityBranches = true;
 
-        // LOD Crossfade Dithing doesn't have multi_compile keyword correctly toggled at build time (its always included) so
-        // this hard-coded material property will uncomment //#pragma multi_compile _ LOD_FADE_CROSSFADE in optimized .shader files
         public static readonly string LODCrossFadePropertyName = "_LODCrossfade";
-
-        // IgnoreProjector and ForceNoShadowCasting don't work as override tags, so material properties by these names
-        // will determine whether or not //"IgnoreProjector"="True" etc. will be uncommented in optimized .shader files
         public static readonly string IgnoreProjectorPropertyName = "_IgnoreProjector";
         public static readonly string ForceNoShadowCastingPropertyName = "_ForceNoShadowCasting";
-
-        // Material property suffix that controls whether the property of the same name gets baked into the optimized shader
-        // e.g. if _Color exists and _ColorAnimated = 1, _Color will not be baked in
         public static readonly string AnimatedPropertySuffix = "Animated";
-
-        // Currently, Material.SetShaderPassEnabled doesn't work on "ShadowCaster" lightmodes,
-        // and doesn't let "ForwardAdd" lights get turned into vertex lights if "ForwardAdd" is simply disabled
-        // vs. if the pases didn't exist at all in the shader.
-        // The Optimizer will take a mask property by this name and attempt to correct these issues
-        // by hard-removing the shadowcaster and fwdadd passes from the shader being optimized.
         public static readonly string DisabledLightModesPropertyName = "_LightModes";
-
-        // Property that determines whether or not to evaluate KSOInlineSamplerState comments.
-        // Inline samplers can be used to get a wider variety of wrap/filter combinations at the cost
-        // of only having 1x anisotropic filtering on all textures
         public static readonly string UseInlineSamplerStatesPropertyName = "_InlineSamplerStates";
         private static bool UseInlineSamplerStates = true;
 
-        // Material properties are put into each CGPROGRAM as preprocessor defines when the optimizer is run.
-        // This is mainly targeted at culling interpolators and lines that rely on those interpolators.
-        // (The compiler is not smart enough to cull VS output that isn't used anywhere in the PS)
-        // Additionally, simply enabling the optimizer can define a keyword, whose name is stored here.
-        // This keyword is added to the beginning of all passes, right after CGPROGRAM
         public static readonly string OptimizerEnabledKeyword = "FINALPASS";
 
-        // Mega shaders are expected to have geometry and tessellation shaders enabled by default,
-        // but with the ability to be disabled by convention property names when the optimizer is run.
-        // Additionally, they can be removed per-lightmode by the given property name plus 
-        // the lightmode name as a suffix (e.g. group_toggle_GeometryShadowCaster)
-        // Geometry and Tessellation shaders are REMOVED by default, but if the main gorups
-        // are enabled certain pass types are assumed to be ENABLED
-        // Note: This is short-circuited for outlines, because geometry is only used for outlines.
         public static readonly string GeometryShaderEnabledPropertyName = "group_toggle_Geometry";
         public static readonly string TessellationEnabledPropertyName = "group_toggle_Tessellation";
         private static bool UseGeometry = true;
@@ -94,112 +57,94 @@ namespace SilentCelShading.Unity.Baking
         private static bool UseTessellationShadowCaster = true;
         private static bool UseTessellationMeta = false;
 
-        // Tessellation can be slightly optimized with a constant max tessellation factor attribute
-        // on the hull shader.  A non-animated property by this name will replace the argument of said
-        // attribute if it exists.
         public static readonly string TessellationMaxFactorPropertyName = "_TessellationFactorMax";
-
-        // Text to prepend to log entries.
         public static readonly string LogHeader = "Shader Baking: ";
 
+        enum LightModeType { None, ForwardBase, ForwardAdd, ShadowCaster, Meta, DepthOnly, DepthNormals };
+        private static LightModeType CurrentLightmode = LightModeType.None;
 
-        private static string CurrentLightmode = "";
-
-        // In-order list of inline sampler state names that will be replaced by InlineSamplerState() lines
         public static readonly string[] InlineSamplerStateNames = new string[]
         {
-            "_linear_repeat",
-            "_linear_clamp",
-            "_linear_mirror",
-            "_linear_mirroronce",
-            "_point_repeat",
-            "_point_clamp",
-            "_point_mirror",
-            "_point_mirroronce",
-            "_trilinear_repeat",
-            "_trilinear_clamp",
-            "_trilinear_mirror",
-            "_trilinear_mirroronce"
+            "_linear_repeat", "_linear_clamp", "_linear_mirror", "_linear_mirroronce",
+            "_point_repeat", "_point_clamp", "_point_mirror", "_point_mirroronce",
+            "_trilinear_repeat", "_trilinear_clamp", "_trilinear_mirror", "_trilinear_mirroronce"
         };
 
-        // Would be better to dynamically parse the "C:\Program Files\UnityXXXX\Editor\Data\CGIncludes\" folder
-        // to get version specific includes but eh
-        public static readonly string[] DefaultUnityShaderIncludes = new string[]
+        public static readonly HashSet<string> DefaultUnityShaderIncludes = new HashSet<string>()
         {
-            "UnityUI.cginc",
-            "AutoLight.cginc",
-            "GLSLSupport.glslinc",
-            "HLSLSupport.cginc",
-            "Lighting.cginc",
-            "SpeedTreeBillboardCommon.cginc",
-            "SpeedTreeCommon.cginc",
-            "SpeedTreeVertex.cginc",
-            "SpeedTreeWind.cginc",
-            "TerrainEngine.cginc",
-            "TerrainSplatmapCommon.cginc",
-            "Tessellation.cginc",
-            "UnityBuiltin2xTreeLibrary.cginc",
-            "UnityBuiltin3xTreeLibrary.cginc",
-            "UnityCG.cginc",
-            "UnityCG.glslinc",
-            "UnityCustomRenderTexture.cginc",
-            "UnityDeferredLibrary.cginc",
-            "UnityDeprecated.cginc",
-            "UnityGBuffer.cginc",
-            "UnityGlobalIllumination.cginc",
-            "UnityImageBasedLighting.cginc",
-            "UnityInstancing.cginc",
-            "UnityLightingCommon.cginc",
-            "UnityMetaPass.cginc",
-            "UnityPBSLighting.cginc",
-            "UnityShaderUtilities.cginc",
-            "UnityShaderVariables.cginc",
-            "UnityShadowLibrary.cginc",
-            "UnitySprites.cginc",
-            "UnityStandardBRDF.cginc",
-            "UnityStandardConfig.cginc",
-            "UnityStandardCore.cginc",
-            "UnityStandardCoreForward.cginc",
-            "UnityStandardCoreForwardSimple.cginc",
-            "UnityStandardInput.cginc",
-            "UnityStandardMeta.cginc",
-            "UnityStandardParticleInstancing.cginc",
-            "UnityStandardParticles.cginc",
-            "UnityStandardParticleShadow.cginc",
-            "UnityStandardShadow.cginc",
-            "UnityStandardUtils.cginc"
+            "UnityUI.cginc", "AutoLight.cginc", "GLSLSupport.glslinc", "HLSLSupport.cginc",
+            "Lighting.cginc", "SpeedTreeBillboardCommon.cginc", "SpeedTreeCommon.cginc",
+            "SpeedTreeVertex.cginc", "SpeedTreeWind.cginc", "TerrainEngine.cginc",
+            "TerrainSplatmapCommon.cginc", "Tessellation.cginc", "UnityBuiltin2xTreeLibrary.cginc",
+            "UnityBuiltin3xTreeLibrary.cginc", "UnityCG.cginc", "UnityCG.glslinc",
+            "UnityCustomRenderTexture.cginc", "UnityDeferredLibrary.cginc", "UnityDeprecated.cginc",
+            "UnityGBuffer.cginc", "UnityGlobalIllumination.cginc", "UnityImageBasedLighting.cginc",
+            "UnityInstancing.cginc", "UnityLightingCommon.cginc", "UnityMetaPass.cginc",
+            "UnityPBSLighting.cginc", "UnityShaderUtilities.cginc", "UnityShaderVariables.cginc",
+            "UnityShadowLibrary.cginc", "UnitySprites.cginc", "UnityStandardBRDF.cginc",
+            "UnityStandardConfig.cginc", "UnityStandardCore.cginc", "UnityStandardCoreForward.cginc",
+            "UnityStandardCoreForwardSimple.cginc", "UnityStandardInput.cginc",
+            "UnityStandardMeta.cginc", "UnityStandardParticleInstancing.cginc",
+            "UnityStandardParticles.cginc", "UnityStandardParticleShadow.cginc",
+            "UnityStandardShadow.cginc", "UnityStandardUtils.cginc",
+            "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl",
+            "Packages/com.unity.render-pipelines.core/ShaderLibrary/CommonMaterial.hlsl",
+            "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Lighting.hlsl",
+            "Packages/com.unity.render-pipelines.universal/ShaderLibrary/RealtimeLights.hlsl",
+            "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Shadows.hlsl",
+            "Packages/com.unity.render-pipelines.core/ShaderLibrary/FoveatedRenderingKeywords.hlsl",
+            "Packages/com.unity.render-pipelines.universal/ShaderLibrary/ProbeVolumeVariants.hlsl",
+            "Packages/com.unity.render-pipelines.universal/ShaderLibrary/RenderingLayers.hlsl",
+            "Packages/com.unity.render-pipelines.core/ShaderLibrary/MetaPass.hlsl",
+            "Packages/com.unity.render-pipelines.universal/ShaderLibrary/MotionVectorsCommon.hlsl"
         };
 
-        public static readonly char[] ValidSeparators = new char[] {' ','\t','\r','\n',';',',','.','(',')','[',']','{','}','>','<','=','!','&','|','^','+','-','*','/','#' };
+        public static readonly HashSet<char> ValidSeparators = new HashSet<char>() { ' ', '\t', '\r', '\n', ';', ',', '.', '(', ')', '[', ']', '{', '}', '>', '<', '=', '!', '&', '|', '^', '+', '-', '*', '/', '#' };
 
-        public static readonly string[] ValidPropertyDataTypes = new string[]
+        public static readonly HashSet<string> ValidPropertyDataTypes = new HashSet<string>()
         {
-            "int",
-            "float",
-            "float2",
-            "float3",
-            "float4",
-            "half",
-            "half2",
-            "half3",
-            "half4",
-            "fixed",
-            "fixed2",
-            "fixed3",
-            "fixed4"
+            "int", "float", "float2", "float3", "float4", "half", "half2", "half3", "half4", "fixed", "fixed2", "fixed3", "fixed4"
         };
 
-        public enum PropertyType
-        {
-            Vector,
-            Float
-        }
+        public enum RenderPipeline { BuiltIn, URP, Other };
+
+        public static readonly string[] PreprocessStructureStart = new string[] { "CGINCLUDE", "CBUFFER_START(UnityPerMaterial)" };
+        public static readonly string[] PreprocessStructureEnd = new string[] { "ENDCG", "CBUFFER_END" };
+        public static readonly string[] CodeBlockStart = new string[] { "CGPROGRAM", "HLSLPROGRAM" };
+        public static readonly string[] CodeBlockEnd = new string[] { "ENDCG", "ENDHLSL" };
+
+        public enum PropertyType { Vector, Float }
 
         public class PropertyData
         {
             public PropertyType type;
             public string name;
             public Vector4 value;
+            public string lastDeclarationType;
+
+            public void ToCode(StringBuilder sb)
+            {
+                switch (type)
+                {
+                    case PropertyType.Float:
+                        string constantValue;
+                        if (lastDeclarationType == "int")
+                            constantValue = value.x.ToString("F0", CultureInfo.InvariantCulture);
+                        else
+                            constantValue = value.x.ToString("0.0####################", CultureInfo.InvariantCulture);
+
+                        sb.Append("float(" + constantValue + ")");
+                        break;
+                    case PropertyType.Vector:
+                        sb.Append("float4(");
+                        sb.Append(value.x.ToString(CultureInfo.InvariantCulture)); sb.Append(",");
+                        sb.Append(value.y.ToString(CultureInfo.InvariantCulture)); sb.Append(",");
+                        sb.Append(value.z.ToString(CultureInfo.InvariantCulture)); sb.Append(",");
+                        sb.Append(value.w.ToString(CultureInfo.InvariantCulture));
+                        sb.Append(")");
+                        break;
+                }
+            }
         }
 
         public class Macro
@@ -230,9 +175,39 @@ namespace SilentCelShading.Unity.Baking
             public string newName;
         }
 
+        private static string GetColorMaskString(int colorMask)
+        {
+            if (colorMask == 0) return "0";
+            string mask = "";
+            if ((colorMask & 8) != 0) mask += "R";
+            if ((colorMask & 4) != 0) mask += "G";
+            if ((colorMask & 2) != 0) mask += "B";
+            if ((colorMask & 1) != 0) mask += "A";
+            return mask;
+        }
+
+        public static RenderPipeline GetActiveRenderPipeline()
+        {
+            var pipelineAsset = UnityEngine.Rendering.GraphicsSettings.defaultRenderPipeline;
+            if (pipelineAsset != null)
+            {
+                if (pipelineAsset.GetType().Name == "UniversalRenderPipelineAsset")
+                    return RenderPipeline.URP;
+                else
+                    return RenderPipeline.Other;
+            }
+            return RenderPipeline.BuiltIn;
+        }
+
         public static bool Lock(Material material, MaterialProperty[] props)
         {
-            // File filepaths and names
+            RenderPipeline pipeline = GetActiveRenderPipeline();
+            if (pipeline == RenderPipeline.Other)
+            {
+                Debug.LogError(LogHeader + "Locking is not supported for this render pipeline.");
+                return false;
+            }
+
             Shader shader = material.shader;
             string shaderFilePath = AssetDatabase.GetAssetPath(shader);
             string materialFilePath = AssetDatabase.GetAssetPath(material);
@@ -241,18 +216,15 @@ namespace SilentCelShading.Unity.Baking
             string newShaderName = "Hidden/" + shader.name + "/" + material.name + "-" + smallguid;
             string newShaderDirectory = materialFolder + "/BakedShaders/" + material.name + "-" + smallguid + "/";
 
-            // Get collection of all properties to replace
-            // Simultaneously build a string of #defines for each CGPROGRAM
             StringBuilder definesSB = new StringBuilder();
-            // Append convention OPTIMIZER_ENABLED keyword
             definesSB.Append(Environment.NewLine);
             definesSB.Append("#define ");
             definesSB.Append(OptimizerEnabledKeyword);
             definesSB.Append(Environment.NewLine);
-            // Append all keywords active on the material
+
             foreach (string keyword in material.shaderKeywords)
             {
-                if (keyword == "") continue; // idk why but null keywords exist if _ keyword is used and not removed by the editor at some point
+                if (keyword == "") continue;
                 definesSB.Append("#define ");
                 definesSB.Append(keyword);
                 definesSB.Append(Environment.NewLine);
@@ -263,13 +235,15 @@ namespace SilentCelShading.Unity.Baking
             {
                 if (prop == null) continue;
 
-                // Every property gets turned into a preprocessor variable
-                switch(prop.type)
+                switch (prop.type)
                 {
                     case MaterialProperty.PropType.Float:
                     case MaterialProperty.PropType.Range:
+#if UNITY_2022_1_OR_NEWER
+                    case MaterialProperty.PropType.Int:
+#endif
                         definesSB.Append("#define PROP");
-                        definesSB.Append(prop.name.ToUpper());
+                        definesSB.Append(prop.name.ToUpperInvariant());
                         definesSB.Append(' ');
                         definesSB.Append(prop.floatValue.ToString(CultureInfo.InvariantCulture));
                         definesSB.Append(Environment.NewLine);
@@ -278,7 +252,7 @@ namespace SilentCelShading.Unity.Baking
                         if (prop.textureValue != null)
                         {
                             definesSB.Append("#define PROP");
-                            definesSB.Append(prop.name.ToUpper());
+                            definesSB.Append(prop.name.ToUpperInvariant());
                             definesSB.Append(Environment.NewLine);
                         }
                         break;
@@ -292,41 +266,27 @@ namespace SilentCelShading.Unity.Baking
                 }
                 else if (prop.name.StartsWith(GeometryShaderEnabledPropertyName))
                 {
-                    if (prop.name == GeometryShaderEnabledPropertyName)
-                        UseGeometry = (prop.floatValue == 1);
-                    else if (prop.name == GeometryShaderEnabledPropertyName + "ForwardBase")
-                        UseGeometryForwardBase = (prop.floatValue == 1);
-                    else if (prop.name == GeometryShaderEnabledPropertyName + "ForwardAdd")
-                        UseGeometryForwardAdd = (prop.floatValue == 1);
-                    else if (prop.name == GeometryShaderEnabledPropertyName + "ShadowCaster")
-                        UseGeometryShadowCaster = (prop.floatValue == 1);
-                    else if (prop.name == GeometryShaderEnabledPropertyName + "Meta")
-                        UseGeometryMeta = (prop.floatValue == 1);
+                    if (prop.name == GeometryShaderEnabledPropertyName) UseGeometry = (prop.floatValue == 1);
+                    else if (prop.name == GeometryShaderEnabledPropertyName + "ForwardBase") UseGeometryForwardBase = (prop.floatValue == 1);
+                    else if (prop.name == GeometryShaderEnabledPropertyName + "ForwardAdd") UseGeometryForwardAdd = (prop.floatValue == 1);
+                    else if (prop.name == GeometryShaderEnabledPropertyName + "ShadowCaster") UseGeometryShadowCaster = (prop.floatValue == 1);
+                    else if (prop.name == GeometryShaderEnabledPropertyName + "Meta") UseGeometryMeta = (prop.floatValue == 1);
                 }
                 else if (prop.name.StartsWith(TessellationEnabledPropertyName))
                 {
-                    if (prop.name == TessellationEnabledPropertyName)
-                        UseTessellation = (prop.floatValue == 1);
-                    else if (prop.name == TessellationEnabledPropertyName + "ForwardBase")
-                        UseTessellationForwardBase = (prop.floatValue == 1);
-                    else if (prop.name == TessellationEnabledPropertyName + "ForwardAdd")
-                        UseTessellationForwardAdd = (prop.floatValue == 1);
-                    else if (prop.name == TessellationEnabledPropertyName + "ShadowCaster")
-                        UseTessellationShadowCaster = (prop.floatValue == 1);
-                    else if (prop.name == TessellationEnabledPropertyName + "Meta")
-                        UseTessellationMeta = (prop.floatValue == 1);
+                    if (prop.name == TessellationEnabledPropertyName) UseTessellation = (prop.floatValue == 1);
+                    else if (prop.name == TessellationEnabledPropertyName + "ForwardBase") UseTessellationForwardBase = (prop.floatValue == 1);
+                    else if (prop.name == TessellationEnabledPropertyName + "ForwardAdd") UseTessellationForwardAdd = (prop.floatValue == 1);
+                    else if (prop.name == TessellationEnabledPropertyName + "ShadowCaster") UseTessellationShadowCaster = (prop.floatValue == 1);
+                    else if (prop.name == TessellationEnabledPropertyName + "Meta") UseTessellationMeta = (prop.floatValue == 1);
                 }
 
-
-
-                // Check for the convention 'Animated' Property to be true otherwise assume all properties are constant
-                // nlogn trash
                 MaterialProperty animatedProp = Array.Find(props, x => x.name == prop.name + AnimatedPropertySuffix);
                 if (animatedProp != null && animatedProp.floatValue == 1)
                     continue;
 
                 PropertyData propData;
-                switch(prop.type)
+                switch (prop.type)
                 {
                     case MaterialProperty.PropType.Color:
                         propData = new PropertyData();
@@ -334,12 +294,10 @@ namespace SilentCelShading.Unity.Baking
                         propData.name = prop.name;
                         if ((prop.flags & MaterialProperty.PropFlags.HDR) != 0)
                         {
-                            if ((prop.flags & MaterialProperty.PropFlags.Gamma) != 0)
-                                propData.value = prop.colorValue.linear;
+                            if ((prop.flags & MaterialProperty.PropFlags.Gamma) != 0) propData.value = prop.colorValue.linear;
                             else propData.value = prop.colorValue;
                         }
-                        else if ((prop.flags & MaterialProperty.PropFlags.Gamma) != 0)
-                            propData.value = prop.colorValue;
+                        else if ((prop.flags & MaterialProperty.PropFlags.Gamma) != 0) propData.value = prop.colorValue;
                         else propData.value = prop.colorValue.linear;
                         constantProps.Add(propData);
                         break;
@@ -352,6 +310,9 @@ namespace SilentCelShading.Unity.Baking
                         break;
                     case MaterialProperty.PropType.Float:
                     case MaterialProperty.PropType.Range:
+#if UNITY_2022_1_OR_NEWER
+                    case MaterialProperty.PropType.Int:
+#endif
                         propData = new PropertyData();
                         propData.type = PropertyType.Float;
                         propData.name = prop.name;
@@ -377,8 +338,7 @@ namespace SilentCelShading.Unity.Baking
                             TexelSize.type = PropertyType.Vector;
                             TexelSize.name = prop.name + "_TexelSize";
                             Texture t = prop.textureValue;
-                            if (t != null)
-                                TexelSize.value = new Vector4(1.0f / t.width, 1.0f / t.height, t.width, t.height);
+                            if (t != null) TexelSize.value = new Vector4(1.0f / t.width, 1.0f / t.height, t.width, t.height);
                             else TexelSize.value = new Vector4(1.0f, 1.0f, 1.0f, 1.0f);
                             constantProps.Add(TexelSize);
                         }
@@ -387,141 +347,154 @@ namespace SilentCelShading.Unity.Baking
             }
             string optimizerDefines = definesSB.ToString();
 
-            // Get list of lightmode passes to delete
             List<string> disabledLightModes = new List<string>();
             var disabledLightModesProperty = Array.Find(props, x => x.name == DisabledLightModesPropertyName);
             if (disabledLightModesProperty != null)
             {
                 int lightModesMask = (int)disabledLightModesProperty.floatValue;
-                if ((lightModesMask & (int)LightMode.ForwardAdd) != 0)
-                    disabledLightModes.Add("ForwardAdd");
-                if ((lightModesMask & (int)LightMode.ShadowCaster) != 0)
-                    disabledLightModes.Add("ShadowCaster");
+                if ((lightModesMask & (int)LightMode.ForwardAdd) != 0) disabledLightModes.Add("ForwardAdd");
+                if ((lightModesMask & (int)LightMode.ShadowCaster) != 0) disabledLightModes.Add("ShadowCaster");
             }
-                
-            // Parse shader and cginc files, also gets preprocessor macros
+
             List<ParsedShaderFile> shaderFiles = new List<ParsedShaderFile>();
             List<Macro> macros = new List<Macro>();
             if (!ParseShaderFilesRecursive(shaderFiles, newShaderDirectory, shaderFilePath, macros))
                 return false;
-            
 
+            Dictionary<string, PropertyData> constantPropsDictionary = constantProps.GroupBy(x => x.name).Select(g => g.First()).ToDictionary(x => x.name);
+            Macro[] macrosArray = macros.ToArray();
             List<GrabPassReplacement> grabPassVariables = new List<GrabPassReplacement>();
-            // Loop back through and do macros, props, and all other things line by line as to save string ops
-            // Will still be a massive n2 operation from each line * each property
+
             foreach (ParsedShaderFile psf in shaderFiles)
             {
-                // Shader file specific stuff
-                if (psf.filePath.EndsWith(".shader"))
+                if (psf.filePath.EndsWith(".shader", StringComparison.Ordinal) || psf.filePath.EndsWith(".hlsl", StringComparison.Ordinal))
                 {
                     for (int i=0; i<psf.lines.Length;i++)
                     {
                         string trimmedLine = psf.lines[i].TrimStart();
-                        if (trimmedLine.StartsWith("Shader"))
+                        if (trimmedLine.StartsWith("Shader", StringComparison.Ordinal))
                         {
                             string originalSgaderName = psf.lines[i].Split('\"')[1];
                             psf.lines[i] = psf.lines[i].Replace(originalSgaderName, newShaderName);
                         }
-                        else if (trimmedLine.StartsWith("//#pragmamulti_compile_LOD_FADE_CROSSFADE"))
+                        else if (trimmedLine.StartsWith("//#pragmamulti_compile_LOD_FADE_CROSSFADE", StringComparison.Ordinal))
                         {
                             MaterialProperty crossfadeProp = Array.Find(props, x => x.name == LODCrossFadePropertyName);
                             if (crossfadeProp != null && crossfadeProp.floatValue == 1)
                                 psf.lines[i] = psf.lines[i].Replace("//#pragma", "#pragma");
                         }
-                        else if (trimmedLine.StartsWith("//\"IgnoreProjector\"=\"True\""))
+                        else if (trimmedLine.StartsWith("//\"IgnoreProjector\"=\"True\"", StringComparison.Ordinal))
                         {
                             MaterialProperty projProp = Array.Find(props, x => x.name == IgnoreProjectorPropertyName);
                             if (projProp != null && projProp.floatValue == 1)
                                 psf.lines[i] = psf.lines[i].Replace("//\"IgnoreProjector", "\"IgnoreProjector");
                         }
-                        else if (trimmedLine.StartsWith("//\"ForceNoShadowCasting\"=\"True\""))
+                        else if (trimmedLine.StartsWith("//\"ForceNoShadowCasting\"=\"True\"", StringComparison.Ordinal))
                         {
                             MaterialProperty forceNoShadowsProp = Array.Find(props, x => x.name == ForceNoShadowCastingPropertyName);
                             if (forceNoShadowsProp != null && forceNoShadowsProp.floatValue == 1)
                                 psf.lines[i] = psf.lines[i].Replace("//\"ForceNoShadowCasting", "\"ForceNoShadowCasting");
                         }
-                        else if (trimmedLine.StartsWith("GrabPass {"))
+                        else if (trimmedLine.StartsWith("GrabPass {", StringComparison.Ordinal))
                         {
                             GrabPassReplacement gpr = new GrabPassReplacement();
                             string[] splitLine = trimmedLine.Split('\"');
-                            if (splitLine.Length == 1)
-                                gpr.originalName = "_GrabTexture";
-                            else
-                                gpr.originalName = splitLine[1];
+                            if (splitLine.Length == 1) gpr.originalName = "_GrabTexture";
+                            else gpr.originalName = splitLine[1];
+
                             gpr.newName = material.GetTag("GrabPass" + grabPassVariables.Count, false, "_GrabTexture");
                             psf.lines[i] = "GrabPass { \"" + gpr.newName + "\" }";
                             grabPassVariables.Add(gpr);
                         }
-                        else if (trimmedLine.StartsWith("CGINCLUDE"))
+                        else if (trimmedLine.StartsWith(PreprocessStructureStart[(int) pipeline], StringComparison.Ordinal))
                         {
-                            for (int j=i+1; j<psf.lines.Length;j++)
-                                if (psf.lines[j].TrimStart().StartsWith("ENDCG"))
+                            for (int j = i + 1; j < psf.lines.Length; j++)
+                                if (psf.lines[j].TrimStart().StartsWith(PreprocessStructureEnd[(int) pipeline], StringComparison.Ordinal))
                                 {
-                                    ReplaceShaderValues(material, psf.lines, i+1, j, props, constantProps, macros, grabPassVariables);
+                                    ReplaceShaderValues(material, psf.lines, i + 1, j, props, constantPropsDictionary, macrosArray, grabPassVariables.ToArray());
                                     break;
                                 }
                         }
-                        else if (trimmedLine.StartsWith("CGPROGRAM"))
+                        else if (trimmedLine.StartsWith(CodeBlockStart[(int) pipeline], StringComparison.Ordinal))
                         {
                             psf.lines[i] += optimizerDefines;
-                            for (int j=i+1; j<psf.lines.Length;j++)
-                                if (psf.lines[j].TrimStart().StartsWith("ENDCG"))
+                            for (int j = i + 1; j < psf.lines.Length; j++)
+                                if (psf.lines[j].TrimStart().StartsWith(CodeBlockEnd[(int) pipeline], StringComparison.Ordinal))
                                 {
-                                    ReplaceShaderValues(material, psf.lines, i+1, j, props, constantProps, macros, grabPassVariables);
+                                    ReplaceShaderValues(material, psf.lines, i + 1, j, props, constantPropsDictionary, macrosArray, grabPassVariables.ToArray());
                                     break;
                                 }
                         }
-                        // Lightmode based pass removal, requires strict formatting
-                        else if (trimmedLine.StartsWith("Tags"))
+                        else if (trimmedLine.StartsWith("Tags", StringComparison.Ordinal))
                         {
                             string lineFullyTrimmed = trimmedLine.Replace(" ", "").Replace("\t", "");
-                            // expects lightmode tag to be on the same line like: Tags { "LightMode" = "ForwardAdd" }
                             if (lineFullyTrimmed.Contains("\"LightMode\"=\""))
                             {
                                 string lightModeName = lineFullyTrimmed.Split('\"')[3];
-                                // Store current lightmode name in a static, useful for per-pass geometry and tessellation removal
-                                CurrentLightmode = lightModeName;
+
+                                if (lightModeName == "ForwardBase") CurrentLightmode = LightModeType.ForwardBase;
+                                else if (lightModeName == "ForwardAdd") CurrentLightmode = LightModeType.ForwardAdd;
+                                else if (lightModeName == "ShadowCaster") CurrentLightmode = LightModeType.ShadowCaster;
+                                else if (lightModeName == "Meta") CurrentLightmode = LightModeType.Meta;
+                                else CurrentLightmode = LightModeType.None;
+
                                 if (disabledLightModes.Contains(lightModeName))
                                 {
-                                    // Loop up from psf.lines[i] until standalone "Pass" line is found, delete it
-                                    int j=i-1;
-                                    for (;j>=0;j--)
-                                        if (psf.lines[j].Replace(" ", "").Replace("\t", "") == "Pass")
-                                            break;
-                                    // then delete each line until a standalone ENDCG line is found
-                                    for (;j<psf.lines.Length;j++)
+                                    int j = i - 1;
+                                    for (; j >= 0; j--)
+                                        if (psf.lines[j].Replace(" ", "").Replace("\t", "") == "Pass") break;
+                                    for (; j < psf.lines.Length; j++)
                                     {
-                                        if (psf.lines[j].Replace(" ", "").Replace("\t", "") == "ENDCG")
-                                            break;
+                                        if (psf.lines[j].Replace(" ", "").Replace("\t", "") == "ENDCG") break;
                                         psf.lines[j] = "";
                                     }
-                                    // then delete each line until a standalone '}' line is found
-                                    for (;j<psf.lines.Length;j++)
+                                    for (; j < psf.lines.Length; j++)
                                     {
                                         string temp = psf.lines[j];
                                         psf.lines[j] = "";
-                                        if (temp.Replace(" ", "").Replace("\t", "") == "}")
-                                            break;
+                                        if (temp.Replace(" ", "").Replace("\t", "") == "}") break;
                                     }
+                                }
+                            }
+                        }
+                        else if (trimmedLine.StartsWith("ColorMask", StringComparison.Ordinal))
+                        {
+                            Match regMatch = Regex.Match(trimmedLine, @"\[\w+\]");
+                            if(regMatch.Success)
+                            {
+                                string trimmedRegMatch = regMatch.Value.Trim('[', ']');
+                                if (constantPropsDictionary.ContainsKey(trimmedRegMatch))
+                                {
+                                    PropertyData colorMaskProp = constantPropsDictionary[trimmedRegMatch];
+                                    psf.lines[i] = psf.lines[i].Replace(regMatch.Value, GetColorMaskString((int)colorMaskProp.value.x));
+                                }
+                            }
+                        }
+                        else if (trimmedLine.StartsWith("Cull", StringComparison.OrdinalIgnoreCase))
+                        {
+                            Match regMatch = Regex.Match(trimmedLine, @"\[\w+\]");
+                            if(regMatch.Success)
+                            {
+                                string trimmedRegMatch = regMatch.Value.Trim('[', ']');
+                                if (constantPropsDictionary.ContainsKey(trimmedRegMatch))
+                                {
+                                    PropertyData cullModeProp = constantPropsDictionary[trimmedRegMatch];
+                                    psf.lines[i] = psf.lines[i].Replace(regMatch.Value, ((UnityEngine.Rendering.CullMode)cullModeProp.value.x).ToString());
                                 }
                             }
                         }
                     }
                 }
-                else // CGINC file
-                    ReplaceShaderValues(material, psf.lines, 0, psf.lines.Length, props, constantProps, macros, grabPassVariables);
+                else
+                    ReplaceShaderValues(material, psf.lines, 0, psf.lines.Length, props, constantPropsDictionary, macrosArray, grabPassVariables.ToArray());
 
-                // Recombine file lines into a single string
-                int totalLen = psf.lines.Length*2; // extra space for newline chars
-                foreach (string line in psf.lines)
-                    totalLen += line.Length;
+                int totalLen = psf.lines.Length * 2;
+                foreach (string line in psf.lines) totalLen += line.Length;
+
                 StringBuilder sb = new StringBuilder(totalLen);
-                // This appendLine function is incompatible with the '\n's that are being added elsewhere
-                foreach (string line in psf.lines)
-                    sb.AppendLine(line);
+                foreach (string line in psf.lines) sb.AppendLine(line);
                 string output = sb.ToString();
 
-                // Write output to file
                 string newShaderFilePath = Path.GetFileName(psf.filePath);
                 (new FileInfo(newShaderDirectory + newShaderFilePath)).Directory.Create();
                 try
@@ -536,23 +509,18 @@ namespace SilentCelShading.Unity.Baking
                     return false;
                 }
             }
-            
+
             AssetDatabase.Refresh();
-            // Write original shader to override tag
+
             material.SetOverrideTag("OriginalShader", shader.name);
-            // Write the new shader folder name in an override tag so it will be deleted 
             material.SetOverrideTag("BakedShaderFolder", material.name + "-" + smallguid);
 
-            // Remove ALL keywords
             foreach (string keyword in material.shaderKeywords)
                 material.DisableKeyword(keyword);
 
-            // For some reason when shaders are swapped on a material the RenderType override tag gets completely deleted and render queue set back to -1
-            // So these are saved as temp values and reassigned after switching shaders
             string renderType = material.GetTag("RenderType", false, "");
             int renderQueue = material.renderQueue;
 
-            // Actually switch the shader
             Shader newShader = Shader.Find(newShaderName);
             if (newShader == null)
             {
@@ -566,20 +534,14 @@ namespace SilentCelShading.Unity.Baking
             return true;
         }
 
-        // Preprocess each file for macros and includes
-        // Save each file as string[], parse each macro with //KSOEvaluateMacro
-        // Only editing done is replacing #include "X" filepaths where necessary
-        // most of these args could be private static members of the class
         private static bool ParseShaderFilesRecursive(List<ParsedShaderFile> filesParsed, string newTopLevelDirectory, string filePath, List<Macro> macros)
         {
-            // Infinite recursion check
             if (filesParsed.Exists(x => x.filePath == filePath)) return true;
 
             ParsedShaderFile psf = new ParsedShaderFile();
             psf.filePath = filePath;
             filesParsed.Add(psf);
 
-            // Read file
             string fileContents = null;
             try
             {
@@ -598,42 +560,32 @@ namespace SilentCelShading.Unity.Baking
                 return false;
             }
 
-            // Parse file line by line
             List<String> macrosList = new List<string>();
-            string[] fileLines = Regex.Split(fileContents, "\r\n|\r|\n");
+            string[] fileLines = fileContents.Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries);
+
             for (int i=0; i<fileLines.Length; i++)
             {
                 string lineParsed = fileLines[i].TrimStart();
-                // Specifically requires no whitespace between # and include, as it should be
-                if (lineParsed.StartsWith("#include"))
+                if (lineParsed.StartsWith("#include", StringComparison.Ordinal))
                 {
                     int firstQuotation = lineParsed.IndexOf('\"',0);
                     int lastQuotation = lineParsed.IndexOf('\"',firstQuotation+1);
                     string includeFilename = lineParsed.Substring(firstQuotation+1, lastQuotation-firstQuotation-1);
 
-                    // Skip default includes
-                    if (Array.Exists(DefaultUnityShaderIncludes, x => x.Equals(includeFilename, StringComparison.InvariantCultureIgnoreCase)))
-                        continue;
+                    if (DefaultUnityShaderIncludes.Contains(includeFilename) == false)
+                    {
+                        string includeFullpath = includeFilename;
+                        if (includeFilename.StartsWith("Assets/", StringComparison.Ordinal) == false && includeFilename.StartsWith("Packages/", StringComparison.Ordinal) == false)
+                            includeFullpath = GetFullPath(includeFilename, Path.GetDirectoryName(filePath));
 
-                    // cginclude filepath is either absolute or relative
-                    if (includeFilename.StartsWith("Assets/"))
-                    {
-                        if (!ParseShaderFilesRecursive(filesParsed, newTopLevelDirectory, includeFilename, macros))
-                            return false;
-                        // Only absolute filepaths need to be renampped in-file
-                        fileLines[i] = fileLines[i].Replace(includeFilename, newTopLevelDirectory + includeFilename);
-                    }
-                    else
-                    {
-                        string includeFullpath = GetFullPath(includeFilename, Path.GetDirectoryName(filePath));
                         if (!ParseShaderFilesRecursive(filesParsed, newTopLevelDirectory, includeFullpath, macros))
                             return false;
+
+                        fileLines[i] = fileLines[i].Replace(includeFilename, "/"+includeFilename.Split('/').Last());
                     }
                 }
-                // Remove unique fallbacks
-                else if (lineParsed.StartsWith("FallBack"))
+                else if (lineParsed.StartsWith("FallBack", StringComparison.Ordinal))
                     fileLines[i] = "//" + fileLines[i];
-                // Specifically requires no whitespace between // and KSOEvaluateMacro
                 else if (lineParsed == "//KSOEvaluateMacro")
                 {
                     string macro = "";
@@ -642,131 +594,99 @@ namespace SilentCelShading.Unity.Baking
                     {
                         i++;
                         lineTrimmed = fileLines[i].TrimEnd();
-                        if (lineTrimmed.EndsWith("\\"))
-                            macro += lineTrimmed.TrimEnd('\\') + Environment.NewLine; // keep new lines in macro to make output more readable
+                        if (lineTrimmed.EndsWith("\\", StringComparison.Ordinal))
+                            macro += lineTrimmed.TrimEnd('\\') + Environment.NewLine;
                         else macro += lineTrimmed;
-                    } 
-                    while (lineTrimmed.EndsWith("\\"));
+                    }
+                    while (lineTrimmed.EndsWith("\\", StringComparison.Ordinal));
                     macrosList.Add(macro);
                 }
             }
 
-            // Prepare the macros list into pattern matchable structs
-            // Revise this later to not do so many string ops
             foreach (string macroString in macrosList)
             {
-                string m = macroString;
+                string m = macroString.TrimStart();
                 Macro macro = new Macro();
-                m = m.TrimStart();
-                if (m[0] != '#') continue;
-                m = m.Remove(0, "#".Length).TrimStart();
-                if (!m.StartsWith("define")) continue;
-                m = m.Remove(0, "define".Length).TrimStart();
-                int firstParenthesis = m.IndexOf('(');
-                macro.name = m.Substring(0, firstParenthesis);
-                m = m.Remove(0, firstParenthesis + "(".Length);
-                int lastParenthesis = m.IndexOf(')');
-                string allArgs = m.Substring(0, lastParenthesis).Replace(" ", "").Replace("\t", "");
-                macro.args = allArgs.Split(',');
-                m = m.Remove(0, lastParenthesis + ")".Length);
-                macro.contents = m;
+
+                if (!m.StartsWith("#define", StringComparison.Ordinal)) continue;
+                m = m.Remove(0, "#define".Length).TrimStart();
+
+                string allArgs = "";
+                if (m.Contains('('))
+                {
+                    macro.name = m.Split('(')[0];
+                    m = m.Remove(0, macro.name.Length + "(".Length);
+                    allArgs = m.Split(')')[0];
+                    allArgs = allArgs.Trim().Replace(" ","").Replace("\t","");
+                    macro.args = allArgs.Split(',');
+                    m = m.Remove(0, allArgs.Length + ")".Length).TrimStart();
+                    macro.contents = m;
+                }
+                else continue;
                 macros.Add(macro);
             }
 
-            // Save psf lines to list
             psf.lines = fileLines;
             return true;
         }
 
-        // error CS1501: No overload for method 'Path.GetFullPath' takes 2 arguments
-        // Thanks Unity
-        // Could be made more efficent with stringbuilder
         public static string GetFullPath(string relativePath, string basePath)
         {
             while (relativePath.StartsWith("./"))
                 relativePath = relativePath.Remove(0, "./".Length);
             while (relativePath.StartsWith("../"))
             {
-                basePath = basePath.Remove(basePath.LastIndexOf("/", StringComparison.Ordinal), basePath.Length - basePath.LastIndexOf("/", StringComparison.Ordinal));
+                basePath = basePath.Remove(basePath.LastIndexOf(Path.DirectorySeparatorChar), basePath.Length - basePath.LastIndexOf(Path.DirectorySeparatorChar));
                 relativePath = relativePath.Remove(0, "../".Length);
             }
             return basePath + '/' + relativePath;
         }
- 
-        // Replace properties! The meat of the shader optimization process
-        // For each constantProp, pattern match and find each instance of the property that isn't a declaration
-        // most of these args could be private static members of the class
-        private static void ReplaceShaderValues(Material material, string[] lines, int startLine, int endLine, 
-        MaterialProperty[] props, List<PropertyData> constants, List<Macro> macros, List<GrabPassReplacement> grabPassVariables)
+
+        private static void ReplaceShaderValues(Material material, string[] lines, int startLine, int endLine,
+            MaterialProperty[] props, Dictionary<string,PropertyData> constants, Macro[] macros, GrabPassReplacement[] grabPassVariables)
         {
             List <TextureProperty> uniqueSampledTextures = new List<TextureProperty>();
 
-            // Outside loop is each line
             for (int i=startLine;i<endLine;i++)
             {
                 string lineTrimmed = lines[i].TrimStart();
-                if (lineTrimmed.StartsWith("#pragma geometry"))
+                string[] tokens = lineTrimmed.Split(new char[]{' ', '\t', '(', ')', '[', ']', '+', '-', '*', '/', '.', ',', ';', '=', '!'}, StringSplitOptions.RemoveEmptyEntries);
+
+                if (lineTrimmed.StartsWith("#pragma geometry", StringComparison.Ordinal))
                 {
-                    if (!UseGeometry)
-                        lines[i] = "//" + lines[i];
+                    if (!UseGeometry) lines[i] = "//" + lines[i];
                     else
                     {
                         switch (CurrentLightmode)
                         {
-                            case "ForwardBase":
-                                if (!UseGeometryForwardBase)
-                                    lines[i] = "//" + lines[i];
-                                break;
-                            case "ForwardAdd":
-                                if (!UseGeometryForwardAdd)
-                                    lines[i] = "//" + lines[i];
-                                break;
-                            case "ShadowCaster":
-                                if (!UseGeometryShadowCaster)
-                                    lines[i] = "//" + lines[i];
-                                break;
-                            case "Meta":
-                                if (!UseGeometryMeta)
-                                    lines[i] = "//" + lines[i];
-                                break;
+                            case LightModeType.ForwardBase: if (!UseGeometryForwardBase) lines[i] = "//" + lines[i]; break;
+                            case LightModeType.ForwardAdd: if (!UseGeometryForwardAdd) lines[i] = "//" + lines[i]; break;
+                            case LightModeType.ShadowCaster: if (!UseGeometryShadowCaster) lines[i] = "//" + lines[i]; break;
+                            case LightModeType.Meta: if (!UseGeometryMeta) lines[i] = "//" + lines[i]; break;
                         }
                     }
                 }
-                else if (lineTrimmed.StartsWith("#pragma hull") || lineTrimmed.StartsWith("#pragma domain"))
+                else if (lineTrimmed.StartsWith("#pragma hull", StringComparison.Ordinal) || lineTrimmed.StartsWith("#pragma domain", StringComparison.Ordinal))
                 {
-                    if (!UseTessellation)
-                        lines[i] = "//" + lines[i];
+                    if (!UseTessellation) lines[i] = "//" + lines[i];
                     else
                     {
                         switch (CurrentLightmode)
                         {
-                            case "ForwardBase":
-                                if (!UseTessellationForwardBase)
-                                    lines[i] = "//" + lines[i];
-                                break;
-                            case "ForwardAdd":
-                                if (!UseTessellationForwardAdd)
-                                    lines[i] = "//" + lines[i];
-                                break;
-                            case "ShadowCaster":
-                                if (!UseTessellationShadowCaster)
-                                    lines[i] = "//" + lines[i];
-                                break;
-                            case "Meta":
-                                if (!UseTessellationMeta)
-                                    lines[i] = "//" + lines[i];
-                                break;
+                            case LightModeType.ForwardBase: if (!UseTessellationForwardBase) lines[i] = "//" + lines[i]; break;
+                            case LightModeType.ForwardAdd: if (!UseTessellationForwardAdd) lines[i] = "//" + lines[i]; break;
+                            case LightModeType.ShadowCaster: if (!UseTessellationShadowCaster) lines[i] = "//" + lines[i]; break;
+                            case LightModeType.Meta: if (!UseTessellationMeta) lines[i] = "//" + lines[i]; break;
                         }
                     }
                 }
-                // Remove all shader_feature directives
-                else if (lineTrimmed.StartsWith("#pragma shader_feature") || lineTrimmed.StartsWith("#pragma shader_feature_local"))
+                else if (lineTrimmed.StartsWith("#pragma shader_feature", StringComparison.Ordinal) || lineTrimmed.StartsWith("#pragma shader_feature_local", StringComparison.Ordinal))
+                {
                     lines[i] = "//" + lines[i];
-                // Replace inline smapler states
-                else if (UseInlineSamplerStates && lineTrimmed.StartsWith("//KSOInlineSamplerState"))
+                }
+                else if (UseInlineSamplerStates && lineTrimmed.StartsWith("//KSOInlineSamplerState", StringComparison.Ordinal))
                 {
-                    string lineParsed = lineTrimmed.Replace(" ", "").Replace("\t", "");
-                    // Remove all whitespace
+                    string lineParsed = lineTrimmed.Replace(" ","").Replace("\t","");
                     int firstParenthesis = lineParsed.IndexOf('(');
                     int lastParenthesis = lineParsed.IndexOf(')');
                     string argsString = lineParsed.Substring(firstParenthesis+1, lastParenthesis - firstParenthesis-1);
@@ -780,66 +700,36 @@ namespace SilentCelShading.Unity.Baking
                         {
                             switch (t.filterMode)
                             {
-                                case FilterMode.Bilinear:
-                                    break;
-                                case FilterMode.Point:
-                                    inlineSamplerIndex += 1 * 4;
-                                    break;
-                                case FilterMode.Trilinear:
-                                    inlineSamplerIndex += 2 * 4;
-                                    break;
+                                case FilterMode.Bilinear: break;
+                                case FilterMode.Point: inlineSamplerIndex += 1 * 4; break;
+                                case FilterMode.Trilinear: inlineSamplerIndex += 2 * 4; break;
                             }
                             switch (t.wrapMode)
                             {
-                                case TextureWrapMode.Repeat:
-                                    break;
-                                case TextureWrapMode.Clamp:
-                                    inlineSamplerIndex += 1;
-                                    break;
-                                case TextureWrapMode.Mirror:
-                                    inlineSamplerIndex += 2;
-                                    break;
-                                case TextureWrapMode.MirrorOnce:
-                                    inlineSamplerIndex += 3;
-                                    break;
+                                case TextureWrapMode.Repeat: break;
+                                case TextureWrapMode.Clamp: inlineSamplerIndex += 1; break;
+                                case TextureWrapMode.Mirror: inlineSamplerIndex += 2; break;
+                                case TextureWrapMode.MirrorOnce: inlineSamplerIndex += 3; break;
                             }
                         }
-
-                        // Replace the token on the following line
                         lines[i+1] = lines[i+1].Replace(args[0], InlineSamplerStateNames[inlineSamplerIndex]);
                     }
                 }
-                else if (lineTrimmed.StartsWith("//KSODuplicateTextureCheckStart"))
+                else if (lineTrimmed.StartsWith("//KSODuplicateTextureCheckStart", StringComparison.Ordinal))
                 {
-                    // Since files are not fully parsed and instead loosely processed, each shader function needs to have
-                    // its sampled texture list reset somewhere before KSODuplicateTextureChecks are made.
-                    // As long as textures are sampled in-order inside a single function, this method will work.
                     uniqueSampledTextures = new List<TextureProperty>();
                 }
-                else if (lineTrimmed.StartsWith("//KSODuplicateTextureCheck"))
+                else if (lineTrimmed.StartsWith("//KSODuplicateTextureCheck", StringComparison.Ordinal))
                 {
-                    // Each KSODuplicateTextureCheck line gets evaluated when the shader is optimized
-                    // If the texture given has already been sampled as another texture (i.e. one texture is used in two slots)
-                    // AND has been sampled with the same UV mode - as indicated by a convention UV property,
-                    // AND has been sampled with the exact same Tiling/Offset values
-                    // AND has been logged by KSODuplicateTextureCheck, 
-                    // then the variable corresponding to the first instance of that texture being 
-                    // sampled will be assigned to the variable corresponding to the given texture.
-                    // The compiler will then skip the duplicate texture sample since its variable is overwritten before being used
-                    
-                    // Parse line for argument texture property name
                     string lineParsed = lineTrimmed.Replace(" ", "").Replace("\t", "");
                     int firstParenthesis = lineParsed.IndexOf('(');
                     int lastParenthesis = lineParsed.IndexOf(')');
                     string argName = lineParsed.Substring(firstParenthesis+1, lastParenthesis-firstParenthesis-1);
-                    // Check if texture property by argument name exists and has a texture assigned
                     if (Array.Exists(props, x => x.name == argName))
                     {
                         MaterialProperty argProp = Array.Find(props, x => x.name == argName);
                         if (argProp.textureValue != null)
                         {
-                            // If no convention UV property exists, sampled UV mode is assumed to be 0 
-                            // Any UV enum or mode indicator can be used for this
                             int UV = 0;
                             if (Array.Exists(props, x => x.name == argName + "UV"))
                                 UV = (int)(Array.Find(props, x => x.name == argName + "UV").floatValue);
@@ -847,19 +737,14 @@ namespace SilentCelShading.Unity.Baking
                             Vector2 texScale = material.GetTextureScale(argName);
                             Vector2 texOffset = material.GetTextureOffset(argName);
 
-                            // Check if this texture has already been sampled
-                            if (uniqueSampledTextures.Exists(x => (x.texture == argProp.textureValue) 
-                                                               && (x.uv == UV)
-                                                               && (x.scale == texScale)
-                                                               && x.offset == texOffset))
+                            if (uniqueSampledTextures.Exists(x => (x.texture == argProp.textureValue)
+                                                               && (x.uv == UV) && (x.scale == texScale) && x.offset == texOffset))
                             {
                                 string texName = uniqueSampledTextures.Find(x => (x.texture == argProp.textureValue) && (x.uv == UV)).name;
-                                // convention _var variables requried. i.e. _MainTex_var and _CoverageMap_var
                                 lines[i] = argName + "_var = " + texName + "_var;";
                             }
                             else
                             {
-                                // Texture/UV/ST combo hasn't been sampled yet, add it to the list
                                 TextureProperty tp = new TextureProperty();
                                 tp.name = argName;
                                 tp.texture = argProp.textureValue;
@@ -871,7 +756,7 @@ namespace SilentCelShading.Unity.Baking
                         }
                     }
                 }
-                else if (lineTrimmed.StartsWith("[maxtessfactor("))
+                else if (lineTrimmed.StartsWith("[maxtessfactor(", StringComparison.Ordinal))
                 {
                     MaterialProperty maxTessFactorProperty = Array.Find(props, x => x.name == TessellationMaxFactorPropertyName);
                     if (maxTessFactorProperty != null)
@@ -884,24 +769,19 @@ namespace SilentCelShading.Unity.Baking
                     }
                 }
 
-                // then replace macros
                 foreach (Macro macro in macros)
                 {
-                    // Expects only one instance of a macro per line!
                     int macroIndex;
                     if ((macroIndex = lines[i].IndexOf(macro.name + "(", StringComparison.Ordinal)) != -1)
                     {
-                        // Macro exists on this line, make sure its not the definition
-                        string lineParsed = lineTrimmed.Replace(" ", "").Replace("\t", "");
-                        if (lineParsed.StartsWith("#define")) continue;
+                        string lineParsed = lineTrimmed.Replace(" ","").Replace("\t","");
+                        if (lineParsed.StartsWith("#define", StringComparison.Ordinal)) continue;
 
-                        // parse args between first '(' and first ')'
                         int firstParenthesis = macroIndex + macro.name.Length;
                         int lastParenthesis = lines[i].IndexOf(')', macroIndex + macro.name.Length+1);
                         string allArgs = lines[i].Substring(firstParenthesis+1, lastParenthesis-firstParenthesis-1);
                         string[] args = allArgs.Split(',');
-                        
-                        // Replace macro parts
+
                         string newContents = macro.contents;
                         for (int j=0; j<args.Length;j++)
                         {
@@ -912,14 +792,12 @@ namespace SilentCelShading.Unity.Baking
                             {
                                 lastIndex = argIndex+1;
                                 char charLeft = ' ';
-                                if (argIndex-1 >= 0)
-                                    charLeft = newContents[argIndex-1];
+                                if (argIndex-1 >= 0) charLeft = newContents[argIndex-1];
                                 char charRight = ' ';
-                                if (argIndex+macro.args[j].Length < newContents.Length)
-                                    charRight = newContents[argIndex+macro.args[j].Length];
-                                if (Array.Exists(ValidSeparators, x => x == charLeft) && Array.Exists(ValidSeparators, x => x == charRight))
+                                if (argIndex+macro.args[j].Length < newContents.Length) charRight = newContents[argIndex+macro.args[j].Length];
+
+                                if (ValidSeparators.Contains(charLeft) && ValidSeparators.Contains(charRight))
                                 {
-                                    // Replcae the arg!
                                     StringBuilder sbm = new StringBuilder(newContents.Length - macro.args[j].Length + args[j].Length);
                                     sbm.Append(newContents, 0, argIndex);
                                     sbm.Append(args[j]);
@@ -928,8 +806,7 @@ namespace SilentCelShading.Unity.Baking
                                 }
                             }
                         }
-                        newContents = newContents.Replace("##", ""); // Remove token pasting separators
-                        // Replace the line with the evaluated macro
+                        newContents = newContents.Replace("##", "");
                         StringBuilder sb = new StringBuilder(lines[i].Length + newContents.Length);
                         sb.Append(lines[i], 0, macroIndex);
                         sb.Append(newContents);
@@ -937,81 +814,65 @@ namespace SilentCelShading.Unity.Baking
                         lines[i] = sb.ToString();
                     }
                 }
-                // then replace properties
-                foreach (PropertyData constant in constants)
+
+                for(int t=0;t<tokens.Length;t++)
                 {
-                    int constantIndex;
-                    int lastIndex = 0;
-                    bool declarationFound = false;
-                    while ((constantIndex = lines[i].IndexOf(constant.name, lastIndex, StringComparison.Ordinal)) != -1)
+                    string token = tokens[t];
+                    if (constants.ContainsKey(token))
                     {
-                        lastIndex = constantIndex+1;
-                        char charLeft = ' ';
-                        if (constantIndex-1 >= 0)
-                            charLeft = lines[i][constantIndex-1];
-                        char charRight = ' ';
-                        if (constantIndex + constant.name.Length < lines[i].Length)
-                            charRight = lines[i][constantIndex + constant.name.Length];
-                        // Skip invalid matches (probably a subname of another symbol)
-                        if (!(Array.Exists(ValidSeparators, x => x == charLeft) && Array.Exists(ValidSeparators, x => x == charRight)))
-                            continue;
-                        
-                        // Skip basic declarations of unity shader properties i.e. "uniform float4 _Color;"
-                        if (!declarationFound)
+                        PropertyData constant = constants[token];
+                        int constantIndex;
+                        int lastIndex = 0;
+                        bool declarationFound = false;
+
+                        while ((constantIndex = lines[i].IndexOf(constant.name, lastIndex, StringComparison.Ordinal)) != -1)
                         {
-                            string precedingText = lines[i].Substring(0, constantIndex-1).TrimEnd(); // whitespace removed string immediately to the left should be float or float4
-                            string restOftheFile = lines[i].Substring(constantIndex + constant.name.Length).TrimStart(); // whitespace removed character immediately to the right should be ;
-                            if (Array.Exists(ValidPropertyDataTypes, x => precedingText.EndsWith(x)) && restOftheFile.StartsWith(";"))
-                            {
-                                declarationFound = true;
+                            lastIndex = constantIndex + 1;
+                            char charLeft = ' ';
+                            if (constantIndex - 1 >= 0) charLeft = lines[i][constantIndex - 1];
+                            char charRight = ' ';
+                            if (constantIndex + constant.name.Length < lines[i].Length) charRight = lines[i][constantIndex + constant.name.Length];
+
+                            if (!(ValidSeparators.Contains(charLeft) && ValidSeparators.Contains(charRight)))
                                 continue;
+
+                            if (charLeft == '*' && charRight == '*' && constantIndex >= 2 && lines[i][constantIndex - 2] == '/')
+                                continue;
+
+                            if (!declarationFound && t > 0)
+                            {
+                                if (ValidPropertyDataTypes.Contains(tokens[t-1]) && lines[i].Substring(constantIndex + constant.name.Length).TrimStart().StartsWith(";", StringComparison.Ordinal))
+                                {
+                                    constant.lastDeclarationType = tokens[t-1];
+                                    declarationFound = true;
+                                    continue;
+                                }
                             }
-                        }
 
-                        // Replace with constant!
-                        // This could technically be more efficient by being outside the IndexOf loop
-                        StringBuilder sb = new StringBuilder(lines[i].Length * 2);
-                        sb.Append(lines[i], 0, constantIndex);
-                        switch (constant.type)
-                        {
-                            case PropertyType.Float:
-                                sb.Append("float(" + constant.value.x.ToString(CultureInfo.InvariantCulture) + ")");
-                                break;
-                            case PropertyType.Vector:
-                                sb.Append("float4("+constant.value.x.ToString(CultureInfo.InvariantCulture)+","
-                                                   +constant.value.y.ToString(CultureInfo.InvariantCulture)+","
-                                                   +constant.value.z.ToString(CultureInfo.InvariantCulture)+","
-                                                   +constant.value.w.ToString(CultureInfo.InvariantCulture)+")");
-                                break;
+                            StringBuilder sb = new StringBuilder(lines[i].Length * 2);
+                            sb.Append(lines[i], 0, constantIndex);
+                            constant.ToCode(sb);
+                            sb.Append(lines[i], constantIndex + constant.name.Length, lines[i].Length - constantIndex - constant.name.Length);
+                            lines[i] = sb.ToString();
                         }
-                        sb.Append(lines[i], constantIndex+constant.name.Length, lines[i].Length-constantIndex-constant.name.Length);
-                        lines[i] = sb.ToString();
-
-                        // Check for Unity branches on previous line here?
                     }
                 }
 
-                // Then replace grabpass variable names
                 foreach (GrabPassReplacement gpr in grabPassVariables)
                 {
-                    // find indexes of all instances of gpr.originalName that exist on this line
                     int lastIndex = 0;
                     int gbIndex;
                     while ((gbIndex = lines[i].IndexOf(gpr.originalName, lastIndex, StringComparison.Ordinal)) != -1)
                     {
                         lastIndex = gbIndex+1;
                         char charLeft = ' ';
-                        if (gbIndex-1 >= 0)
-                            charLeft = lines[i][gbIndex-1];
+                        if (gbIndex-1 >= 0) charLeft = lines[i][gbIndex-1];
                         char charRight = ' ';
-                        if (gbIndex + gpr.originalName.Length < lines[i].Length)
-                            charRight = lines[i][gbIndex + gpr.originalName.Length];
-                        // Skip invalid matches (probably a subname of another symbol)
-                        if (!(Array.Exists(ValidSeparators, x => x == charLeft) && Array.Exists(ValidSeparators, x => x == charRight)))
+                        if (gbIndex + gpr.originalName.Length < lines[i].Length) charRight = lines[i][gbIndex + gpr.originalName.Length];
+
+                        if (!(ValidSeparators.Contains(charLeft) && ValidSeparators.Contains(charRight)))
                             continue;
-                        
-                        // Replace with new variable name
-                        // This could technically be more efficient by being outside the IndexOf loop
+
                         StringBuilder sb = new StringBuilder(lines[i].Length * 2);
                         sb.Append(lines[i], 0, gbIndex);
                         sb.Append(gpr.newName);
@@ -1020,7 +881,6 @@ namespace SilentCelShading.Unity.Baking
                     }
                 }
 
-                // Then remove Unity branches
                 if (RemoveUnityBranches)
                     lines[i] = lines[i].Replace("UNITY_BRANCH", "").Replace("[branch]", "");
             }
@@ -1028,29 +888,25 @@ namespace SilentCelShading.Unity.Baking
 
         public static bool Unlock (Material material)
         {
-            // Revert to original shader
             string originalShaderName = material.GetTag("OriginalShader", false, "");
             if (originalShaderName == "")
             {
                 Debug.LogError(LogHeader + "Original shader not saved to material, could not unlock shader");
                 return false;
             }
-            Shader orignalShader = Shader.Find(originalShaderName);
-            if (orignalShader == null)
+            Shader originalShader = Shader.Find(originalShaderName);
+            if (originalShader == null)
             {
                 Debug.LogError(LogHeader + "Original shader " + originalShaderName + " could not be found");
                 return false;
             }
 
-            // For some reason when shaders are swapped on a material the RenderType override tag gets completely deleted and render queue set back to -1
-            // So these are saved as temp values and reassigned after switching shaders
             string renderType = material.GetTag("RenderType", false, "");
             int renderQueue = material.renderQueue;
-            material.shader = orignalShader;
+            material.shader = originalShader;
             material.SetOverrideTag("RenderType", renderType);
             material.renderQueue = renderQueue;
 
-            // Delete the variants folder and all files in it, as to not orhpan files and inflate Unity project
             string shaderDirectory = material.GetTag("BakedShaderFolder", false, "");
             if (shaderDirectory == "")
             {
@@ -1060,40 +916,11 @@ namespace SilentCelShading.Unity.Baking
             string materialFilePath = AssetDatabase.GetAssetPath(material);
             string materialFolder = Path.GetDirectoryName(materialFilePath);
             string newShaderDirectory = materialFolder + "/BakedShaders/" + shaderDirectory;
-            // Both safe ways of removing the shader make the editor GUI throw an error, so just don't refresh the
-            // asset database immediately
-            //AssetDatabase.DeleteAsset(shaderFilePath);
+
             FileUtil.DeleteFileOrDirectory(newShaderDirectory + "/");
             FileUtil.DeleteFileOrDirectory(newShaderDirectory + ".meta");
-            //AssetDatabase.Refresh();
 
             return true;
         }
     }
 }
-
-/***
-
-MIT License
-
-Copyright (c) 2020 DarthShader
-
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
-
-***/

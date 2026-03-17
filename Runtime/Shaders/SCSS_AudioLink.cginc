@@ -10,35 +10,13 @@
 #endif
 
 #ifdef AUDIOLINK_COMPILE_COMPATIBILITY
-sampler2D  _AudioTexture;
+uniform sampler2D  _AudioTexture;
 #else
-Texture2D<float4> _AudioTexture;
-SamplerState sampler_AudioGraph_Linear_Clamp;
+uniform Texture2D<float4> _AudioTexture;
+uniform SamplerState sampler_AudioGraph_Linear_Clamp;
 #endif
 
-uniform half _alModeR;
-uniform half _alModeG;
-uniform half _alModeB;
-uniform half _alModeA;
-
-uniform half _alBandR;
-uniform half _alBandG;
-uniform half _alBandB;
-uniform half _alBandA;
-
-uniform half4 _alColorR;
-uniform half4 _alColorG;
-uniform half4 _alColorB;
-uniform half4 _alColorA;
-
-uniform half _alTimeRangeR;
-uniform half _alTimeRangeG;
-uniform half _alTimeRangeB;
-uniform half _alTimeRangeA;
-
-uniform half _alUseFallback;
-uniform half _alFallbackBPM;
-
+// Todo: Move _alFallbackBPM, _alUseFallback to parameters.
 
 half al_lerpstep( half a, half b, half t)
 {
