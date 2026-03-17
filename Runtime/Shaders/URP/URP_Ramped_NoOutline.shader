@@ -511,9 +511,7 @@ Shader "Silent's Cel Shading/URP/Lightramp"
             AlphaToMask Off
 
             HLSLPROGRAM
-            #pragma vertex vert
-            #pragma require geometry
-            #pragma geometry geom
+            #pragma vertex vert_nogeom
             #pragma fragment frag
             #pragma target 5.0
 

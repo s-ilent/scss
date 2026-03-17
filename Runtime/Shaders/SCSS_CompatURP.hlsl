@@ -20,7 +20,6 @@
 #define UnityWorldSpaceViewDir(x) GetWorldSpaceViewDir(x)
 #define _WorldSpaceCameraPos GetCameraPositionWS()
 
-/*
 // Todo: Enabling this causes some insane visual artifacts. 
 #if defined(SCSS_USE_HALF_FLOAT) && (defined(UNITY_COMPILER_HLSL) || defined(UNITY_COMPILER_DXC))
 #define UNITY_UNIFIED_SHADER_PRECISION_MODEL 1
@@ -43,7 +42,6 @@
 #define fixed3 min10float3
 #define fixed4 min10float4
 #endif
-*/
 
 #define unity_ColorSpaceDielectricSpec kDielectricSpec
 #define UNITY_PI PI
@@ -95,7 +93,7 @@ float3 _LightPosition;
 #define SCSS_GET_SHADOW_COORD_WS(posWS) TransformWorldToShadowCoord(posWS)
 
 #define SCSS_LIGHT_ATTENUATION(destName, input, worldPos) \
-    destName = MainLightRealtimeShadow(input.shadowCoord);
+    half destName = MainLightRealtimeShadow(input.shadowCoord);
 
 #define UNITY_INITIALIZE_OUTPUT(type, name) ZERO_INITIALIZE(type, name)
 

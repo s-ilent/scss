@@ -29,6 +29,7 @@
 
 // BIRP only options.
 #if !defined(SCSS_IS_URP)
+
 // When screen-space shadows are used in the scene, performs a
 // search to find the best sampling point for the shadow
 // using the camera's depth buffer. This filters away many aliasing
@@ -58,6 +59,7 @@
 #if !defined(UNITY_COMPILER_HLSLCC) && !defined(UNITY_COMPILER_HLSL2GLSL) && !defined(SHADER_TARGET_GLSL)
 	#define SCSS_HLSL_COMPAT
 #endif
+
 #endif
 
 #endif // SCSS_CONFIG_INCLUDED
