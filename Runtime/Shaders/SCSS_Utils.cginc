@@ -667,7 +667,7 @@ float screenSpaceContactShadow(float3 lightDirection, float3 shadingPosition,
         // But SCSS_Utils is included early. We rely on the fact that DeclareDepthTexture is included in SCSS_CompatURP.cginc
         // However, we cannot use URP functions here if they are not defined yet or conflicts occur.
         // We will assume _CameraDepthTexture is available as a texture object in URP context.
-        float z = SAMPLE_TEXTURE2D_LOD(_CameraDepthTexture, sampler_LinearClamp, sampleUV, 0.0).r;
+        float z = SAMPLE_TEXTURE2D_X_LOD(_CameraDepthTexture, sampler_LinearClamp, sampleUV, 0.0).r;
         #else
         float z = tex2Dlod(_CameraDepthTexture, float4(sampleUV, 0.0, 0.0)).r;
         #endif

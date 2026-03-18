@@ -406,6 +406,7 @@ void geom(triangle VertexOutput IN[3], inout TriangleStream<VertexOutput> tristr
 		{
 			VertexOutput o = IN[ii];
 			UNITY_SETUP_INSTANCE_ID(o);
+			UNITY_TRANSFER_VERTEX_OUTPUT_STEREO(IN[ii], o);
 	    	UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(o);
 
 			o.extraData.x = false;
@@ -428,6 +429,7 @@ void geom(triangle VertexOutput IN[3], inout TriangleStream<VertexOutput> tristr
 			{
 				VertexOutput o = IN[i];
 				UNITY_SETUP_INSTANCE_ID(o);
+				UNITY_TRANSFER_VERTEX_OUTPUT_STEREO(IN[i], o);
 	    		UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(o);
 
 				o = CalculateOutlineVertexClipPosition(o);
@@ -449,6 +451,7 @@ void geom(triangle VertexOutput IN[3], inout TriangleStream<VertexOutput> tristr
 		{
 			VertexOutput o = IN[ii];
 			UNITY_SETUP_INSTANCE_ID(o);
+			UNITY_TRANSFER_VERTEX_OUTPUT_STEREO(IN[ii], o);
 	    	UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(o);
 
 			o.extraData.x = false;
@@ -518,6 +521,7 @@ void geom_fur(triangle VertexOutput IN[3], inout TriangleStream<VertexOutput> tr
 	{
 		VertexOutput o = IN[ii];
 		UNITY_SETUP_INSTANCE_ID(o);
+		UNITY_TRANSFER_VERTEX_OUTPUT_STEREO(IN[ii], o);
 	    UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(o);
 
 		int currentLayer = instanceID;

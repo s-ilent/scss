@@ -171,6 +171,10 @@ half4 fragShadowCaster (
 #endif
 ) : SV_Target
 {
+    UNITY_SETUP_INSTANCE_ID(i);
+#ifdef SCSS_USE_STEREO_SHADOW_OUTPUT_STRUCT
+    UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(is);
+#endif
     // Setup Material, but dummy out unused elements.
     float4 uvPack0 = 0;
     float4 uvPack1 = 0;
