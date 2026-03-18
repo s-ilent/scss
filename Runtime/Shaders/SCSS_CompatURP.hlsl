@@ -20,7 +20,6 @@
 #define UnityWorldSpaceViewDir(x) GetWorldSpaceViewDir(x)
 #define _WorldSpaceCameraPos GetCameraPositionWS()
 
-// Todo: Enabling this causes some insane visual artifacts. 
 #if defined(SCSS_USE_HALF_FLOAT) && (defined(UNITY_COMPILER_HLSL) || defined(UNITY_COMPILER_DXC))
 #define UNITY_UNIFIED_SHADER_PRECISION_MODEL 1
 #define TARGET_HALF // Require fp16 optimizations

@@ -170,7 +170,8 @@ half3 getSpecularDominantDirection(const half3 n, const half3 r, half roughness)
 
 half3 getIndirectSpecular(SCSS_Input c, SCSS_ShadingParam p, SCSS_LightParam d, half3 indirectColor)
 {
-    #if !defined(_METALLICGLOSSMAP)
+    // Skip for cel specular. 
+    #if defined(_SPECGLOSSMAP)
         return 0.0;
     #endif
 
