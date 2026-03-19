@@ -38,10 +38,10 @@
 float3 BetterApplyShadowBias(float3 positionWS, float3 normalWS, float3 lightDirection)
 {
     half NoL = saturate(dot(normalWS, lightDirection));
-    half offsetNormal = sqrt(1 - NoL * NoL); 
+    half offsetNormal = sqrt(1 - NoL * NoL);
     half offsetLight = min(2.0, offsetNormal / NoL);
-    
-    positionWS.xyz -= offsetLight * lightDirection.xyz * 0.01; 
+
+    positionWS.xyz -= offsetLight * lightDirection.xyz * 0.01;
     return positionWS.xyz;
 }
 

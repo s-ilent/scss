@@ -239,6 +239,7 @@ CompatLight CGetMainLight(float3 positionWS, float2 screenUV, float4 shadowCoord
 
     l.color = _LightColor0.rgb;
     l.shadowAttenuation = atten; // Baked result of UNITY_LIGHT_ATTENUATION
+    l.shadowStrength = 1.0 - _LightShadowData.r;
     l.layerMask = 0;
     return l;
 }
@@ -292,6 +293,7 @@ bool CGetNextLight(inout CompatLightIterator iter, float3 positionWS, float4 sha
             // Combine for smooth falloff without popping
             outLight.attenuation = min(atten, cutoff * cutoff);
             outLight.shadowAttenuation = 1.0;
+            outLight.shadowStrength = 0.0;
             outLight.layerMask = 0;
             return true;
         }

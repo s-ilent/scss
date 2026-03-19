@@ -170,7 +170,7 @@ half3 getSpecularDominantDirection(const half3 n, const half3 r, half roughness)
 
 half3 getIndirectSpecular(SCSS_Input c, SCSS_ShadingParam p, SCSS_LightParam d, half3 indirectColor)
 {
-    // Skip for cel specular. 
+    // Skip for cel specular.
     #if defined(_SPECGLOSSMAP)
         return 0.0;
     #endif
@@ -243,7 +243,6 @@ half3 getDirectSpecular(SCSS_Input c, SCSS_ShadingParam p, SCSS_LightParam d, Co
 
     // Stylized Specular (Cel, Strand)
     #if defined(_SPECGLOSSMAP)
-
         if (_SpecularType == 4) // Cel Standard
         {
             half specMask = sharpenLighting(saturate(d.NdotH), _CelSpecularSoftness);
@@ -338,6 +337,18 @@ half3 SCSS_ShadeBase(const SCSS_Input c, const SCSS_ShadingParam p, CompatLight 
 	// Todo: Should we handle attenuation from shadows and lights seperately?
     half totalShadow = l.shadowAttenuation * l.attenuation;
 
+    #if defined(_CONTACTSHADOWS)
+    // Only calculate contact shadows if we're not in shadow.
+    if (l.shadowStrength > 0 && totalShadow > 0)
+    {
+        half contactShadows = screenSpaceContactShadow(l.direction, p.position, p.normalizedViewportCoord,
+            _ContactShadowDistance, _ContactShadowSteps);
+        contactShadows = 1.0 - contactShadows;
+        contactShadows = lerp(1.0, contactShadows, l.shadowStrength);
+        totalShadow *= contactShadows * contactShadows;
+    }
+    #endif
+
     finalColor  = calcDiffuseGI(c.albedo, shadingData, indirectLighting, directLighting, giLight);
     finalColor += calcDiffuseBase(c.albedo, shadingData, totalShadow, l.color, remappedLight);
 
@@ -423,6 +434,19 @@ half3 SCSS_ShadeLight(const SCSS_Input c, const SCSS_ShadingParam p, const Compa
     finalColor = calcDiffuseAdd(c.albedo, shadingData, l.color, remappedLight * l.attenuation);
 
     half totalAtten = l.attenuation * l.shadowAttenuation;
+
+    #if defined(_CONTACTSHADOWS)
+    // Only calculate contact shadows if we're not in shadow.
+    if (l.shadowStrength > 0 && totalAtten > 0)
+    {
+        half contactShadows = screenSpaceContactShadow(l.direction, p.position, p.normalizedViewportCoord,
+            _ContactShadowDistance, _ContactShadowSteps);
+        contactShadows = 1.0 - contactShadows;
+        contactShadows = lerp(1.0, contactShadows, l.shadowStrength);
+        totalAtten *= contactShadows * contactShadows;
+    }
+    #endif
+
     finalColor *= totalAtten;
 
 	if (p.isOutline <= 0)

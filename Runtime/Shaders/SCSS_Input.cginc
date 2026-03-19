@@ -737,20 +737,6 @@ void computeShadingParams (inout SCSS_ShadingParam shading, VertexOutput i, bool
         correctedScreenShadowsForMSAA(shading.shadowCoord, shading.attenuation);
     #endif
 
-    #if defined(USING_SHADOWS_UNITY) && !defined(UNITY_PASS_SHADOWCASTER)
-    float3 lightPos = UnityWorldSpaceLightDir(i.worldPos.xyz);
-        #if defined(_CONTACTSHADOWS)
-        // Only calculate contact shadows if we're not in shadow.
-        if (shading.attenuation > 0)
-        {
-            half contactShadows = screenSpaceContactShadow(lightPos, i.worldPos.xyz, i.pos.xy, _ContactShadowDistance, _ContactShadowSteps);
-            contactShadows = 1.0 - contactShadows;
-            contactShadows = _LightShadowData.r + contactShadows * (1-_LightShadowData.r);
-            shading.attenuation *= contactShadows * contactShadows;
-        }
-        #endif
-    #endif
-
     #if (defined(LIGHTMAP_ON) || defined(DYNAMICLIGHTMAP_ON))
         GetBakedAttenuation(shading.attenuation, lightmapUV, shading.position);
     #endif

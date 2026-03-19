@@ -38,6 +38,7 @@ struct CompatLight
     float3 color;             // Intensity included
     half  attenuation;        // Distance * Angle falloff
     half  shadowAttenuation;  // Realtime Shadows (0..1)
+    half  shadowStrength;     // Shadow strength
     uint   layerMask;         // URP Light Layers
 };
 

@@ -643,8 +643,8 @@ float screenSpaceContactShadow(float3 lightDirection, float3 shadingPosition,
     float tolerance = abs(rayData.ssViewRayEnd.z - rayData.ssRayStart.z) * dt;
 
     // dither the ray with noise
-    float dither = interleaved_gradient(screenPosition) - 0.5;
-    float4 dither4 = getR2_RGBA(screenPosition) - 0.5;
+    float dither = interleaved_gradient(screenPosition * _ScreenParams) - 0.5;
+    float4 dither4 = getR2_RGBA(screenPosition * _ScreenParams) - 0.5;
 
     // normalized position on the ray (0 to 1)
     float t = dt * dither + dt;
@@ -686,7 +686,7 @@ float screenSpaceContactShadow(float3 lightDirection, float3 shadingPosition,
     }
 
 	// soft occlusion, includes distance falloff
-	occlusion = saturate(softOcclusion * (1.0 - (firstHit / kStepCount)));
+	occlusion = saturate(4 * softOcclusion * (1.0 - (firstHit / kStepCount)));
 
     // we fade out the contribution of contact shadows towards the edge of the screen
     // because we don't have depth data there

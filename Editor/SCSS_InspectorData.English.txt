@@ -83,10 +83,10 @@ _UseHatching	Hatching	Toggles the hatching effect, which applies a stylized cros
 _HatchingTex	Hatching Map	Defines the texture used for the hatching effect. The pattern in this texture determines the appearance of the hatching.
 _HatchingScale	Hatching Scale	Adjusts the scale of the hatching texture. Higher values make the hatching pattern larger, while lower values make it finer.
 _HatchingMovementFPS	Hatching Movement FPS	Sets the frame rate for animating the hatching effect. Higher values result in faster movement of the hatching pattern.
-_HatchingShadingAdd	Shading Add Level	Controls the additive intensity of the hatching effect in shaded areas. Higher values make the hatching more prominent.
-_HatchingShadingMul	Shading Multiply Level	Controls the multiplicative intensity of the hatching effect in shaded areas. Higher values darken the hatching pattern.
-_HatchingRimAdd	Rim Light Add Level	Adjusts the intensity of the hatching effect in rim-lit areas. Higher values make the hatching more visible in these regions.
-_HatchingAlbedoMul	Albedo Mul Level	Controls the blending of the hatching effect with the albedo texture. Higher values increase the influence of the hatching pattern on the material's base color.
+_HatchingShadingAdd	Shading Additive	Controls the additive intensity of the hatching effect in shaded areas. Higher values make the hatching more prominent.
+_HatchingShadingMul	Shading Multiply	Controls the multiplicative intensity of the hatching effect in shaded areas. Higher values darken the hatching pattern.
+_HatchingRimAdd	Rim Light Additive	Adjusts the intensity of the hatching effect in rim-lit areas. Higher values make the hatching more visible in these regions.
+_HatchingAlbedoMul	Albedo Multiply	Controls the blending of the hatching effect with the albedo texture. Higher values increase the influence of the hatching pattern on the material's base color.
 _UseAlphaFresnel	Alpha Fresnel	Toggles the alpha fresnel effect, which reduces the opacity of the material as it faces towards the viewer. Useful for simulating see-through materials with a certain thickness, like tights.
 _AlphaFresnelWidth	Width	Controls the width of the rim. Higher values cover more of the object.
 _AlphaFresnelSharpness	Sharpness	Controls the hardness of the edge. Must be <= Width to see a gradient.

@@ -75,8 +75,8 @@ float3 _LightPosition;
 #define TRANSFER_SHADOW_CASTER_NOPOS(o, opos) \
     opos = SCSS_GetShadowPositionHClip(v);
 
-// Normal transformation matrix. 
-// In BIRP it's the inverse transpose of Model-View. 
+// Normal transformation matrix.
+// In BIRP it's the inverse transpose of Model-View.
 // In URP, we often want World space normals, so we use the inverse transpose of the Model matrix (which is the transpose of WorldToObject).
 #ifndef UNITY_MATRIX_IT_MV
 #define UNITY_MATRIX_IT_MV transpose(GetWorldToObjectMatrix())
@@ -211,15 +211,15 @@ CompatLightIterator CInitLightLoop(float2 screenUV, float3 positionWS)
     CompatLightIterator iter;
     ZERO_INITIALIZE(CompatLightIterator, iter);
     iter.index = 0;
-    
-    // USE_CLUSTER_LIGHT_LOOP is defined by URP's Core.hlsl if either _FORWARD_PLUS 
+
+    // USE_CLUSTER_LIGHT_LOOP is defined by URP's Core.hlsl if either _FORWARD_PLUS
     // or _CLUSTER_LIGHT_LOOP are enabled via #pragma.
     #if USE_CLUSTER_LIGHT_LOOP
         // In clustered rendering, 'count' tracks the number of Directional Lights, which are processed BEFORE the grid.
         iter.count = min(URP_FP_DIRECTIONAL_LIGHTS_COUNT, MAX_VISIBLE_LIGHTS);
-        
+
         ClusterIterator clusterIter = ClusterInit(screenUV, positionWS, 0);
-        
+
         // Pack ClusterIterator into uint4 tileData
         iter.tileData.x = clusterIter.tileWordsOffset;
         iter.tileData.y = clusterIter.zBinWordsOffset;
@@ -229,7 +229,7 @@ CompatLightIterator CInitLightLoop(float2 screenUV, float3 positionWS)
         // In standard Forward, 'count' is just the total active lights
         iter.count = GetAdditionalLightsCount();
     #endif
-    
+
     return iter;
 }
 
@@ -263,11 +263,11 @@ bool CGetNextLight(inout CompatLightIterator iter, float3 positionWS, float4 sha
                 clusterIter.entityIndexNextMax = iter.tileData.w;
 
                 uint entityIndex;
-                if (ClusterNext(clusterIter, entityIndex)) 
+                if (ClusterNext(clusterIter, entityIndex))
                 {
                     // CRITICAL: Offset the cluster index by the directional light count!
                     lightIndex = (int)entityIndex + URP_FP_DIRECTIONAL_LIGHTS_COUNT;
-                    
+
                     // Save state back to iterator
                     iter.tileData.z = clusterIter.tileMask;
                     iter.tileData.w = clusterIter.entityIndexNextMax;
@@ -279,10 +279,10 @@ bool CGetNextLight(inout CompatLightIterator iter, float3 positionWS, float4 sha
             }
         #else
             // Standard Forward Lighting Loop
-            if (iter.index < iter.count) 
-            { 
-                lightIndex = iter.index; 
-                iter.index++; 
+            if (iter.index < iter.count)
+            {
+                lightIndex = iter.index;
+                iter.index++;
             }
             else
             {
@@ -322,11 +322,12 @@ bool CGetNextLight(inout CompatLightIterator iter, float3 positionWS, float4 sha
         outLight.color = urpLight.color;
         outLight.attenuation = urpLight.distanceAttenuation;
         outLight.shadowAttenuation = urpLight.shadowAttenuation;
+        outLight.shadowStrength = GetAdditionalLightShadowParams(lightIndex).x;
         outLight.layerMask = urpLight.layerMask;
-        
+
         return true;
     }
-    
+
     return false;
 }
 
