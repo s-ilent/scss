@@ -165,8 +165,6 @@ CBUFFER_START(UnityPerMaterial)
 half4 _Color;
 half4 _MainTex_ST;
 half4 _MainTex_TexelSize;
-half4 _ColorMask_ST;
-half4 _BumpMap_ST;
 half4 _ClippingMask_ST;
 
 #if defined(_BACKFACE) || defined(SCSS_ENABLE_ALL_PROPS)
@@ -262,7 +260,6 @@ half _AudiolinkSweepMapUVSec;
 #endif
 
 #if defined(_SPECULAR) || defined(SCSS_ENABLE_ALL_PROPS)
-half4 _SpecGlossMap_ST;
 half _UseMetallic;
 half _SpecularType;
 half _Smoothness;
@@ -302,7 +299,6 @@ half _ShadowBorderRange;
 // --- Ramped (Non-Crosstone) ---
 #if !defined(SCSS_CROSSTONE)
 half4 _ShadowMask_ST;
-half4 _Ramp_ST;
 half _LightRampType;
 half4 _ShadowMaskColor;
 half _ShadowMaskType;
@@ -476,7 +472,6 @@ int _SDFRightVector;
 // --- Outline options ---
 #if (defined(SHADER_STAGE_VERTEX) || defined(SHADER_STAGE_GEOMETRY)) || defined(SCSS_ENABLE_ALL_PROPS)
     #if defined(SCSS_OUTLINE) || defined(SCSS_ENABLE_ALL_PROPS)
-    half4 _OutlineMask_ST;
     half _OutlineZPush;
     half _outline_width;
     half _OutlineCalculationMode;

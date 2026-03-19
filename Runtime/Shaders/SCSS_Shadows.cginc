@@ -54,7 +54,7 @@ float3 BetterApplyShadowBias2(float3 positionWS, float3 normalWS, float3 lightDi
 
     positionWS += normalWS * _ShadowBias.y * slopeScale;
     positionWS += lightDirection * _ShadowBias.x;
-    
+
     return positionWS;
 }
 #endif
