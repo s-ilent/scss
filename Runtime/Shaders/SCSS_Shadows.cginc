@@ -178,7 +178,7 @@ half4 fragShadowCaster (
     // Setup Material, but dummy out unused elements.
     float4 uvPack0 = 0;
     float4 uvPack1 = 0;
-    #if defined(SCSS_USE_SHADOW_UVS)
+    #if defined(SCSS_USE_SHADOW_UVS) && defined(SCSS_USE_SHADOW_OUTPUT_STRUCT)
     uvPack0 = i.uvPack0;
     uvPack1 = i.uvPack1;
     #endif
