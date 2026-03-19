@@ -467,7 +467,7 @@ half3 SCSS_ShadeLight(const SCSS_Input c, const SCSS_ShadingParam p, const Compa
 
 half3 SCSS_ApplyLighting(SCSS_Input c, SCSS_ShadingParam p)
 {
-	#if defined(_METALLICGLOSSMAP)
+	#if !defined(_SPECGLOSSMAP)
 	// Perceptual roughness transformation. Without this, roughness handling is wrong.
 	half perceptualRoughness = SmoothnessToPerceptualRoughness(c.smoothness);
 	perceptualRoughness = IsotropicNDFFiltering(p.geometricNormal.xyz, perceptualRoughness);

@@ -748,8 +748,8 @@ half4 frag(VertexOutput i, uint facing : SV_IsFrontFace
 	#endif
 
 	// Todo: The URP passes should probably be in a seperate frag function, similar to the shadowcaster.
-	// But we cannot use the shadowcaster directly for URP, since it does not support outlines. 
-	// Outlines must render to DepthOnly and DepthNormals in order to render in URP. 
+	// But we cannot use the shadowcaster directly for URP, since it does not support outlines.
+	// Outlines must render to DepthOnly and DepthNormals in order to render in URP.
 
     #if defined(SCSS_DEPTH_ONLY_PASS)
 		// Workaround a compiler issue when albedo is not needed but its sampler is.
