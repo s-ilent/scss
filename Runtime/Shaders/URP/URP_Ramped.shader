@@ -350,6 +350,8 @@ Shader "Silent's Cel Shading/URP/Lightramp (Outline)"
         #pragma target 5.0
         #pragma shader_feature _ _ALPHATEST_ON _ALPHABLEND_ON _ALPHAPREMULTIPLY_ON
 
+        #include "Packages/com.unity.render-pipelines.universal/Editor/ShaderGraph/Includes/ShaderPass.hlsl"
+
         #define SCSS_OUTLINE
         #define SCSS_USE_OUTLINE_TEXTURE
         #define SCSS_COVERAGE_OUTPUT
@@ -370,7 +372,6 @@ Shader "Silent's Cel Shading/URP/Lightramp (Outline)"
             // =========================================================================
             // URP core setup
             
-            #include "Packages/com.unity.render-pipelines.universal/Editor/ShaderGraph/Includes/ShaderPass.hlsl"
             #define SHADERPASS SHADERPASS_FORWARD
         
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
@@ -454,7 +455,6 @@ Shader "Silent's Cel Shading/URP/Lightramp (Outline)"
             #pragma geometry geom
             #pragma fragment frag
 
-            #include "Packages/com.unity.render-pipelines.universal/Editor/ShaderGraph/Includes/ShaderPass.hlsl"
             #define SHADERPASS SHADERPASS_DEPTHNORMALS
 
             #pragma multi_compile_instancing
@@ -487,7 +487,6 @@ Shader "Silent's Cel Shading/URP/Lightramp (Outline)"
             #pragma vertex vertShadowCaster
             #pragma fragment fragShadowCaster
 
-            #include "Packages/com.unity.render-pipelines.universal/Editor/ShaderGraph/Includes/ShaderPass.hlsl"
             #define SHADERPASS SHADERPASS_SHADOWCASTER
 
             #pragma multi_compile_instancing
@@ -523,7 +522,6 @@ Shader "Silent's Cel Shading/URP/Lightramp (Outline)"
             #pragma fragment frag
             #pragma target 5.0
 
-            #include "Packages/com.unity.render-pipelines.universal/Editor/ShaderGraph/Includes/ShaderPass.hlsl"
             #define SHADERPASS SHADERPASS_DEPTHONLY
 
             #pragma multi_compile_instancing
@@ -550,7 +548,6 @@ Shader "Silent's Cel Shading/URP/Lightramp (Outline)"
 
             HLSLPROGRAM
 
-            #include "Packages/com.unity.render-pipelines.universal/Editor/ShaderGraph/Includes/ShaderPass.hlsl"
             #define SHADERPASS SHADERPASS_MOTION_VECTORS
 
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
@@ -582,7 +579,6 @@ Shader "Silent's Cel Shading/URP/Lightramp (Outline)"
 
             HLSLPROGRAM
 
-            #include "Packages/com.unity.render-pipelines.universal/Editor/ShaderGraph/Includes/ShaderPass.hlsl"
             #define SHADERPASS SHADERPASS_XR_MOTION_VECTORS
 
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"

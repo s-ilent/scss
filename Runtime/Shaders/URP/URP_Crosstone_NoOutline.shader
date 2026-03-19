@@ -358,6 +358,8 @@ Shader "Silent's Cel Shading/URP/Crosstone"
         #pragma target 5.0
         #pragma shader_feature _ _ALPHATEST_ON _ALPHABLEND_ON _ALPHAPREMULTIPLY_ON
 
+        #include "Packages/com.unity.render-pipelines.universal/Editor/ShaderGraph/Includes/ShaderPass.hlsl"
+
         #define SCSS_CROSSTONE
         #define SCSS_COVERAGE_OUTPUT
         #define SCSS_IS_URP
@@ -375,7 +377,6 @@ Shader "Silent's Cel Shading/URP/Crosstone"
             // =========================================================================
             // URP core setup
             
-            #include "Packages/com.unity.render-pipelines.universal/Editor/ShaderGraph/Includes/ShaderPass.hlsl"
             #define SHADERPASS SHADERPASS_FORWARD
             
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
@@ -457,7 +458,6 @@ Shader "Silent's Cel Shading/URP/Crosstone"
             #pragma vertex vert_nogeom
             #pragma fragment frag
 
-            #include "Packages/com.unity.render-pipelines.universal/Editor/ShaderGraph/Includes/ShaderPass.hlsl"
             #define SHADERPASS SHADERPASS_DEPTHNORMALS
 
             #pragma multi_compile_instancing
@@ -490,7 +490,6 @@ Shader "Silent's Cel Shading/URP/Crosstone"
             #pragma vertex vertShadowCaster
             #pragma fragment fragShadowCaster
 
-            #include "Packages/com.unity.render-pipelines.universal/Editor/ShaderGraph/Includes/ShaderPass.hlsl"
             #define SHADERPASS SHADERPASS_SHADOWCASTER
 
             #pragma multi_compile_instancing
@@ -524,7 +523,6 @@ Shader "Silent's Cel Shading/URP/Crosstone"
             #pragma fragment frag
             #pragma target 5.0
 
-            #include "Packages/com.unity.render-pipelines.universal/Editor/ShaderGraph/Includes/ShaderPass.hlsl"
             #define SHADERPASS SHADERPASS_DEPTHONLY
 
             #pragma multi_compile_instancing
@@ -551,7 +549,6 @@ Shader "Silent's Cel Shading/URP/Crosstone"
 
             HLSLPROGRAM
 
-            #include "Packages/com.unity.render-pipelines.universal/Editor/ShaderGraph/Includes/ShaderPass.hlsl"
             #define SHADERPASS SHADERPASS_MOTION_VECTORS
 
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
@@ -583,7 +580,6 @@ Shader "Silent's Cel Shading/URP/Crosstone"
 
             HLSLPROGRAM
 
-            #include "Packages/com.unity.render-pipelines.universal/Editor/ShaderGraph/Includes/ShaderPass.hlsl"
             #define SHADERPASS SHADERPASS_XR_MOTION_VECTORS
 
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
