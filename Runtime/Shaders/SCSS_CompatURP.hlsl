@@ -202,6 +202,7 @@ CompatLight CGetMainLight(float3 positionWS, float2 screenUV, float4 shadowCoord
     l.color = urpLight.color; // Includes AO and Cookie
     l.attenuation = urpLight.distanceAttenuation;
     l.shadowAttenuation = urpLight.shadowAttenuation;
+    l.shadowStrength = _MainLightShadowParams.x;
     l.layerMask = urpLight.layerMask;
     return l;
 }

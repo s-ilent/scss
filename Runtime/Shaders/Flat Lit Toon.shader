@@ -318,10 +318,296 @@ Shader "Silent's Cel Shading/Lightramp (Outline)"
 		[NonModifiableTextureData][HideInInspector]_DFG("Specular Distribution", 2D) = "green" {}
 	}
 
+    SubShader
+    {
+        PackageRequirements
+        {
+            "com.unity.render-pipelines.universal"
+        }
+
+        Tags
+        {
+            "RenderPipeline" = "UniversalPipeline"
+            "RenderType" = "Opaque"
+            "Queue" = "Geometry"
+            "VRCFallback"="toonstandardoutline"
+            "PerformanceChecks" = "False"
+        }
+
+        Blend[_SrcBlend][_DstBlend], One One
+        BlendOp[_BlendOp], Max
+        ZTest[_ZTest]
+        ZWrite[_ZWrite]
+        Cull[_CullMode]
+        ColorMask[_ColorWriteMask]
+
+        Stencil
+        {
+            Ref [_Stencil]
+            ReadMask [_ReadMask]
+            WriteMask [_WriteMask]
+            Comp [_StencilComp]
+            Pass [_StencilOp]
+            Fail [_StencilFail]
+            ZFail [_StencilZFail]
+        }
+
+        HLSLINCLUDE
+        #pragma target 5.0
+        #pragma shader_feature _ _ALPHATEST_ON _ALPHABLEND_ON _ALPHAPREMULTIPLY_ON
+
+        #include "Packages/com.unity.render-pipelines.universal/Editor/ShaderGraph/Includes/ShaderPass.hlsl"
+
+        #define SCSS_OUTLINE
+        #define SCSS_USE_OUTLINE_TEXTURE
+        #define SCSS_COVERAGE_OUTPUT
+        #define SCSS_IS_URP
+        ENDHLSL
+
+        Pass
+        {
+            Name "ForwardLit"
+            Tags { "LightMode" = "UniversalForward" }
+
+            HLSLPROGRAM
+            #pragma vertex vert
+            #pragma require geometry
+            #pragma geometry geom
+            #pragma fragment frag
+
+            // =========================================================================
+            // URP core setup
+
+            #define SHADERPASS SHADERPASS_FORWARD
+
+            #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
+            #include_with_pragmas "Packages/com.s-ilent.crosstone/Runtime/Shaders/DXCSupport.hlsl"
+
+            #if defined(NEEDS_FORCE_MAX_INSTANCE_COUNT)
+            #pragma instancing_options maxcount:128 forcemaxcount:128
+            #endif
+
+            #pragma multi_compile_instancing
+            #include_with_pragmas "Packages/com.unity.render-pipelines.universal/ShaderLibrary/DOTS.hlsl"
+
+            // =========================================================================
+            // URP keyword setup
+
+            #pragma multi_compile _ _MAIN_LIGHT_SHADOWS _MAIN_LIGHT_SHADOWS_CASCADE
+
+            #if defined(SHADER_API_MOBILE) // Android/iOS
+            // On mobile, disable some features for extra performance.
+            #define _ADDITIONAL_LIGHTS_VERTEX 1
+
+            #else // PC
+            #pragma multi_compile _ _ADDITIONAL_LIGHTS
+            #pragma multi_compile _ _ADDITIONAL_LIGHT_SHADOWS
+
+            #if UNITY_VERSION >= 60010000
+            #pragma multi_compile _ _CLUSTER_LIGHT_LOOP
+            #else
+            #pragma multi_compile _ _FORWARD_PLUS
+            #endif
+
+            #pragma multi_compile_fragment _ _REFLECTION_PROBE_ATLAS
+
+            #pragma multi_compile _ _SCREEN_SPACE_OCCLUSION
+            #endif
+
+            #include_with_pragmas "Packages/com.unity.render-pipelines.core/ShaderLibrary/FoveatedRenderingKeywords.hlsl"
+
+            #define PROBE_VOLUMES_L1  1
+
+            #define _REFLECTION_PROBE_BOX_PROJECTION 1
+            #pragma multi_compile_fragment _ _REFLECTION_PROBE_BLENDING
+            #pragma multi_compile_fragment _ REFLECTION_PROBE_ROTATION
+
+            #pragma multi_compile_fragment _ _SHADOWS_SOFT
+
+            #ifdef USE_DYNAMIC_BRANCH_FOG_KEYWORD
+            #undef USE_DYNAMIC_BRANCH_FOG_KEYWORD
+            #endif
+            #define USE_DYNAMIC_BRANCH_FOG_KEYWORD 1
+            #include_with_pragmas "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Fog.hlsl"
+
+            // =========================================================================
+            // Material Keywords
+
+            #pragma shader_feature_local _EMISSION
+            #pragma shader_feature_local _EMISSION_2ND
+            #pragma shader_feature_local_fragment _DETAIL_MULX2
+            #pragma shader_feature_local _ _METALLICGLOSSMAP _SPECGLOSSMAP _SPEC_GLINTY
+            #pragma shader_feature_local_fragment _SUNDISK_NONE
+            #pragma shader_feature_local_fragment _BACKFACE
+            #pragma shader_feature_local_fragment _AUDIOLINK
+            #pragma shader_feature_local_fragment _CONTACTSHADOWS
+            #pragma shader_feature_local_fragment _HATCHING
+
+            #include "Packages/com.s-ilent.crosstone/Runtime/Shaders/SCSS_Core.cginc"
+            #include "Packages/com.s-ilent.crosstone/Runtime/Shaders/SCSS_Forward.cginc"
+            ENDHLSL
+        }
+
+        Pass
+        {
+            Name "DepthNormals"
+            Tags { "LightMode" = "DepthNormals" }
+
+            ZWrite On
+
+            HLSLPROGRAM
+            #pragma vertex vert
+            #pragma require geometry
+            #pragma geometry geom
+            #pragma fragment frag
+
+            #define SHADERPASS SHADERPASS_DEPTHNORMALS
+
+            #pragma multi_compile_instancing
+            #include_with_pragmas "Packages/com.unity.render-pipelines.universal/ShaderLibrary/DOTS.hlsl"
+
+            #define SCSS_DEPTH_NORMALS_PASS
+            #pragma multi_compile_fragment _ _GBUFFER_NORMALS_OCT
+
+            #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
+            #include_with_pragmas "Packages/com.s-ilent.crosstone/Runtime/Shaders/DXCSupport.hlsl"
+            #if defined(NEEDS_FORCE_MAX_INSTANCE_COUNT)
+            #pragma instancing_options maxcount:128 forcemaxcount:128
+            #endif
+
+            #include "Packages/com.s-ilent.crosstone/Runtime/Shaders/SCSS_Core.cginc"
+            #include "Packages/com.s-ilent.crosstone/Runtime/Shaders/SCSS_Forward.cginc"
+            ENDHLSL
+        }
+
+        Pass
+        {
+            Name "ShadowCaster"
+            Tags { "LightMode" = "ShadowCaster" }
+
+            ZWrite On ZTest LEqual
+            Cull[_CullMode]
+            AlphaToMask Off
+
+            HLSLPROGRAM
+            #pragma vertex vertShadowCaster
+            #pragma fragment fragShadowCaster
+
+            #define SHADERPASS SHADERPASS_SHADOWCASTER
+
+            #pragma multi_compile_instancing
+            #include_with_pragmas "Packages/com.unity.render-pipelines.universal/ShaderLibrary/DOTS.hlsl"
+
+            #pragma multi_compile_vertex _ _CASTING_PUNCTUAL_LIGHT_SHADOW
+
+            #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
+            #include_with_pragmas "Packages/com.s-ilent.crosstone/Runtime/Shaders/DXCSupport.hlsl"
+            #if defined(NEEDS_FORCE_MAX_INSTANCE_COUNT)
+            #pragma instancing_options maxcount:128 forcemaxcount:128
+            #endif
+
+            #include "Packages/com.s-ilent.crosstone/Runtime/Shaders/SCSS_Shadows.cginc"
+            ENDHLSL
+        }
+
+        Pass
+        {
+            Name "DepthOnly"
+            Tags { "LightMode" = "DepthOnly" }
+
+            ZWrite On ZTest LEqual
+            Blend Off
+            Cull[_CullMode]
+            ColorMask 0
+            AlphaToMask Off
+
+            HLSLPROGRAM
+            #pragma vertex vert
+            #pragma require geometry
+            #pragma geometry geom
+            #pragma fragment frag
+            #pragma target 5.0
+
+            #define SHADERPASS SHADERPASS_DEPTHONLY
+
+            #pragma multi_compile_instancing
+            #include_with_pragmas "Packages/com.unity.render-pipelines.universal/ShaderLibrary/DOTS.hlsl"
+
+            #define SCSS_DEPTH_ONLY_PASS
+
+            #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
+            #include_with_pragmas "Packages/com.s-ilent.crosstone/Runtime/Shaders/DXCSupport.hlsl"
+            #if defined(NEEDS_FORCE_MAX_INSTANCE_COUNT)
+            #pragma instancing_options maxcount:128 forcemaxcount:128
+            #endif
+
+            #include "Packages/com.s-ilent.crosstone/Runtime/Shaders/SCSS_Core.cginc"
+            #include "Packages/com.s-ilent.crosstone/Runtime/Shaders/SCSS_Forward.cginc"
+            ENDHLSL
+        }
+
+        Pass
+        {
+            Name "MotionVectors"
+            Tags { "LightMode" = "MotionVectors" }
+            ColorMask RG
+
+            HLSLPROGRAM
+
+            #define SHADERPASS SHADERPASS_MOTION_VECTORS
+
+            #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
+            #include_with_pragmas "Packages/com.s-ilent.crosstone/Runtime/Shaders/DXCSupport.hlsl"
+
+            // Fix OOB instance property cbuffer index with DXC and android
+            #if defined(NEEDS_FORCE_MAX_INSTANCE_COUNT)
+            #pragma instancing_options maxcount:128 forcemaxcount:128
+            #endif
+
+            #pragma shader_feature_local_vertex _ADD_PRECOMPUTED_VELOCITY
+
+            #include_with_pragmas "Packages/com.unity.render-pipelines.universal/ShaderLibrary/ObjectMotionVectors.hlsl"
+            ENDHLSL
+        }
+        Pass
+        {
+            Name "XRMotionVectors"
+            Tags { "LightMode" = "XRMotionVectors" }
+
+            // Stencil write for obj motion pixels
+            Stencil
+            {
+                WriteMask 1
+                Ref 1
+                Comp Always
+                Pass Replace
+            }
+
+            HLSLPROGRAM
+
+            #define SHADERPASS SHADERPASS_XR_MOTION_VECTORS
+
+            #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
+            #include_with_pragmas "Packages/com.s-ilent.crosstone/Runtime/Shaders/DXCSupport.hlsl"
+
+            // Fix OOB instance property cbuffer index with DXC and android
+            #if defined(NEEDS_FORCE_MAX_INSTANCE_COUNT)
+            #pragma instancing_options maxcount:128 forcemaxcount:128
+            #endif
+
+            #pragma shader_feature_local_vertex _ADD_PRECOMPUTED_VELOCITY
+            #define APPLICATION_SPACE_WARP_MOTION 1
+
+            #include_with_pragmas "Packages/com.unity.render-pipelines.universal/ShaderLibrary/ObjectMotionVectors.hlsl"
+            ENDHLSL
+        }
+    }
+
 	SubShader
 	{
 		Tags
 		{
+            "RenderPipeline" = ""
 			"RenderType" = "Opaque"
 			"VRCFallback"="toonstandardoutline"
 		}
