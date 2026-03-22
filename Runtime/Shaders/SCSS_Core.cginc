@@ -192,10 +192,6 @@ half3 getIndirectSpecular(SCSS_Input c, SCSS_ShadingParam p, SCSS_LightParam d, 
 
 half3 getDirectSpecular(SCSS_Input c, SCSS_ShadingParam p, SCSS_LightParam d, CompatLight l, half attenuation)
 {
-    #if defined(_SPECULARHIGHLIGHTS_OFF)
-        return 0.0;
-    #endif
-
     half specularTerm = 0;
 
     half roughness = PerceptualRoughnessToRoughness(c.perceptualRoughness);
