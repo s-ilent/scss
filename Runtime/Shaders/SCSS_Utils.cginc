@@ -146,6 +146,18 @@ float4 cubic_weights(float v)
     return o;
 }
 
+uint getMSAASampleCount()
+{
+    // Get the number of MSAA samples present
+    // On Vulkan, this fails due to not supporting GetRenderTargetSampleCount()?
+    #if (SHADER_TARGET > 40) && !defined(UNITY_PASS_SHADOWCASTER) && defined(SHADER_API_D3D11)
+    uint samplecount = GetRenderTargetSampleCount();
+    #else
+    uint samplecount = 1;
+    #endif
+    return samplecount;
+}
+
 #define ALPHA_SHOULD_DITHER_CLIP (defined(_ALPHATEST_ON) || defined(UNITY_PASS_SHADOWCASTER))
 
 inline void applyAlphaSharpen(inout float alpha, float cutoff)
@@ -177,12 +189,7 @@ inline void applyAlphaClip(inout float alpha, float cutoff, float2 pos, bool sha
     static bool isBlending = false;
     #endif
 
-    // Get the amount of MSAA samples present
-    #if (SHADER_TARGET > 40)
-    half samplecount = GetRenderTargetSampleCount();
-    #else
-    half samplecount = 1;
-    #endif
+    half samplecount = getMSAASampleCount();
 
     float modAlpha = alpha;
 

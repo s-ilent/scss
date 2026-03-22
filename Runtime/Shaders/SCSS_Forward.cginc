@@ -729,7 +729,7 @@ half4 frag(VertexOutput i, uint facing : SV_IsFrontFace
     #if defined(USING_COVERAGE_OUTPUT)
 		cov = 1.0;
 		// Get the amount of MSAA samples enabled
-		uint samplecount = GetRenderTargetSampleCount();
+    	uint samplecount = getMSAASampleCount();
 
 		// center out the steps
 		outputAlpha = saturate(outputAlpha) * samplecount + 0.5;
