@@ -171,7 +171,9 @@ half4 fragShadowCaster (
 #endif
 ) : SV_Target
 {
+#ifdef SCSS_USE_SHADOW_OUTPUT_STRUCT
     UNITY_SETUP_INSTANCE_ID(i);
+#endif
 #ifdef SCSS_USE_STEREO_SHADOW_OUTPUT_STRUCT
     UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(is);
 #endif
