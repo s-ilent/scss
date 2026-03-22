@@ -566,6 +566,11 @@ Shader "Silent's Cel Shading/Crosstone"
             #pragma shader_feature_local_vertex _ADD_PRECOMPUTED_VELOCITY
 
             #include_with_pragmas "Packages/com.unity.render-pipelines.universal/ShaderLibrary/ObjectMotionVectors.hlsl"
+
+            #ifndef UNIVERSAL_OBJECT_MOTION_VECTORS_INCLUDED
+            #pragma vertex vert
+            #pragma fragment frag
+            #endif
             ENDHLSL
         }
         Pass
@@ -598,6 +603,11 @@ Shader "Silent's Cel Shading/Crosstone"
             #define APPLICATION_SPACE_WARP_MOTION 1
 
             #include_with_pragmas "Packages/com.unity.render-pipelines.universal/ShaderLibrary/ObjectMotionVectors.hlsl"
+
+            #ifndef UNIVERSAL_OBJECT_MOTION_VECTORS_INCLUDED
+            #pragma vertex vert
+            #pragma fragment frag
+            #endif
             ENDHLSL
         }
     }

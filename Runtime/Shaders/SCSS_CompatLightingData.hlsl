@@ -79,4 +79,6 @@ CompatLightIterator CInitLightLoop(float2 screenUV, float3 positionWS);
 // Get Next Light. Occlusion required for SSAO/AO application (URP).
 bool CGetNextLight(inout CompatLightIterator iter, float3 positionWS, float4 shadowMask, float occlusion, out CompatLight outLight);
 
+int dummy;
+
 #endif
