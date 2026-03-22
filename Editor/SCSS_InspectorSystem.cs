@@ -270,11 +270,6 @@ public class MaterialPropertyHandler
 
 	}
 
-	public bool TogglePropertyHeader(string i, bool display = true)
-	{
-		if (display) return ShaderProperty(i);
-		return false;
-	}
 
     public void DrawShaderPropertySameLine(string i) {
 		MaterialProperty prop;
@@ -313,5 +308,90 @@ public class MaterialPropertyHandler
         }
     }
 
+    public GUIStyle sectionHeader;
+    public GUIStyle sectionHeaderBox;
+
+    public void InitialiseStyles()
+	{
+		sectionHeader = new GUIStyle(EditorStyles.miniBoldLabel);
+        sectionHeader.padding.left = 24;
+        sectionHeader.padding.right = -24;
+
+		sectionHeaderBox = new GUIStyle(GUI.skin.box);
+        sectionHeaderBox.alignment = TextAnchor.MiddleLeft;
+        sectionHeaderBox.padding.left = 5;
+        sectionHeaderBox.padding.right = -5;
+        sectionHeaderBox.padding.top = 0;
+        sectionHeaderBox.padding.bottom = 0;
+	}
+
+    public Rect DrawSectionHeaderArea(GUIContent content)
+    {
+        InitialiseStyles();
+        Rect r = EditorGUILayout.GetControlRect(true, 0, EditorStyles.layerMaskField);
+        r.x -= 2.0f;
+        r.y += 2.0f;
+        r.height = 18.0f;
+        r.width -= 0.0f;
+        GUI.Box(r, EditorGUIUtility.IconContent("d_FilterByType"), sectionHeaderBox);
+        EditorGUILayout.LabelField(content, sectionHeader);
+        return r;
+    }
+
+    public void BeginSection(string contentKey)
+    {
+        EditorGUILayout.Space();
+        DrawSectionHeaderArea(Content(contentKey));
+    }
+
+    public float Float(string i)
+    {
+        MaterialProperty prop = Property(i);
+        return prop != null ? prop.floatValue : 0f;
+    }
+
+    public void WithGroupHorizontal(Action action)
+    {
+        EditorGUILayout.BeginHorizontal();
+        action();
+        EditorGUILayout.EndHorizontal();
+    }
+
+    public void TexColorDropdownLine(string tex, string col, string dropdown, Type enumType)
+    {
+        WithGroupHorizontal(() => {
+            TextureColorPropertyWithColorReset(tex, col);
+            PropertyDropdownNoLabel(dropdown, Enum.GetNames(enumType), editor);
+        });
+    }
+
+    public void EnumProperty(string i, Type enumType, Action<Material, float> onDraw = null)
+    {
+        MaterialProperty prop = Property(i);
+        if (prop != null)
+        {
+            foreach (Material mat in PropertyDropdown(i, Enum.GetNames(enumType), editor))
+            {
+                onDraw?.Invoke(mat, prop.floatValue);
+            }
+        }
+    }
+
+    public void DrawIf(bool condition, params string[] propertyNames)
+    {
+        if (!condition) return;
+        foreach (var name in propertyNames)
+        {
+            ShaderProperty(name);
+        }
+    }
+
+    public void ShaderProperties(params string[] propertyNames)
+    {
+        foreach (var name in propertyNames)
+        {
+            ShaderProperty(name);
+        }
+    }
 }
 }

@@ -12,31 +12,8 @@ using static SilentCelShading.Unity.InspectorCommon;
 
 namespace SilentCelShading.Unity
 {
-    public class SCSSShaderGUI : ShaderGUI
+    public partial class SCSSShaderGUI : ShaderGUI
     {
-        public enum DepthWrite
-        {
-            Off,
-            On
-        }
-
-        public enum RenderingMode
-        {
-            Opaque = 0,
-            Cutout = 1,
-            Fade = 2,
-            Transparent = 3,
-            Additive = 4,
-            Custom = 5
-        }
-
-        public enum CustomRenderingMode
-        {
-            Opaque = 0,
-            Cutout = 1,
-            Fade = 2,
-            Premultiplied = 3
-        }
 
         protected static class BaseStyles
         {
@@ -101,9 +78,9 @@ namespace SilentCelShading.Unity
         protected MaterialProperty stencilFail;
         protected MaterialProperty stencilZFail;
 
-        protected const string LegacyShadersPath = "Legacy Shaders/";
-        protected const string TransparentShadersPath = "/Transparent/";
-        protected const string TransparentCutoutShadersPath = "/Transparent/Cutout/";
+        internal const string LegacyShadersPath = "Legacy Shaders/";
+        internal const string TransparentShadersPath = "/Transparent/";
+        internal const string TransparentCutoutShadersPath = "/Transparent/Cutout/";
 
         public override void OnGUI(MaterialEditor materialEditor, MaterialProperty[] props)
         {
@@ -418,7 +395,7 @@ namespace SilentCelShading.Unity
             return (property.floatValue != 0.0f);
         }
 
-        protected static Texture GetTextureProperty(Material material, string propertyName)
+        internal static Texture GetTextureProperty(Material material, string propertyName)
         {
             if (material.HasProperty(propertyName))
             {
@@ -428,7 +405,7 @@ namespace SilentCelShading.Unity
             return null;
         }
 
-        protected static float? GetFloatProperty(Material material, string propertyName)
+        internal static float? GetFloatProperty(Material material, string propertyName)
         {
             if (material.HasProperty(propertyName))
             {
@@ -438,7 +415,7 @@ namespace SilentCelShading.Unity
             return null;
         }
 
-        protected static int? GetIntProperty(Material material, string propertyName)
+        internal static int? GetIntProperty(Material material, string propertyName)
         {
             if (material.HasProperty(propertyName))
             {
@@ -448,7 +425,7 @@ namespace SilentCelShading.Unity
             return null;
         }
 
-        protected static Vector4? GetVectorProperty(Material material, string propertyName)
+        internal static Vector4? GetVectorProperty(Material material, string propertyName)
         {
             if (material.HasProperty(propertyName))
             {
@@ -458,7 +435,7 @@ namespace SilentCelShading.Unity
             return null;
         }
 
-        protected static Color? GetColorProperty(Material material, string propertyName)
+        internal static Color? GetColorProperty(Material material, string propertyName)
         {
             if (material.HasProperty(propertyName))
             {
@@ -468,7 +445,7 @@ namespace SilentCelShading.Unity
             return null;
         }
 
-        protected static void SetShaderFeatureActive(Material material, string keywordName, string propertyName, float? propertyValue)
+        internal static void SetShaderFeatureActive(Material material, string keywordName, string propertyName, float? propertyValue)
         {
             if (propertyValue.HasValue)
             {
@@ -488,7 +465,7 @@ namespace SilentCelShading.Unity
             }
         }
 
-        protected static void SetFloatProperty(Material material, string keywordName, string propertyName, float? propertyValue)
+        internal static void SetFloatProperty(Material material, string keywordName, string propertyName, float? propertyValue)
         {
             if (propertyValue.HasValue)
             {
@@ -509,7 +486,7 @@ namespace SilentCelShading.Unity
         }
 
 
-        protected static void SetFloatProperty(Material material, string propertyName, float? propertyValue)
+        internal static void SetFloatProperty(Material material, string propertyName, float? propertyValue)
         {
             if (propertyValue.HasValue)
             {
@@ -517,7 +494,7 @@ namespace SilentCelShading.Unity
             }
         }
 
-        protected static void SetVectorProperty(Material material, string propertyName, Vector4? propertyValue)
+        internal static void SetVectorProperty(Material material, string propertyName, Vector4? propertyValue)
         {
             if (propertyValue.HasValue)
             {
@@ -525,7 +502,7 @@ namespace SilentCelShading.Unity
             }
         }
 
-        protected static void SetColorProperty(Material material, string propertyName, Color? propertyValue)
+        internal static void SetColorProperty(Material material, string propertyName, Color? propertyValue)
         {
             if (propertyValue.HasValue)
             {
@@ -533,7 +510,7 @@ namespace SilentCelShading.Unity
             }
         }
 
-        protected static void SetIntProperty(Material material, string propertyName, int? propertyValue)
+        internal static void SetIntProperty(Material material, string propertyName, int? propertyValue)
         {
             if (propertyValue.HasValue)
             {

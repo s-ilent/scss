@@ -12,94 +12,33 @@ using System.Linq;
 
 namespace SilentCelShading.Unity
 {
-	public class InspectorCommon
+	public class SCSSBoot : AssetPostprocessor
 	{
-		public enum OutlineMode
+		private static void OnPostprocessAllAssets(string[] importedAssets, string[] deletedAssets, string[] movedAssets,
+			string[] movedFromAssetPaths)
 		{
-			None,
-			Tinted,
-			Colored
+			var isUpdated = importedAssets.Any(path => path.StartsWith("Packages/")) &&
+			                importedAssets.Any(path => path.Contains("SCSS_InspectorData"));
+
+			if (isUpdated)
+			{
+				InspectorCommon.LoadInspectorData();
+			}
 		}
 
-		public enum AlbedoAlphaMode
+		[InitializeOnLoadMethod]
+		private static void InitializeOnLoad()
 		{
-			Transparency = 0,
-			Smoothness = 1,
-			ClippingMask = 2
+			InspectorCommon.LoadInspectorData();
 		}
+	}
 
-		public enum SpecularType
-		{
-			Disable = 0,
-			Standard = 1,
-			Cloth = 2,
-			Anisotropic = 3,
-			Cel = 4,
-			CelStrand = 5,
-			Glinty = 6
-		}
-
-		public enum LightingCalculationType
-		{
-			Unbiased = 0,
-			Standard = 1,
-			Cubed = 2,
-			Directional = 3,
-			Biased = 4
-		}
-
-		public enum AmbientFresnelType
-		{
-			Disable,
-			Lit,
-			Ambient,
-			AmbientAlt
-		}
-
-		public enum MatcapBlendModes
-		{
-			Additive,
-			Multiply,
-			Median,
-		}
-
-		public enum MatcapType
-		{
-			Disable,
-			Standard,
-			Anisotropic
-		}
-
-		public enum VertexColorType
-		{
-			Color = 0,
-			OutlineColor = 1,
-			CustomData = 2,
-			Ignore = 3,
-			OutlineDirection = 4
-		}
-
+	public partial class InspectorCommon
+	{
 		public static class CommonStyles
 		{
 			public static string albedoMapAlphaSmoothnessName = "_SMOOTHNESS_TEXTURE_ALBEDO_CHANNEL_A";
 			public static readonly string[] albedoAlphaModeNames = Enum.GetNames(typeof(AlbedoAlphaMode));
-		}
-
-		public class SCSSBoot : AssetPostprocessor {
-			private static void OnPostprocessAllAssets(string[] importedAssets, string[] deletedAssets, string[] movedAssets,
-			string[] movedFromAssetPaths) {
-			var isUpdated = importedAssets.Any(path => path.StartsWith("Packages/")) &&
-							importedAssets.Any(path => path.Contains("SCSS_InspectorData"));
-
-			if (isUpdated) {
-				InitializeOnLoad();
-			}
-			}
-
-			[InitializeOnLoadMethod]
-			private static void InitializeOnLoad() {
-			InspectorCommon.LoadInspectorData();
-			}
 		}
 
 		static public SystemLanguage inspectorLanguage;
@@ -149,12 +88,7 @@ namespace SilentCelShading.Unity
 			}
 		}
 
-		// Selectable languages
-		public enum InspectorLanguageSelection
-		{
-			English, 日本語
-		}
-
+		
 		public static SystemLanguage GetInspectorLanguage()
 		{
 			return inspectorLanguage;
@@ -178,28 +112,6 @@ namespace SilentCelShading.Unity
 
 		}
 
-		public static void DrawInspectorLanguageDropdown()
-		{
-			InspectorLanguageSelection selectedLanguage = InspectorLanguageSelection.English;
-
-			switch(inspectorLanguage)
-			{
-				case SystemLanguage.English:
-					selectedLanguage = InspectorLanguageSelection.English;
-					break;
-				case SystemLanguage.Japanese:
-					selectedLanguage = InspectorLanguageSelection.日本語;
-					break;
-			}
-
-			if (WithChangeCheck(() =>
-			{
-            	selectedLanguage = (InspectorLanguageSelection)EditorGUILayout.EnumPopup("Language", selectedLanguage);
-			}))
-			{
-				UpdateInspectorLanguage(selectedLanguage);
-			}
-		}
 
         internal static bool ButtonWithDropdownList(GUIContent content, string[] buttonNames, GenericMenu.MenuFunction2 callback) {
             var style = new GUIStyle("DropDownButton");
@@ -303,17 +215,6 @@ namespace SilentCelShading.Unity
 
 		}
 
-		protected float? GetSerializedMaterialFloat(Material material, string propName)
-		{
-			float? floatVal = new SerializedObject(material).FindProperty("m_SavedProperties.m_Floats." + propName).floatValue;
-			return floatVal;
-		}
-
-		protected Vector4? GetSerializedMaterialVector4(Material material, string propName)
-		{
-			Vector4? colorVal = new SerializedObject(material).FindProperty("m_SavedProperties.m_Colors." + propName).colorValue;
-			return colorVal;
-		}
 
     }
 }
