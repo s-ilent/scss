@@ -378,7 +378,7 @@ Shader "Silent's Cel Shading/Crosstone (Fur)"
             HLSLPROGRAM
             #pragma vertex vert
             #pragma require geometry
-            #pragma geometry geom
+            #pragma geometry geom_fur
             #pragma fragment frag
 
             // =========================================================================
@@ -464,7 +464,7 @@ Shader "Silent's Cel Shading/Crosstone (Fur)"
             HLSLPROGRAM
             #pragma vertex vert
             #pragma require geometry
-            #pragma geometry geom
+            #pragma geometry geom_fur
             #pragma fragment frag
 
             #define SHADERPASS SHADERPASS_DEPTHNORMALS
@@ -530,7 +530,7 @@ Shader "Silent's Cel Shading/Crosstone (Fur)"
             HLSLPROGRAM
             #pragma vertex vert
             #pragma require geometry
-            #pragma geometry geom
+            #pragma geometry geom_fur
             #pragma fragment frag
             #pragma target 5.0
 
