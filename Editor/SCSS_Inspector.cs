@@ -95,6 +95,42 @@ namespace SilentCelShading.Unity
             isBaked = (bakedSettings != null && bakedSettings.floatValue == 1);
         }
 
+        public static void ValidateMaterial(Material material)
+        {
+            if (material == null) return;
+
+            if (material.HasProperty("_OutlineMode"))  SetupMaterialWithOutlineMode(material, (OutlineMode)material.GetFloat("_OutlineMode"));
+            if (material.HasProperty("_FurMode"))      SetupMaterialWithFurMode(material, (FurMode)material.GetFloat("_FurMode"));
+            if (material.HasProperty("_SpecularType")) SetupMaterialWithSpecularType(material, (SpecularType)material.GetFloat("_SpecularType"));
+
+            if (material.HasProperty("_RenderingMode") && material.HasProperty("_CustomRenderingMode") && material.HasProperty("_RenderQueueOverride"))
+            {
+                SetupMaterialWithRenderingMode(material,
+                    (RenderingMode)material.GetFloat("_RenderingMode"),
+                    (CustomRenderingMode)material.GetFloat("_CustomRenderingMode"),
+                    (int)material.GetFloat("_RenderQueueOverride"));
+            }
+
+            if (material.HasProperty("_AlbedoAlphaMode"))
+            {
+                var alphaMode = (AlbedoAlphaMode)material.GetFloat("_AlbedoAlphaMode");
+                if (alphaMode == AlbedoAlphaMode.Smoothness) material.EnableKeyword(CommonStyles.albedoMapAlphaSmoothnessName);
+                else material.DisableKeyword(CommonStyles.albedoMapAlphaSmoothnessName);
+            }
+
+            SetKeyword(material, "_BACKFACE", material.HasProperty("_UseBackfaceTexture") && material.GetFloat("_UseBackfaceTexture") == 1f);
+            SetKeyword(material, "_DETAIL_MULX2", material.HasProperty("_UseDetailMaps") && material.GetFloat("_UseDetailMaps") == 1f);
+            SetKeyword(material, "_AUDIOLINK", material.HasProperty("_UseEmissiveAudiolink") && material.GetFloat("_UseEmissiveAudiolink") == 1f);
+
+            bool hasEmission = (material.HasProperty("_EmissionMap") && material.GetTexture("_EmissionMap") != null) ||
+                            (material.HasProperty("_DetailEmissionMap") && material.GetTexture("_DetailEmissionMap") != null);
+            SetKeyword(material, "_EMISSION", hasEmission);
+
+            bool hasEmission2nd = (material.HasProperty("_EmissionMap2nd") && material.GetTexture("_EmissionMap2nd") != null) ||
+                                (material.HasProperty("_DetailEmissionMap2nd") && material.GetTexture("_DetailEmissionMap2nd") != null);
+            SetKeyword(material, "_EMISSION_2ND", hasEmission2nd);
+        }
+
         protected override void MaterialChanged(Material material)
         {
             InitialiseStyles();
@@ -111,28 +147,7 @@ namespace SilentCelShading.Unity
             UpgradeMatcaps(material);
             UpgradeDetailMaps(material);
 
-            SetupMaterialWithAlbedo(material,
-                ph.Property("_MainTex"),
-                ph.Property("_AlbedoAlphaMode"));
-
-
-            MaterialProperty outlineProp = ph.Property("_OutlineMode");
-            if (outlineProp != null)
-            {
-                SetupMaterialWithOutlineMode(material, (OutlineMode)outlineProp.floatValue);
-            }
-
-            MaterialProperty furProp = ph.Property("_FurMode");
-            if (furProp != null)
-            {
-                SetupMaterialWithFurMode(material, (FurMode)furProp.floatValue);
-            }
-
-            MaterialProperty specProp = ph.Property("_SpecularType");
-            if (specProp != null)
-            {
-                SetupMaterialWithSpecularType(material, (SpecularType)specProp.floatValue);
-            }
+            ValidateMaterial(material);
 
             base.MaterialChanged(material);
         }
