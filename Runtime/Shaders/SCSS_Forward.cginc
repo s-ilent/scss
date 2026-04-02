@@ -611,7 +611,7 @@ inline SCSS_Input MaterialSetup(SCSS_TexCoords tc,
 	material.rim.invAlpha *= rimMask;
 	material.rim.tint *= outlineDarken;
 
-	applySpecularGloss(material, tc.uv[0], outlineDarken);
+	applySpecularGloss(material, mainUVs, outlineDarken);
 
 	applyMaskedDetail(material, tc);
 
