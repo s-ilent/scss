@@ -513,7 +513,10 @@ half3 SCSS_ApplyLighting(SCSS_Input c, SCSS_ShadingParam p)
 	}
 
     // Apply minimum brightness
+    // ShadeBase determines whether there's a main directional light by checking the light intensity;
+    // if it exists, it also needs a direction. If there was no light, we need to provide a direction vector.
     l.color += _LightAddAnimated;
+    l.direction = length(l.direction > 0) ? l.direction : p.view * 0.001;
 
 	half3 finalColor = 0;
 
