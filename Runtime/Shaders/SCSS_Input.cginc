@@ -9,18 +9,18 @@
 // Keyword squeezing.
 
 #if (defined(_DETAIL_MULX2) || defined(_DETAIL_MUL) || defined(_DETAIL_ADD) || defined(_DETAIL_LERP))
-    #define _DETAIL
+    #define _DETAIL 1
 #endif
 
 #if (defined(_METALLICGLOSSMAP) || defined(_SPECGLOSSMAP) || defined(_SPEC_GLINTY))
-    #define _SPECULAR
+    #define _SPECULAR (_METALLICGLOSSMAP || _SPECGLOSSMAP || _SPEC_GLINTY)
 #else
-    #define _SPECULARHIGHLIGHTS_OFF
-    #define _GLOSSYREFLECTIONS_OFF
+    #define _SPECULARHIGHLIGHTS_OFF 1
+    #define _GLOSSYREFLECTIONS_OFF 1
 #endif
 
 #if (defined(_SUNDISK_NONE))
-    #define _SUBSURFACE
+    #define _SUBSURFACE 1
 #endif
 
 //---------------------------------------
