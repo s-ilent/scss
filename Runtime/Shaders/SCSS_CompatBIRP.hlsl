@@ -233,7 +233,8 @@ CompatLight CGetMainLight(float3 positionWS, float2 screenUV, float4 shadowCoord
     CompatLight l;
     bool isDirectional = _WorldSpaceLightPos0.w < 0.5;
 
-    #if defined(UNITY_PASS_FORWARDADD)
+    #if defined(UNITY_PASS_FORWARDADD) && (defined(POINT) || defined(POINT_COOKIE) || defined(SPOT))
+    // unity_WorldToLight is defined in AutoLight.cginc.
     #else
     half4x4 unity_WorldToLight = (half4x4)0;
     #endif
