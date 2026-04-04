@@ -71,6 +71,9 @@
     #endif
 #endif
 
+// Temporary? fix for issues with certain variants in BIRP having corrupted shader properties.
+#define SCSS_BIRP_USE_CBUFFER
+
 // --------------------------------------------------------------------------
 // Helpers (Available to shaders, but NOT used by the API below)
 // --------------------------------------------------------------------------

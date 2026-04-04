@@ -58,7 +58,7 @@ UNITY_DECLARE_TEX2D(_MainTex);
 UNITY_DECLARE_TEX2D_NOSAMPLER(_ColorMask);
 UNITY_DECLARE_TEX2D_NOSAMPLER(_BumpMap);
 
-#if defined(SCSS_IS_URP)
+#if defined(SCSS_IS_URP) || defined(SCSS_BIRP_USE_CBUFFER)
     // Forces memory consistency for the SRP Batcher
     #define SCSS_ENABLE_ALL_PROPS 1
 #endif
@@ -157,7 +157,7 @@ UNITY_DECLARE_TEX2D_NOSAMPLER(_FurNoise);
 // Note that this block can't define unused properties, so SCSS_ENABLE_ALL_PROPS
 // does not affect SCSS_CROSSTONE.
 
-#if defined(SCSS_IS_URP)
+#if defined(SCSS_IS_URP) || defined(SCSS_BIRP_USE_CBUFFER)
 CBUFFER_START(UnityPerMaterial)
 #endif
 
@@ -251,12 +251,8 @@ half _AudiolinkSweepMapUVSec;
 // _SpecColor is defined deep in Standard/UnityCG land, in UnityLightingCommon.cginc
 // For easy compatibility with Standard, we don't rename it.
 // This is a safety for the shadowcaster pass, which does not include it.
-#if defined(SCSS_ENABLE_ALL_PROPS)
-    half4 _SpecColor; // Must be inside CBUFFER for URP SRP Batcher
-#else
-    #ifndef UNITY_LIGHTING_COMMON_INCLUDED
-    half4 _SpecColor;
-    #endif
+#ifndef UNITY_LIGHTING_COMMON_INCLUDED
+half4 _SpecColor;
 #endif
 
 #if defined(_SPECULAR) || defined(SCSS_ENABLE_ALL_PROPS)
@@ -499,7 +495,7 @@ half4 _FurNoise_ST;
 half _FurThickness;
 #endif
 
-#if defined(SCSS_IS_URP)
+#if defined(SCSS_IS_URP) || defined(SCSS_BIRP_USE_CBUFFER)
 CBUFFER_END
 #endif
 
