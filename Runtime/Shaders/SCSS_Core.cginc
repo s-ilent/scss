@@ -144,9 +144,10 @@ half3 calcDiffuseBase(half3 albedo, SCSS_CrosstoneData data, half attenuation, h
     return lightContribution;
 }
 
-// For point/spot lights, where attenuation is shadow+attenuation.
+// For point/spot lights.
 // remappedLight must be 0..1 range.
-half3 calcDiffuseAdd(half3 albedo, SCSS_LightrampData data, half3 lightColor, half remappedLight) {
+half3 calcDiffuseAdd(half3 albedo, SCSS_LightrampData data, half combinedAtten, half3 lightColor, half remappedLight) {
+    remappedLight = applyAttenuation(remappedLight, combinedAtten);
     remappedLight = applyShadowLift(remappedLight, data.tone0.bias * data.occlusion, data.shadowLift);
     half3 lightContribution = sampleRampWithOptions(remappedLight, data.softness);
 
@@ -157,7 +158,8 @@ half3 calcDiffuseAdd(half3 albedo, SCSS_LightrampData data, half3 lightColor, ha
     return lightContribution;
 }
 
-half3 calcDiffuseAdd(half3 albedo, SCSS_CrosstoneData data, half3 lightColor, half remappedLight) {
+half3 calcDiffuseAdd(half3 albedo, SCSS_CrosstoneData data, half combinedAtten, half3 lightColor, half remappedLight) {
+    remappedLight = applyAttenuationCrosstone(remappedLight, combinedAtten, data.tone0);
     half3 lightContribution = sampleCrossToneLighting(remappedLight, data, albedo);
     lightContribution *= lightColor;
     return lightContribution;
@@ -427,33 +429,36 @@ half3 SCSS_ShadeLight(const SCSS_Input c, const SCSS_ShadingParam p, const Compa
     SCSS_LightrampData shadingData = initaliseLightrampParam(c);
 	#endif
 
-    finalColor = calcDiffuseAdd(c.albedo, shadingData, l.color, remappedLight * l.attenuation);
-
-    half totalAtten = l.attenuation * l.shadowAttenuation;
+    half shadowAtten = l.shadowAttenuation;
 
     #if defined(_CONTACTSHADOWS)
     // Only calculate contact shadows if we're not in shadow.
-    if (l.shadowStrength > 0 && totalAtten > 0)
+    if (l.shadowStrength > 0 && l.attenuation * l.shadowAttenuation > 0)
     {
         half contactShadows = screenSpaceContactShadow(l.direction, p.position, p.normalizedViewportCoord,
             _ContactShadowDistance, _ContactShadowSteps);
         contactShadows = 1.0 - contactShadows;
         contactShadows = lerp(1.0, contactShadows, l.shadowStrength);
-        totalAtten *= contactShadows * contactShadows;
+        shadowAtten *= contactShadows * contactShadows;
     }
     #endif
 
-    finalColor *= totalAtten;
+    half combinedAtten = l.attenuation * shadowAtten;
+
+    finalColor = calcDiffuseAdd(c.albedo, shadingData, combinedAtten, l.color, shadowAtten) * l.attenuation;
+
+    half cutoff = saturate(simpleSharpen(l.attenuation, 0, 0.01 + FLT_EPS));
+    finalColor *= cutoff;
 
 	if (p.isOutline <= 0)
 	{
 		#if defined(_SUBSURFACE)
 		finalColor += c.albedo * getSubsurfaceScatteringLight(l, p.normal, p.view,
-			totalAtten, c.thickness);
+			combinedAtten, c.thickness);
 		#endif
 
 		#if (defined(_SPECULAR))
-        half3 directSpec   = getDirectSpecular(c, p, d, l, totalAtten);
+        half3 directSpec   = getDirectSpecular(c, p, d, l, combinedAtten);
         finalColor += directSpec;
         #endif
 	};
@@ -516,7 +521,6 @@ half3 SCSS_ApplyLighting(SCSS_Input c, SCSS_ShadingParam p)
     // ShadeBase determines whether there's a main directional light by checking the light intensity;
     // if it exists, it also needs a direction. If there was no light, we need to provide a direction vector.
     l.color += _LightAddAnimated;
-    l.direction = length(l.direction > 0) ? l.direction : p.view * 0.001;
 
 	half3 finalColor = 0;
 

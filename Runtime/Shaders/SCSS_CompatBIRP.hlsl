@@ -15,7 +15,9 @@
 #define UNITY_CALC_FOG_FACTOR_RAW(coord) UNITY_CALC_FOG_FACTOR(coord)
 #define SCSS_SAMPLE_SCREEN_COLOR(uv) tex2D(_CameraOpaqueTexture, uv)// Wrappers
 #define SCSS_GET_SHADOW_COORD(i) i._ShadowCoord
-#define SCSS_LIGHT_ATTENUATION(destName, input, worldPos) UNITY_LIGHT_ATTENUATION(destName, input, worldPos)
+// #define SCSS_LIGHT_ATTENUATION(destName, input, worldPos) UNITY_LIGHT_ATTENUATION(destName, input, worldPos)
+// Hijack UNITY_SHADOW_ATTENUATION directly to isolate shadows from distance and cookies.
+#define SCSS_LIGHT_ATTENUATION(destName, input, worldPos) half destName = UNITY_SHADOW_ATTENUATION(input, worldPos);
 
 #if defined(SCSS_USE_HALF_FLOAT) && (defined(UNITY_COMPILER_HLSL) || defined(UNITY_COMPILER_DXC))
 #define TARGET_HALF // Require fp16 optimizations
@@ -228,16 +230,45 @@ CompatLight CGetMainLight(float3 positionWS, float2 screenUV, float4 shadowCoord
     CompatLight l;
     bool isDirectional = _WorldSpaceLightPos0.w < 0.5;
 
+    #if defined(UNITY_PASS_FORWARDADD)
+    #else
+    half4x4 unity_WorldToLight = (half4x4)0;
+    #endif
+
     if (isDirectional) {
-        l.direction = normalize(_WorldSpaceLightPos0.xyz);
+        l.direction = Unity_SafeNormalize(_WorldSpaceLightPos0.xyz);
         l.attenuation = 1.0;
     } else {
         float3 lightVec = _WorldSpaceLightPos0.xyz - positionWS;
-        l.direction = normalize(lightVec);
-        l.attenuation = 1.0;
+        l.direction = Unity_SafeNormalize(lightVec);
+
+        float distanceSquare = dot(lightVec, lightVec);
+        half range = length(unity_WorldToLight._m02_m12_m22);
+        float attenUV = sqrt(distanceSquare) / (1.0 / range);
+        float unityLightFalloff = saturate(1.0 / (1.0 + 25.0 * attenUV * attenUV) * saturate((1.0 - attenUV) * 5.0));
+        l.attenuation = unityLightFalloff;
     }
 
     l.color = _LightColor0.rgb;
+
+    #if defined(DIRECTIONAL_COOKIE)
+        float2 dirCookieCoord = mul(unity_WorldToLight, float4(positionWS, 1)).xy;
+        half dirCookie = tex2D(_LightTexture0, dirCookieCoord).w;
+        l.color *= dirCookie;
+    #endif
+
+    #if defined(SPOT)
+        float4 cookieCoord = mul(unity_WorldToLight, float4(positionWS, 1));
+        half spotCookie = tex2D(_LightTexture0, cookieCoord.xy / cookieCoord.w + 0.5).w;
+        l.color *= (cookieCoord.z > 0) ? spotCookie : 0.0;
+    #endif
+
+    #if defined(POINT_COOKIE)
+        float3 pointCookieCoord = mul(unity_WorldToLight, float4(positionWS, 1)).xyz;
+        half pointCookie = texCUBE(_LightTexture0, pointCookieCoord).w;
+        l.color *= pointCookie;
+    #endif
+
     l.shadowAttenuation = atten; // Baked result of UNITY_LIGHT_ATTENUATION
     l.shadowStrength = 1.0 - _LightShadowData.r;
     l.layerMask = 0;
@@ -279,7 +310,7 @@ bool CGetNextLight(inout CompatLightIterator iter, float3 positionWS, float4 sha
             float attenSq = unity_4LightAtten0[i];
 
             outLight.color = unity_LightColor[i].rgb;
-            outLight.direction = normalize(toLight);
+            outLight.direction = Unity_SafeNormalize(toLight);
 
             // Unity Vertex Light Attenuation with pop-in fix. Thanks d4rkplay3r and error.mdl!
             // unity_4LightAtten0 contains (25.0 / range^2).
