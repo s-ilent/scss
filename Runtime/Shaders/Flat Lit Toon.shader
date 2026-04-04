@@ -280,6 +280,7 @@ Shader "Silent's Cel Shading/Lightramp (Outline)"
 		_LightMultiplyAnimated("Modulate outgoing light", Range(0, 1)) = 1.0
 		[ToggleUI]_LightClampAnimated("Reduce outgoing light", Range(0, 1)) = 0.0
 		_LightAddAnimated("Boost outgoing light", Range(0, 1)) = 0.0
+		_ShadowCrushAnimated("Crush material shadows", Range(1, 0)) = 1.0
 		//[Space]
 		[ToggleUI]_AlbedoAlphaMode("Albedo Alpha Mode", Float) = 0.0
 		[ToggleUI]_PixelSampleMode("Sharp Sampling Mode", Float) = 0.0

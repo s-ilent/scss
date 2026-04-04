@@ -1101,7 +1101,7 @@ namespace SilentCelShading.Unity
         protected void RuntimeLightOptions()
         {
             EditorGUILayout.Space();
-            ph.ShaderProperties("_LightMultiplyAnimated", "_LightClampAnimated", "_LightAddAnimated");
+            ph.ShaderProperties("_LightMultiplyAnimated", "_LightClampAnimated", "_LightAddAnimated", "_ShadowCrushAnimated");
         }
 
         protected void InventoryOptions()

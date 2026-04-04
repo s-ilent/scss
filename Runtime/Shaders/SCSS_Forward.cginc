@@ -639,6 +639,10 @@ inline void MaterialSetupPostParams(inout SCSS_Input material, SCSS_ShadingParam
 	half rlPow4 = Pow4(1 - p.NoV);
 	half3 bitangentDir = p.tangentToWorld[1].xyz;
 
+	// Todo: Add option _ShadowCrushAnimated
+    material.tone[0].col = lerp(exp2(100.0 * log2(material.tone[0].col)), material.tone[0].col, _ShadowCrushAnimated);
+    material.tone[1].col = lerp(exp2(100.0 * log2(material.tone[1].col)), material.tone[1].col, _ShadowCrushAnimated);
+
 	applyEmission(material, tc, outlineDarken, d.NdotV);
 	applyEmission2nd(material, tc, outlineDarken, d.NdotV);
 	applyEmissiveAudioLink(material, tc);

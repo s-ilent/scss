@@ -440,6 +440,7 @@ half _LightingCalculationType;
 half _LightMultiplyAnimated;
 half _LightClampAnimated;
 half _LightAddAnimated;
+half _ShadowCrushAnimated;
 
 // --- Contact shadows ---
 #if defined(_CONTACTSHADOWS) || defined(SCSS_ENABLE_ALL_PROPS)
