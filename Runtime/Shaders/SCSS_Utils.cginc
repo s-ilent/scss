@@ -831,8 +831,8 @@ half V_SmithGGXCorrelated(half roughness, half NoV, half NoL) {
     // Heitz 2014, "Understanding the Masking-Shadowing Function in Microfacet-Based BRDFs"
     half a2 = roughness * roughness;
     // TODO: lambdaV can be pre-computed for all the lights, it should be moved out of this function
-    half lambdaV = NoL * sqrt((NoV - a2 * NoV) * NoV + a2);
-    half lambdaL = NoV * sqrt((NoL - a2 * NoL) * NoL + a2);
+    half lambdaV = NoL * sqrt(max((NoV - a2 * NoV) * NoV + a2, 0.0));
+    half lambdaL = NoV * sqrt(max((NoL - a2 * NoL) * NoL + a2, 0.0));
     // 0.0000077 = nextafter(0.5 / MEDIUMP_FLT_MAX, 1.0) in fp16, so we don't overflow
     half v = PREVENT_DIV0(0.5, lambdaV + lambdaL, 0.0000077);
     // a2=0 => v = 1 / 4*NoL*NoV   => min=1/4, max=+inf
