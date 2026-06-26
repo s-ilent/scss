@@ -234,6 +234,9 @@ half3 getDirectSpecular(SCSS_Input c, SCSS_ShadingParam p, SCSS_LightParam d, Co
         }
 
         specularTerm = V * D * UNITY_PI; // Torrance-Sparrow
+        if (getLightClampActive()) {
+            specularTerm = specularTerm / max(max3(FLT_EPS + l.color), 1);
+        } 
         specularTerm = max(0, specularTerm * d.NdotL);
 
         return specularTerm * l.color * attenuation * FresnelTerm(c.specColor, d.LdotH) * _SpecularHighlights;
