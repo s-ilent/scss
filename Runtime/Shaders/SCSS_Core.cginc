@@ -234,6 +234,9 @@ half3 getDirectSpecular(SCSS_Input c, SCSS_ShadingParam p, SCSS_LightParam d, Co
         }
 
         specularTerm = V * D * UNITY_PI; // Torrance-Sparrow
+        if (getLightClampActive()) {
+            specularTerm = specularTerm / max(max3(FLT_EPS + l.color), 1);
+        } 
         specularTerm = max(0, specularTerm * d.NdotL);
 
         return specularTerm * l.color * attenuation * FresnelTerm(c.specColor, d.LdotH) * _SpecularHighlights;
@@ -501,6 +504,8 @@ half3 SCSS_ApplyLighting(SCSS_Input c, SCSS_ShadingParam p)
 	effectLightShadow += d.sh.L0;
 	#endif
 
+    half effectLightingClampScale = 1;
+
     // Workaround for scenes with HDR off blowing out in VRchat.
     if (getLightClampActive())
     {
@@ -510,6 +515,8 @@ half3 SCSS_ApplyLighting(SCSS_Input c, SCSS_ShadingParam p)
 	    // Note: Not luminance, because the final output is still tinted by the output colour.
 	    // So bright blue light is OK because blue is still dark.
 	    half maxEffectLight = max3(effectLighting);
+        // Store original light intensity before remapping, scale output by this instead of clamped values
+        effectLightingClampScale = max(maxEffectLight, 1);
 	    // The effect lighting is remapped to be within the 0-1.25 range when clamped.
 	    half modLight = min(maxEffectLight, 1.25);
 	    // Scale the values by the highest value.
@@ -551,7 +558,7 @@ half3 SCSS_ApplyLighting(SCSS_Input c, SCSS_ShadingParam p)
 	// Apply the light scaling if the light clamp is active. When the light clamp is active,
 	// the final colour is divided by the main light intensity.
 	// Todo: Test in URP and see if it still makes sense.
-   	if (getLightClampActive()) finalColor = finalColor / max(max3(effectLighting), 1);
+   	if (getLightClampActive()) finalColor = finalColor / effectLightingClampScale;
 
 	finalColor *= _LightMultiplyAnimated;
 
