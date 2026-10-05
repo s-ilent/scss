@@ -1,13 +1,7 @@
-﻿// Derived from https://github.com/Xiexe/Xiexes-Unity-Shaders
-// with Xiexe's permission. For compatibility's sake, though,
-// I've kept the namespaces seperate but similar. 
-
-using UnityEngine;
+﻿using UnityEngine;
 using UnityEditor;
 using System.Collections.Generic;
 using System.IO;
-using System.Reflection;
-using System;
 using UnityEditorInternal;
 using static SilentCelShading.Unity.InspectorCommon;
 
@@ -15,49 +9,79 @@ namespace SilentCelShading.Unity
 {
 public class XSGradientEditor : EditorWindow
 {
+    private const int gradients_min = 1;
+    public const int gradients_max = 16;
 
-    private static int gradients_min = 1;
-    private static int gradients_max = 8;
-
+    [SerializeField]
     public List<int> gradients_index = new List<int>(new int[1] { 0 });
+
+    [SerializeField]
     public List<Gradient> gradients = new List<Gradient>(gradients_max);
+
     public Texture2D tex;
 
     private string finalFilePath;
 
+    [SerializeField]
     private bool isLinear = false;
-    private bool manualMaterial = false;
-    private enum Resolutions
+
+    public enum RampWidth
     {
-        Tiny64x8 = 64,
-        Small128x8 = 128,
-        Medium256x8 = 256,
-        Large512x8 = 512
+        _64 = 64,
+        _128 = 128,
+        _256 = 256,
+        _512 = 512
     }
-    private Resolutions res = Resolutions.Tiny64x8;
+
+    public enum RampLayerHeight
+    {
+        _1 = 1,
+        _2 = 2,
+        _4 = 4,
+        _8 = 8,
+        _16 = 16
+    }
+
+    private static readonly string[] rampWidthLabels = new string[] { "64", "128", "256", "512" };
+    private static readonly int[] rampWidthValues = new int[] { 64, 128, 256, 512 };
+
+    private static readonly string[] rampHeightLabels = new string[] { "1", "2", "4", "8", "16" };
+    private static readonly int[] rampHeightValues = new int[] { 1, 2, 4, 8, 16 };
+
+    [SerializeField]
+    private int resWidth = 256;
+
+    [SerializeField]
+    private int layerHeight = 8;
+
     public static Material focusedMat;
-    private Material oldFocusedMat;
+    private Material explicitMat;
+    private Material oldActiveMat;
     private Texture oldTexture;
     private string rampProperty = "_Ramp";
-    private ReorderableList grad_index_reorderable;
-    private bool reorder;
-    private static GUIContent iconToolbarPlus;
-    private static GUIContent iconToolbarMinus;
-    private static GUIStyle preButton;
-    private static GUIStyle buttonBackground;
-    private bool changed;
-    private int loadGradIndex;
-    private SCSSMultiGradient multiGrad;
-    private Vector2 scrollPos;
-    public string currentMatName;
 
+    private ReorderableList gradList;
+    private SerializedObject serializedObj;
+    private SerializedProperty gradientsProp;
+    private SerializedProperty gradientsIndexProp;
+
+    private SCSSMultiGradient multiGrad;
     private bool dHelpText = true;
 
+    // Resolves explicit material override or falls back to active selection
+    private Material ResolvedMaterial
+    {
+        get
+        {
+            if (explicitMat != null) return explicitMat;
+            if (Selection.activeObject is Material selMat) return selMat;
+            return focusedMat;
+        }
+    }
 
     protected GUIContent GetInspectorGUIContent(string i)
     {
-        GUIContent style;
-        if (!styles.TryGetValue(i, out style))
+        if (!styles.TryGetValue(i, out GUIContent style))
         {
             style = new GUIContent(i);
         }
@@ -66,8 +90,7 @@ public class XSGradientEditor : EditorWindow
 
     protected string GetInspectorData(string i)
     {
-        GUIContent style;
-        if (!styles.TryGetValue(i, out style))
+        if (!styles.TryGetValue(i, out GUIContent style))
         {
             return i;
         }
@@ -75,17 +98,17 @@ public class XSGradientEditor : EditorWindow
     }
 
     [MenuItem("Tools/Silent's Cel Shading/Gradient Editor")]
-    static public void Init()
+    public static void Init()
     {
         XSGradientEditor window = EditorWindow.GetWindow<XSGradientEditor>(false, "SCSS Gradient Editor", true);
-        window.minSize = new Vector2(450, 390);
+        window.minSize = new Vector2(490, 500);
     }
 
-    //Find Asset Path
     public static string findAssetPath(string finalFilePath)
     {
-        string[] guids1 = AssetDatabase.FindAssets("SCSS_XSGradientEditor", null);
-        string untouchedString = AssetDatabase.GUIDToAssetPath(guids1[0]);
+        string[] guids = AssetDatabase.FindAssets("SCSS_XSGradientEditor", null);
+        if (guids.Length == 0) return "Assets";
+        string untouchedString = AssetDatabase.GUIDToAssetPath(guids[0]);
         string[] splitString = untouchedString.Split('/');
 
         ArrayUtility.RemoveAt(ref splitString, splitString.Length - 1);
@@ -95,301 +118,382 @@ public class XSGradientEditor : EditorWindow
         return finalFilePath;
     }
 
-    private void OnGUI_Initialise()
+    private void OnEnable()
     {
-        changed = false;
-        EditorGUILayout.Space();
-
-        currentMatName = (focusedMat != null)
-        ? focusedMat.name 
-        : "None";
-
-        GUILayout.Label(GetInspectorData("ge_gradientEditorTitle") + " " + currentMatName, EditorStyles.boldLabel, new GUILayoutOption[0]);
-
-        if (preButton == null)
+        while (gradients.Count < gradients_max)
         {
-            iconToolbarPlus = EditorGUIUtility.IconContent("Toolbar Plus", GetInspectorData("ge_addButton"));
-            iconToolbarMinus = EditorGUIUtility.IconContent("Toolbar Minus", GetInspectorData("ge_removeButton"));
-            preButton = new GUIStyle("RL FooterButton");
-            buttonBackground = new GUIStyle("RL Header");
-        }
-
-        if (gradients.Count < gradients_max)
-        {
-            for (int i = gradients.Count; i < gradients_max; i++)
-            {
             gradients.Add(new Gradient());
+        }
+
+        serializedObj = new SerializedObject(this);
+        gradientsProp = serializedObj.FindProperty("gradients");
+        gradientsIndexProp = serializedObj.FindProperty("gradients_index");
+
+        InitReorderableList();
+    }
+
+    private void OnSelectionChange()
+    {
+        if (explicitMat == null)
+        {
+            Repaint();
+        }
+    }
+
+    private void InitReorderableList()
+    {
+        gradList = new ReorderableList(serializedObj, gradientsIndexProp, true, true, true, true);
+
+        // Calculate element height to accommodate boundary dividing lines
+        gradList.elementHeightCallback = (int index) =>
+        {
+            int total = gradientsIndexProp.arraySize;
+            float baseHeight = EditorGUIUtility.singleLineHeight + 14f;
+            if (index == total - 1) baseHeight += 12f; // Space for closing 1.00 divider
+            return baseHeight;
+        };
+
+        gradList.drawHeaderCallback = (Rect rect) =>
+        {
+            EditorGUI.LabelField(rect, $"Ramp Layers ({gradients_index.Count}) & Vertex Color Boundaries (0.00 → 1.00)", EditorStyles.boldLabel);
+        };
+
+        gradList.drawElementCallback = (Rect rect, int index, bool isActive, bool isFocused) =>
+        {
+            if (index >= gradients_index.Count || index >= gradientsIndexProp.arraySize) return;
+
+            int total = gradientsIndexProp.arraySize;
+            int gradIdx = gradients_index[index];
+
+            // 1. Top Boundary Threshold Line: T_k = index / total
+            float topThreshold = total > 0 ? (float)index / total : 0f;
+            Rect topDividerRect = new Rect(rect.x, rect.y + 1f, rect.width, 10f);
+            DrawThresholdDivider(topDividerRect, topThreshold);
+
+            // 2. Gradient Row: Full-width gradient field between thresholds
+            float rowY = rect.y + 12f;
+            float rowHeight = EditorGUIUtility.singleLineHeight;
+            Rect gradRect = new Rect(rect.x + 12f, rowY, rect.width - 16f, rowHeight);
+
+            if (gradIdx >= 0 && gradIdx < gradientsProp.arraySize)
+            {
+                SerializedProperty gradElem = gradientsProp.GetArrayElementAtIndex(gradIdx);
+                EditorGUI.PropertyField(gradRect, gradElem, GUIContent.none);
             }
-        }
 
-        if (grad_index_reorderable == null)
+            // 3. Bottom Closing Threshold Line: 1.00
+            if (index == total - 1)
+            {
+                Rect bottomDividerRect = new Rect(rect.x, rowY + rowHeight + 2f, rect.width, 10f);
+                DrawThresholdDivider(bottomDividerRect, 1.00f);
+            }
+        };
+
+        gradList.onAddCallback = (ReorderableList list) =>
         {
-            makeReorderedList();
-        }
+            if (gradients_index.Count >= gradients_max) return;
 
-        GUILayout.BeginHorizontal();
-        GUILayout.FlexibleSpace();
-        Rect r = EditorGUILayout.GetControlRect();
-        float rightEdge = r.xMax;
-        float leftEdge = rightEdge - 48f;
-        r = new Rect(leftEdge, r.y, rightEdge - leftEdge, r.height);
-        if (Event.current.type == EventType.Repaint) buttonBackground.Draw(r, false, false, false, false);
-        leftEdge += 18f;
-        EditorGUI.BeginDisabledGroup(gradients_index.Count >= gradients_max);
-        bool addE = GUI.Button(new Rect(leftEdge + 4, r.y, 25, 13), iconToolbarPlus, preButton);
-        EditorGUI.EndDisabledGroup();
-        EditorGUI.BeginDisabledGroup(gradients_index.Count <= gradients_min);
-        bool removeE = GUI.Button(new Rect(leftEdge - 19, r.y, 25, 13), iconToolbarMinus, preButton);
-        EditorGUI.EndDisabledGroup();
-
-        if (addE)
-        {
-            grad_index_reorderable.index++;
-            int wat = 0;
+            serializedObj.Update();
+            int nextUnused = 0;
             for (int i = 0; i < gradients_max; i++)
             {
                 if (!gradients_index.Contains(i))
                 {
-                    wat = i;
+                    nextUnused = i;
                     break;
                 }
             }
-            gradients_index.Add(wat);
-            changed = true;
-        }
-        if (removeE)
-        {
-            gradients_index.Remove(gradients_index[gradients_index.Count - 1]);
-            grad_index_reorderable.index--;
-            changed = true;
-        }
 
-        GUIStyle button = new GUIStyle(EditorStyles.miniButton);
-        button.normal = !reorder ? EditorStyles.miniButton.normal : EditorStyles.miniButton.onNormal;
-        if (GUILayout.Button(GetInspectorGUIContent("ge_reorderButton"), button, GUILayout.ExpandWidth(false)))
-        {
-            reorder = !reorder;
-        }
-        GUILayout.EndHorizontal();
+            int newIndex = gradientsIndexProp.arraySize;
+            gradientsIndexProp.InsertArrayElementAtIndex(newIndex);
+            gradientsIndexProp.GetArrayElementAtIndex(newIndex).intValue = nextUnused;
+            serializedObj.ApplyModifiedProperties();
 
-        SerializedObject serializedObject = new SerializedObject(this);
-        if (reorder)
+            BakeTextureAndApplyToMaterial();
+        };
+
+        gradList.onRemoveCallback = (ReorderableList list) =>
         {
-            grad_index_reorderable.DoLayoutList();
-        }
-        else
-        {
-            SerializedProperty colorGradients = serializedObject.FindProperty("gradients");
-            if (colorGradients.arraySize == gradients_max)
+            if (gradientsIndexProp.arraySize > gradients_min && list.index >= 0 && list.index < gradientsIndexProp.arraySize)
             {
-                for (int i = 0; i < gradients_index.Count; i++)
-                {
-                    Rect _r = EditorGUILayout.GetControlRect();
-                    _r.x += 8f;
-                    _r.width -= 2f * 8f;
-                    _r.height += 5f;
-                    _r.y += 2f + (3f * i);
-                    EditorGUI.PropertyField(_r, colorGradients.GetArrayElementAtIndex(gradients_index[i]), new GUIContent(""));
-                }
-                GUILayout.Space(9 + gradients_index.Count*3);
+                serializedObj.Update();
+                gradientsIndexProp.DeleteArrayElementAtIndex(list.index);
+                list.index = Mathf.Clamp(list.index - 1, 0, gradientsIndexProp.arraySize - 1);
+                serializedObj.ApplyModifiedProperties();
+
+                BakeTextureAndApplyToMaterial();
             }
-        }
-        if (serializedObject.ApplyModifiedProperties()) changed = true;
+        };
+
+        gradList.onReorderCallback = (ReorderableList list) =>
+        {
+            serializedObj.ApplyModifiedProperties();
+            BakeTextureAndApplyToMaterial();
+        };
     }
-    private void OnGUI_HandleGradientObjectSetup()
+
+    private void DrawThresholdDivider(Rect rect, float thresholdValue)
     {
-        if (oldFocusedMat != focusedMat)
+        Color dividerColor = EditorGUIUtility.isProSkin ? new Color(0.4f, 0.4f, 0.4f, 0.8f) : new Color(0.6f, 0.6f, 0.6f, 0.8f);
+        Color textColor = EditorGUIUtility.isProSkin ? new Color(0.7f, 0.85f, 1f, 0.95f) : new Color(0.15f, 0.35f, 0.7f, 1f);
+
+        float lineY = rect.y + 5f;
+        float labelWidth = 42f;
+
+        // Left Line
+        EditorGUI.DrawRect(new Rect(rect.x, lineY, 16f, 1f), dividerColor);
+
+        // Threshold Label (e.g. 0.00, 0.50, 1.00)
+        GUIStyle thresholdStyle = new GUIStyle(EditorStyles.miniLabel)
         {
-            changed = true;
-            if (this.oldTexture != null)
-            {
-                if (this.oldTexture == EditorGUIUtility.whiteTexture) this.oldTexture = null;
-                oldFocusedMat.SetTexture(rampProperty, this.oldTexture);
-                this.oldTexture = null;
-            }
-            oldFocusedMat = focusedMat;
+            normal = { textColor = textColor },
+            fontStyle = FontStyle.Bold,
+            alignment = TextAnchor.MiddleCenter
+        };
+
+        EditorGUI.LabelField(new Rect(rect.x + 18f, rect.y - 2f, labelWidth, 14f), thresholdValue.ToString("F2"), thresholdStyle);
+
+        // Right Line
+        float rightLineX = rect.x + 18f + labelWidth + 2f;
+        float rightLineWidth = Mathf.Max(10f, (rect.x + rect.width) - rightLineX);
+        EditorGUI.DrawRect(new Rect(rightLineX, lineY, rightLineWidth, 1f), dividerColor);
+    }
+
+    public void OnGUI()
+    {
+        if (serializedObj == null || gradientsProp == null)
+        {
+            serializedObj = new SerializedObject(this);
+            gradientsProp = serializedObj.FindProperty("gradients");
+            gradientsIndexProp = serializedObj.FindProperty("gradients_index");
+            InitReorderableList();
         }
 
-        Resolutions oldRes = res;
-        res = (Resolutions)EditorGUILayout.EnumPopup(GetInspectorGUIContent("ge_resolutionTitle"), res);
-        if (oldRes != res) changed = true;
+        serializedObj.Update();
 
-        int width = (int)res;
-        int height = 8; // Todo: Add 16 option
-        if (tex == null)
-        {
-            tex = new Texture2D(width, height, TextureFormat.RGBA32, false);
-        }
+        bool guiChanged = false;
+        EditorGUILayout.Space();
+
+        DrawMaterialField(ref guiChanged);
+        DrawResolutionControls(ref guiChanged);
 
         EditorGUILayout.Space();
-        bool old_isLinear = isLinear;
-        drawAdvancedOptions();
-        if (old_isLinear != isLinear)
+
+        EditorGUI.BeginChangeCheck();
+        gradList.DoLayoutList();
+        if (EditorGUI.EndChangeCheck())
         {
-            changed = true;
+            guiChanged = true;
         }
 
-        if (manualMaterial)
+        if (serializedObj.ApplyModifiedProperties() || guiChanged)
         {
-            focusedMat = (Material)EditorGUILayout.ObjectField(new GUIContent("", ""), focusedMat, typeof(Material), true);
+            BakeTextureAndApplyToMaterial();
         }
 
-        if (focusedMat != null)
-        {
-            if (focusedMat.HasProperty("_Ramp"))
-            {
-                rampProperty = "_Ramp";
-            }
-            else
-            {
-                rampProperty = EditorGUILayout.TextField(GetInspectorGUIContent("ge_rampPropertyField"), rampProperty);
-                if (!focusedMat.HasProperty(rampProperty))
-                {
-                    GUILayout.Label(GetInspectorGUIContent("ge_rampPropertyError"));
-                }
-            }
-        }
-
-        if (changed)
-        {
-            updateTexture(width, height);
-            if (focusedMat != null)
-            {
-                if (focusedMat.HasProperty(rampProperty))
-                {
-                    if (this.oldTexture == null)
-                    {
-                        if (focusedMat.GetTexture(rampProperty) == null)
-                        {
-                            this.oldTexture = EditorGUIUtility.whiteTexture;
-                        }
-                        else
-                        {
-                            this.oldTexture = focusedMat.GetTexture(rampProperty);
-                        }
-                    }
-                    tex.wrapMode = TextureWrapMode.Clamp;
-                    tex.Apply(false, false);
-                    focusedMat.SetTexture(rampProperty, tex);
-                }
-            }
-        }
+        HandleActiveMaterialChange();
 
         EditorGUILayout.Space();
         drawMGInputOutput();
 
         EditorGUILayout.Space();
-        if (GUILayout.Button(GetInspectorGUIContent("ge_saveRampButton")))
+        DrawSaveButton();
+
+        EditorGUILayout.Space();
+        DrawPostSaveOptions(ref guiChanged);
+
+        drawHelpText();
+    }
+
+    private void DrawMaterialField(ref bool guiChanged)
+    {
+        using (new EditorGUILayout.VerticalScope(EditorStyles.helpBox))
+        {
+            var targetMat = ResolvedMaterial;
+            bool isOverridden = explicitMat != null;
+
+            using (new EditorGUILayout.HorizontalScope())
+            {
+                EditorGUI.BeginChangeCheck();
+                GUIContent label = new GUIContent("Target Material", "Drag a Material to lock editing to it, or leave empty to auto-follow selection.");
+                
+                Material displayedMat = isOverridden ? explicitMat : targetMat;
+                Material newMat = (Material)EditorGUILayout.ObjectField(label, displayedMat, typeof(Material), true);
+                
+                if (EditorGUI.EndChangeCheck())
+                {
+                    explicitMat = newMat;
+                    guiChanged = true;
+                }
+
+                if (isOverridden)
+                {
+                    if (GUILayout.Button(new GUIContent("Reset", "Return to auto-following selection"), EditorStyles.miniButton, GUILayout.Width(45)))
+                    {
+                        explicitMat = null;
+                        guiChanged = true;
+                        GUI.FocusControl(null);
+                    }
+                }
+                else
+                {
+                    GUILayout.Label("(Selection)", EditorStyles.miniLabel, GUILayout.Width(60));
+                }
+            }
+
+            if (targetMat != null)
+            {
+                if (targetMat.HasProperty("_Ramp"))
+                {
+                    rampProperty = "_Ramp";
+                }
+                else
+                {
+                    EditorGUI.BeginChangeCheck();
+                    rampProperty = EditorGUILayout.TextField(GetInspectorGUIContent("ge_rampPropertyField"), rampProperty);
+                    if (EditorGUI.EndChangeCheck()) guiChanged = true;
+
+                    if (!targetMat.HasProperty(rampProperty))
+                    {
+                        EditorGUILayout.HelpBox(GetInspectorData("ge_rampPropertyError"), MessageType.Warning);
+                    }
+                }
+            }
+        }
+    }
+
+    private void DrawResolutionControls(ref bool guiChanged)
+    {
+        using (new EditorGUILayout.HorizontalScope())
+        {
+            // Width
+            EditorGUILayout.LabelField("Width", GUILayout.Width(42));
+            EditorGUI.BeginChangeCheck();
+            resWidth = EditorGUILayout.IntPopup(resWidth, rampWidthLabels, rampWidthValues, GUILayout.Width(60));
+            if (EditorGUI.EndChangeCheck()) guiChanged = true;
+            EditorGUILayout.LabelField("px", EditorStyles.miniLabel, GUILayout.Width(22));
+
+            GUILayout.Space(12);
+
+            // Layer Height
+            EditorGUILayout.LabelField("Layer Height", GUILayout.Width(78));
+            EditorGUI.BeginChangeCheck();
+            layerHeight = EditorGUILayout.IntPopup(layerHeight, rampHeightLabels, rampHeightValues, GUILayout.Width(50));
+            if (EditorGUI.EndChangeCheck()) guiChanged = true;
+            EditorGUILayout.LabelField("px", EditorStyles.miniLabel, GUILayout.Width(22));
+
+            GUILayout.FlexibleSpace();
+
+            // Total Size Summary
+            int totalHeight = gradients_index.Count * layerHeight;
+            EditorGUILayout.LabelField($"Total: {resWidth}×{totalHeight}px", EditorStyles.miniBoldLabel, GUILayout.Width(110));
+        }
+    }
+
+    private void DrawPostSaveOptions(ref bool guiChanged)
+    {
+        using (new EditorGUILayout.HorizontalScope())
+        {
+            EditorGUI.BeginChangeCheck();
+            isLinear = GUILayout.Toggle(isLinear, GetInspectorGUIContent("ge_linearCheckbox"));
+            dHelpText = GUILayout.Toggle(dHelpText, GetInspectorGUIContent("ge_helpCheckbox"));
+            if (EditorGUI.EndChangeCheck())
+            {
+                guiChanged = true;
+                BakeTextureAndApplyToMaterial();
+            }
+        }
+    }
+
+    private void HandleActiveMaterialChange()
+    {
+        var current = ResolvedMaterial;
+        if (oldActiveMat != current)
+        {
+            if (oldTexture != null)
+            {
+                if (oldTexture == EditorGUIUtility.whiteTexture) oldTexture = null;
+                if (oldActiveMat != null && oldActiveMat.HasProperty(rampProperty))
+                {
+                    oldActiveMat.SetTexture(rampProperty, oldTexture);
+                }
+                oldTexture = null;
+            }
+            oldActiveMat = current;
+            BakeTextureAndApplyToMaterial();
+        }
+    }
+
+    private void BakeTextureAndApplyToMaterial()
+    {
+        int width = resWidth;
+        int rowHeight = layerHeight;
+        int layerCount = Mathf.Max(1, gradients_index.Count);
+        int totalHeight = layerCount * rowHeight;
+
+        if (tex == null || tex.width != width || tex.height != totalHeight)
+        {
+            if (tex != null) DestroyImmediate(tex);
+            tex = new Texture2D(width, totalHeight, TextureFormat.RGBA32, false);
+            tex.wrapMode = TextureWrapMode.Clamp;
+        }
+
+        for (int layer = 0; layer < layerCount; layer++)
+        {
+            int gradIdx = gradients_index[Mathf.Min(layer, gradients_index.Count - 1)];
+            var grad = gradients[gradIdx];
+
+            for (int r = 0; r < rowHeight; r++)
+            {
+                int y = layer * rowHeight + r;
+                for (int x = 0; x < width; x++)
+                {
+                    Color grad_col = grad.Evaluate((float)x / (float)width);
+                    tex.SetPixel(x, y, isLinear ? grad_col.gamma : grad_col);
+                }
+            }
+        }
+        tex.Apply(false, false);
+
+        var current = ResolvedMaterial;
+        if (current != null && current.HasProperty(rampProperty))
+        {
+            if (oldTexture == null)
+            {
+                oldTexture = current.GetTexture(rampProperty) ?? EditorGUIUtility.whiteTexture;
+            }
+            current.SetTexture(rampProperty, tex);
+        }
+    }
+
+    private void DrawSaveButton()
+    {
+        if (GUILayout.Button(GetInspectorGUIContent("ge_saveRampButton"), GUILayout.Height(28f)))
         {
             finalFilePath = findAssetPath(finalFilePath);
             string path = EditorUtility.SaveFilePanel(GetInspectorData("ge_saveRampButton"), finalFilePath + "/Textures/Shadow Ramps/Generated", "gradient", "png");
             if (path.Length != 0)
             {
-                updateTexture(width, height);
+                BakeTextureAndApplyToMaterial();
                 bool success = GenTexture(tex, path);
-                if (success)
+                var current = ResolvedMaterial;
+                if (success && current != null)
                 {
-                    if (focusedMat != null)
+                    string s = path.Substring(path.IndexOf("Assets"));
+                    Texture ramp = AssetDatabase.LoadAssetAtPath<Texture>(s);
+                    if (ramp != null)
                     {
-                        string s = path.Substring(path.IndexOf("Assets"));
-                        Texture ramp = AssetDatabase.LoadAssetAtPath<Texture>(s);
-                        if (ramp != null)
-                        {
-                            focusedMat.SetTexture(rampProperty, ramp);
-                            this.oldTexture = null;
-                        }
+                        current.SetTexture(rampProperty, ramp);
+                        oldTexture = null;
                     }
                 }
             }
         }
-        drawHelpText();
     }
 
-    public void OnGUI()
+    private bool GenTexture(Texture2D targetTex, string path)
     {
-        OnGUI_Initialise();
-        OnGUI_HandleGradientObjectSetup();
-    }   
-
-    Gradient reflessGradient(Gradient old_grad)
-    {
-        Gradient grad = new Gradient();
-        grad.SetKeys(old_grad.colorKeys, old_grad.alphaKeys);
-        grad.mode = old_grad.mode;
-        return grad;
-    }
-
-    List<int> reflessIndexes(List<int> old_indexes)
-    {
-        List<int> indexes = new List<int>();
-        for (int i = 0; i < old_indexes.Count; i++)
-        {
-            indexes.Add(old_indexes[i]);
-        }
-        return indexes;
-    }
-
-    void makeReorderedList()
-    {
-        grad_index_reorderable = new ReorderableList(gradients_index, typeof(int), true, false, false, false);
-        grad_index_reorderable.headerHeight = 0f;
-        grad_index_reorderable.footerHeight = 0f;
-        grad_index_reorderable.showDefaultBackground = true;
-
-        grad_index_reorderable.drawElementCallback = (Rect rect, int index, bool isActive, bool isFocused) =>
-        {
-            if (gradients.Count == gradients_max)
-            {
-                Type editorGui = typeof(EditorGUI);
-                MethodInfo mi = editorGui.GetMethod("GradientField", BindingFlags.NonPublic | BindingFlags.Static, null, new Type[2] { typeof(Rect), typeof(Gradient) }, null);
-                mi.Invoke(this, new object[2] { rect, gradients[gradients_index[index]] });
-                if (Event.current.type == EventType.Repaint)
-                {
-                    changed = true;
-                }
-            }
-        };
-
-        grad_index_reorderable.onChangedCallback = (ReorderableList list) =>
-        {
-            changed = true;
-        };
-    }
-
-    void OnDestroy()
-    {
-        if (focusedMat != null)
-        {
-            if (this.oldTexture != null)
-            {
-                if (this.oldTexture == EditorGUIUtility.whiteTexture)
-                {
-                    this.oldTexture = null;
-                }
-                focusedMat.SetTexture(rampProperty, this.oldTexture);
-                this.oldTexture = null;
-            }
-            focusedMat = null;
-        }
-    }
-
-    void updateTexture(int width, int height)
-    {
-        tex = new Texture2D(width, height, TextureFormat.RGBA32, false);
-        for (int y = 0; y < height; y++) // Per gradient
-        {
-            for (int x = 0; x < width; x++) // Per pixel
-            {
-                Color grad_col = gradients[gradients_index[Mathf.Min(y, gradients_index.Count-1)]].Evaluate((float)x / (float)width);
-                tex.SetPixel(x, y, isLinear ? grad_col.gamma : grad_col);
-                
-            }
-        }
-    }
-
-    bool GenTexture(Texture2D tex, string path)
-    {
-        var pngData = tex.EncodeToPNG();
+        byte[] pngData = targetTex.EncodeToPNG();
         if (pngData != null)
         {
             File.WriteAllBytes(path, pngData);
@@ -399,9 +503,8 @@ public class XSGradientEditor : EditorWindow
         return false;
     }
 
-    bool ChangeImportSettings(string path)
+    private bool ChangeImportSettings(string path)
     {
-
         string s = path.Substring(path.LastIndexOf("Assets"));
         TextureImporter texture = (TextureImporter)TextureImporter.GetAtPath(s);
         if (texture != null)
@@ -410,15 +513,9 @@ public class XSGradientEditor : EditorWindow
             texture.maxTextureSize = 512;
             texture.mipmapEnabled = false;
             texture.textureCompression = TextureImporterCompression.Uncompressed;
-
-            // texture.sRGBTexture = !isLinear; // We already do the conversion in tex.SetPixel
-
             texture.SaveAndReimport();
             AssetDatabase.Refresh();
             return true;
-
-            // shadowRamp = (Texture)Resources.Load(path);
-            // Debug.LogWarning(shadowRamp.ToString());
         }
         else
         {
@@ -427,37 +524,38 @@ public class XSGradientEditor : EditorWindow
         return false;
     }
 
-    void drawMGInputOutput()
+    private void drawMGInputOutput()
     {
         GUILayout.BeginHorizontal();
         SCSSMultiGradient old_multiGrad = multiGrad;
-        multiGrad = (SCSSMultiGradient)EditorGUILayout.ObjectField(GetInspectorGUIContent("ge_multiGradientPreset"), multiGrad, typeof(SCSSMultiGradient), false, null);
+        multiGrad = (SCSSMultiGradient)EditorGUILayout.ObjectField(GetInspectorGUIContent("ge_multiGradientPreset"), multiGrad, typeof(SCSSMultiGradient), false);
         if (multiGrad != old_multiGrad)
         {
+            serializedObj.Update();
             if (multiGrad != null)
             {
-                this.gradients = multiGrad.gradients;
-                this.gradients_index = multiGrad.order;
-                makeReorderedList();
+                gradients = multiGrad.gradients;
+                gradients_index = multiGrad.order;
             }
             else
             {
                 List<Gradient> new_Grads = new List<Gradient>();
-                for (int i = 0; i < this.gradients.Count; i++)
+                for (int i = 0; i < gradients.Count; i++)
                 {
-                    new_Grads.Add(reflessGradient(this.gradients[i]));
+                    new_Grads.Add(reflessGradient(gradients[i]));
                 }
-                this.gradients = new_Grads;
-                this.gradients_index = reflessIndexes(this.gradients_index);
-                makeReorderedList();
+                gradients = new_Grads;
+                gradients_index = reflessIndexes(gradients_index);
             }
-            changed = true;
+            serializedObj.ApplyModifiedProperties();
+            InitReorderableList();
+            BakeTextureAndApplyToMaterial();
         }
 
         if (GUILayout.Button(GetInspectorGUIContent("ge_saveNewButton"), EditorStyles.miniButton, GUILayout.ExpandWidth(false)))
         {
             finalFilePath = findAssetPath(finalFilePath);
-            string path = EditorUtility.SaveFilePanel(GetInspectorData("ge_saveMultiGradient"), (finalFilePath + "/Textures/Shadow Ramps/MGPresets"), "MultiGradient", "asset");
+            string path = EditorUtility.SaveFilePanel(GetInspectorData("ge_saveMultiGradient"), finalFilePath + "/Textures/Shadow Ramps/MGPresets", "MultiGradient", "asset");
             if (path.Length != 0)
             {
                 path = path.Substring(Application.dataPath.Length - "Assets".Length);
@@ -467,44 +565,63 @@ public class XSGradientEditor : EditorWindow
                 {
                     _multiGrad.gradients.Add(reflessGradient(grad));
                 }
-                _multiGrad.order.AddRange(gradients_index.ToArray());
+                _multiGrad.order.AddRange(gradients_index);
                 multiGrad = _multiGrad;
                 AssetDatabase.CreateAsset(_multiGrad, path);
-                this.gradients = multiGrad.gradients;
-                this.gradients_index = multiGrad.order;
-                makeReorderedList();
+                gradients = multiGrad.gradients;
+                gradients_index = multiGrad.order;
+                InitReorderableList();
                 AssetDatabase.SaveAssets();
             }
         }
         GUILayout.EndHorizontal();
     }
 
-    void drawAdvancedOptions()
+    private Gradient reflessGradient(Gradient old_grad)
     {
-        GUILayout.BeginHorizontal();
-        isLinear = GUILayout.Toggle(isLinear, GetInspectorGUIContent("ge_linearCheckbox"));
-        manualMaterial = GUILayout.Toggle(manualMaterial, GetInspectorGUIContent("ge_materialCheckbox"));
-        dHelpText = GUILayout.Toggle(dHelpText, GetInspectorGUIContent("ge_helpCheckbox"));
-        GUILayout.EndHorizontal();
+        Gradient grad = new Gradient();
+        grad.SetKeys(old_grad.colorKeys, old_grad.alphaKeys);
+        grad.mode = old_grad.mode;
+        return grad;
     }
 
-    void drawHelpText()
+    private List<int> reflessIndexes(List<int> old_indexes)
     {
-        if(dHelpText)
+        return new List<int>(old_indexes);
+    }
+
+    private void drawHelpText()
+    {
+        if (dHelpText)
         {
             EditorGUILayout.Space();
             EditorGUILayout.HelpBox(GetInspectorData("ge_basicHelp"), MessageType.Info);
-            EditorGUILayout.HelpBox(GetInspectorData("ge_multiRampHelp"), MessageType.Info);
+            EditorGUILayout.HelpBox("The boundary values (0.00, 0.50, 1.00...) indicate vertex color thresholds where one ramp layer transitions to the next. The total output texture height equals (Layers × Layer Height).", MessageType.Info);
         }
     }
 
-    // External
-
-    static public void callGradientEditor(Material focusedMat = null)
+    private void OnDestroy()
     {
-            XSGradientEditor.focusedMat = focusedMat;
-            XSGradientEditor.Init();
+        var current = ResolvedMaterial;
+        if (current != null && oldTexture != null)
+        {
+            if (oldTexture == EditorGUIUtility.whiteTexture) oldTexture = null;
+            if (current.HasProperty(rampProperty)) current.SetTexture(rampProperty, oldTexture);
+            oldTexture = null;
+            focusedMat = null;
+            explicitMat = null;
+        }
+
+        if (tex != null)
+        {
+            DestroyImmediate(tex);
+        }
     }
 
+    public static void callGradientEditor(Material focusedMat = null)
+    {
+        XSGradientEditor.focusedMat = focusedMat;
+        XSGradientEditor.Init();
+    }
 }
 }
