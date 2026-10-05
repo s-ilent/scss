@@ -137,24 +137,32 @@ SCSS_TonemapInput LightrampTonemap(float2 uv)
 	switch (_ShadowMaskType)
 	{
 		case 0: // Occlusion
+		{
 			// RGB will boost shadow range. Raising _Shadow reduces its influence.
 			// Alpha will boost light range. Raising _Shadow reduces its influence.
 			t.col = saturate(_IndirectLightingBoost+1-_ShadowMask_var.a) * _ShadowMaskColor.rgb;
 			t.bias = _ShadowMaskColor.a*_ShadowMask_var.r;
 			break;
+		}
 		case 1: // Tone
+		{
 			t.col = saturate(_ShadowMask_var+_IndirectLightingBoost) * _ShadowMaskColor.rgb;
 			t.bias = _ShadowMaskColor.a*_ShadowMask_var.a;
 			break;
+		}
 		case 2: // Auto-Tone
+		{
 			half3 albedo = UNITY_SAMPLE_TEX2D(_MainTex, uv);
 			t.col = saturate(AutoToneMapping(albedo)+_IndirectLightingBoost) * _ShadowMaskColor.rgb;
 			t.bias = _ShadowMaskColor.a*_ShadowMask_var.r;
 			break;
+		}
 		case 3: // Median
+		{
 			// Single channel texture (R) where 0.5 is neutral
 			// TODO
 			break;
+		}
 	}
 
 	t.bias = (1 - _Shadow) * t.bias + _Shadow;
@@ -566,21 +574,25 @@ inline SCSS_Input MaterialSetup(SCSS_TexCoords tc,
 		#define SDF_SOURCE _ShadowMask
 		#endif
 		case 1:
-		half sdfL = UNITY_SAMPLE_TEX2D_SAMPLER(SDF_SOURCE, _MainTex, mainUVs).r;
-		half sdfR = UNITY_SAMPLE_TEX2D_SAMPLER(SDF_SOURCE, _MainTex, mainUVs * half2(-1, 1)).r;
-		material.sdf = half2(sdfL, sdfR);
-		material.occlusion = 1.0;
-		material.sdfSmoothness = _SDFSmoothness;
-		material.sdfMask = 0;
-		break;
+		{
+    		half sdfL = UNITY_SAMPLE_TEX2D_SAMPLER(SDF_SOURCE, _MainTex, mainUVs).r;
+    		half sdfR = UNITY_SAMPLE_TEX2D_SAMPLER(SDF_SOURCE, _MainTex, mainUVs * half2(-1, 1)).r;
+    		material.sdf = half2(sdfL, sdfR);
+    		material.occlusion = 1.0;
+    		material.sdfSmoothness = _SDFSmoothness;
+    		material.sdfMask = 0;
+    		break;
+		}
 
 		case 2:
-		half4 sdfMaskTex = UNITY_SAMPLE_TEX2D_SAMPLER(SDF_SOURCE, _MainTex, mainUVs);
-		material.sdf = sdfMaskTex.rg;
-		material.occlusion = 1.0;
-		material.sdfSmoothness = _SDFSmoothness;
-		material.sdfMask = sdfMaskTex.b;
-		break;
+		{
+    		half4 sdfMaskTex = UNITY_SAMPLE_TEX2D_SAMPLER(SDF_SOURCE, _MainTex, mainUVs);
+    		material.sdf = sdfMaskTex.rg;
+    		material.occlusion = 1.0;
+    		material.sdfSmoothness = _SDFSmoothness;
+    		material.sdfMask = sdfMaskTex.b;
+    		break;
+		}
 		#undef SDF_SOURCE
 	}
 
@@ -665,7 +677,7 @@ inline void MaterialSetupPostParams(inout SCSS_Input material, SCSS_ShadingParam
 	applyMatcaps(material.albedo, p.normal, p.view, bitangentDir, tc.uv[0]);
 }
 
-half4 frag(VertexOutput i, uint facing : SV_IsFrontFace
+half4 frag(VertexOutput i, bool facing : SV_IsFrontFace
     #if defined(USING_COVERAGE_OUTPUT)
 	, out uint cov : SV_Coverage
 	#endif

@@ -654,6 +654,11 @@ Shader "Silent's Cel Shading/Crosstone (Fur)"
 		#pragma shader_feature_local_vertex _ FOG_EXP FOG_EXP2 FOG_LINEAR
         #pragma multi_compile_instancing
         #pragma skip_variants DYNAMICLIGHTMAP_ON LIGHTMAP_ON LIGHTMAP_SHADOW_MIXING DIRLIGHTMAP_COMBINED SHADOWS_SHADOWMASK
+        
+        // If compiling for Vulkan under BIRP (basically, Linux) then turn on DXC here.
+    	#if defined(SHADER_API_VULKAN)
+    	#include_with_pragmas "DXCSupport_BIRP.hlsl"
+    	#endif
 
 		#define SCSS_CROSSTONE
 		#define SCSS_FUR
