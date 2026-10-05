@@ -310,6 +310,9 @@ half3 SCSS_ShadeBase(const SCSS_Input c, const SCSS_ShadingParam p, CompatLight 
 	half3 finalColor;
 	bool hasMainLight = length(l.color) > 0;
 
+    // Apply minimum brightness control; this only applies to the main light.
+    l.color += _LightAddAnimated;
+
     half remappedLight = getRemappedLight(c.perceptualRoughness, d);
 	remappedLight = remappedLight * 0.5 + 0.5;
 	half giLight = d.NdotAmb;
@@ -366,7 +369,7 @@ half3 SCSS_ShadeBase(const SCSS_Input c, const SCSS_ShadingParam p, CompatLight 
 	if (hasMainLight)
 	{
     	fL.color = l.color + indirectKeyLight;
-    	fL.direction = Unity_SafeNormalize(l.direction + indirectDominantDir * directionality);
+    	fL.direction = Unity_SafeNormalize(length(l.color) * l.direction + indirectDominantDir * directionality);
     	fD = recalculateLightParamLight(fL, p, d);
 	}
 
@@ -516,11 +519,6 @@ half3 SCSS_ApplyLighting(SCSS_Input c, SCSS_ShadingParam p)
 	    // Needs a bit more testing, but should look nice.
 	    effectLighting = (effectLighting/maxEffectLight)*modLight;
 	}
-
-    // Apply minimum brightness
-    // ShadeBase determines whether there's a main directional light by checking the light intensity;
-    // if it exists, it also needs a direction. If there was no light, we need to provide a direction vector.
-    l.color += _LightAddAnimated;
 
 	half3 finalColor = 0;
 
