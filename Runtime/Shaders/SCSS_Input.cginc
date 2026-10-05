@@ -483,6 +483,7 @@ int _SDFRightVector;
     half _FurLayerCount;
     half _FurRandomization;
     half _FurGravity;
+    half _FurAO;
     #endif
 #endif
 

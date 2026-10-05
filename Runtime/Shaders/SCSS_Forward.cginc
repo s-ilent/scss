@@ -304,14 +304,15 @@ void applyFur(inout SCSS_Input material, SCSS_TexCoords tc, half furDepth)
 	half furNoise = UNITY_SAMPLE_TEX2D_SAMPLER(_FurNoise, _MainTex, applyScaleOffset(tc.uv[0], _FurNoise_ST));
 	if (furDepth > 0)
 	{
-		half furFalloff = pow((1.0 - furDepth), abs(_FurThickness));
+    	half thickness = max(_FurThickness, 0.001); 
+    	half furFalloff = pow(saturate(1.0 - furDepth), 1.0 / thickness);
 		material.alpha = material.alpha * furNoise;
 		// Alpha sharpen is used for the cutoff, but we can use it here too.
 		applyAlphaSharpen(material.alpha, 1.0 - furFalloff);
 	}
 
 	half furAO = depthBlend(furDepth, furNoise);
-	material.albedo *= gtaoMultiBounce(furAO, material.albedo);
+	material.albedo *= gtaoMultiBounce(lerp(1.0, furAO, _FurAO), material.albedo);
 	if (_CrosstoneToneSeparation) material.tone[0].col *= gtaoMultiBounce(furAO, material.tone[0].col);
 	if (_Crosstone2ndSeparation) material.tone[1].col *= gtaoMultiBounce(furAO, material.tone[1].col);
 

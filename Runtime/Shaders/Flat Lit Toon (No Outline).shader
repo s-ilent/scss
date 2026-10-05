@@ -61,14 +61,15 @@ Shader "Silent's Cel Shading/Lightramp"
 		_FurRandomization("Randomization", Float) = 0.0
 		[Gamma]_FurThickness("Thickness", Range(0.01, 2)) = 1.0
 		_FurGravity("Gravity", Range(-0.99, 0.99)) = 1.0
+		_FurAO("AO", Range(0.0, 1.0)) = 0.5
 		//[Space]
 		[Enum(AmbientFresnelType)]_UseFresnel ("Use Rim Light", Float) = 0.0
-		[HDR]_FresnelTint("Rim Light Tint", Color) = (1,1,1,1)
+		_FresnelTint("Rim Light Tint", Color) = (1,1,1,1)
 		_FresnelWidth ("Rim Light Strength", Range(0, 20)) = .5
 		_FresnelStrength ("Rim Light Softness", Range(0.01, 0.9999)) = 0.5
 		[ToggleUI]_UseFresnelLightMask("Mask Rim Light by Light Direction", Float) = 0.0
 		_FresnelLightMask("Light Direction Mask Power", Range(1, 10)) = 1.0
-		[HDR]_FresnelTintInv("Inverse Rim Light Tint", Color) = (1,1,1,1)
+		_FresnelTintInv("Inverse Rim Light Tint", Color) = (1,1,1,1)
 		_FresnelWidthInv ("Inverse Rim Light Strength", Range(0, 20)) = .5
 		_FresnelStrengthInv ("Inverse Rim Light Softness", Range(0.01, 0.9999)) = 0.5
 		//[Space]
