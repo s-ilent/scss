@@ -13,7 +13,7 @@ void prepareMaterial (inout SCSS_ShadingParam shading, const SCSS_Input material
 
     half3 direction = material.anisotropyDirection;
     shading.anisotropy = material.anisotropy;
-    shading.anisotropicT = normalize(mul(direction, shading.tangentToWorld));
+    shading.anisotropicT = normalize(mul(shading.tangentToWorld, direction));
     shading.anisotropicB = normalize(cross(shading.geometricNormal, shading.anisotropicT));
 }
 
@@ -108,7 +108,7 @@ void applySpecularGloss(inout SCSS_Input material, float2 uv, half oneMinusOutli
 	}
 
 	material.anisotropy = _Anisotropy;
-	material.anisotropyDirection = half3(0, 0, 1);
+	material.anisotropyDirection = half3(1, 0, 0);
 #endif
 }
 
