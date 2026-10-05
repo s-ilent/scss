@@ -378,9 +378,97 @@ namespace SilentCelShading.Unity
         public Options GetActiveOptions()
         {
             Options activeOptions = 0;
-            // Todo: Check each option and if it's active, add it to activeOptions
-            // For example:
-            // if (IsOptionActive("MainOptions")) activeOptions |= Options.MainOptions;
+            if (ph == null || target == null) return activeOptions;
+        
+            activeOptions |= Options.MainOptions | Options.ShadingOptions;
+        
+            if (ph.PropertyEnabled("_UseBackfaceTexture"))
+            {
+                activeOptions |= Options.BackfaceOptions;
+            }
+        
+            var outlineProp = ph.Property("_OutlineMode");
+            if (outlineProp != null && outlineProp.floatValue > 0f)
+            {
+                activeOptions |= Options.OutlineOptions;
+            }
+        
+            var furProp = ph.Property("_FurMode");
+            if (furProp != null && furProp.floatValue > 0f)
+            {
+                activeOptions |= Options.FurOptions;
+            }
+        
+            bool hasEmissionMap = (ph.Property("_EmissionMap")?.textureValue != null) ||
+                                  (ph.Property("_DetailEmissionMap")?.textureValue != null);
+            bool hasEmissionMap2nd = (ph.Property("_EmissionMap2nd")?.textureValue != null) ||
+                                     (ph.Property("_DetailEmissionMap2nd")?.textureValue != null);
+            bool hasEmissionColor = ph.Property("_EmissionColor") != null && ph.Property("_EmissionColor").colorValue.maxColorComponent > 0f;
+            bool hasEmissionColor2nd = ph.Property("_EmissionColor2nd") != null && ph.Property("_EmissionColor2nd").colorValue.maxColorComponent > 0f;
+            bool hasAudiolink = ph.PropertyEnabled("_UseEmissiveAudiolink");
+            bool hasLightSense = ph.PropertyEnabled("_UseEmissiveLightSense");
+        
+            if (hasEmissionMap || hasEmissionMap2nd || hasEmissionColor || hasEmissionColor2nd || hasAudiolink || hasLightSense)
+            {
+                activeOptions |= Options.EmissionOptions;
+            }
+        
+            bool hasSpecular = ph.Property("_SpecularType") != null && ph.Property("_SpecularType").floatValue > 0f;
+            bool hasFresnel = ph.Property("_UseFresnel") != null && ph.Property("_UseFresnel").floatValue > 0f;
+            bool hasMatcap = ph.Property("_UseMatcap") != null && ph.Property("_UseMatcap").floatValue > 0f;
+        
+            if (hasSpecular || hasFresnel || hasMatcap)
+            {
+                activeOptions |= Options.RenderingOptions;
+            }
+        
+            bool hasDetailMaps = ph.PropertyEnabled("_UseDetailMaps");
+            bool hasSSS = ph.PropertyEnabled("_UseSubsurfaceScattering");
+            bool hasContactShadows = ph.PropertyEnabled("_UseContactShadows");
+            bool hasHatching = ph.PropertyEnabled("_UseHatching");
+            bool hasAlphaFresnel = ph.PropertyEnabled("_UseAlphaFresnel");
+        
+            if (hasDetailMaps || hasSSS || hasContactShadows || hasHatching || hasAlphaFresnel)
+            {
+                activeOptions |= Options.DetailOptions;
+            }
+        
+            bool hasAnimation = ph.PropertyEnabled("_UseAnimation");
+            bool hasVanishing = ph.PropertyEnabled("_UseVanishing");
+            bool hasProximityShadow = ph.PropertyEnabled("_UseProximityShadow");
+            bool hasPixelMode = ph.PropertyEnabled("_PixelSampleMode");
+        
+            if (hasAnimation || hasVanishing || hasProximityShadow || hasPixelMode)
+            {
+                activeOptions |= Options.MiscOptions;
+            }
+        
+            float lightMul = ph.Property("_LightMultiplyAnimated")?.floatValue ?? 1f;
+            float lightClamp = ph.Property("_LightClampAnimated")?.floatValue ?? 0f;
+            float lightAdd = ph.Property("_LightAddAnimated")?.floatValue ?? 0f;
+            float shadowCrush = ph.Property("_ShadowCrushAnimated")?.floatValue ?? 1f;
+        
+            if (!Mathf.Approximately(lightMul, 1f) || !Mathf.Approximately(lightClamp, 0f) ||
+                !Mathf.Approximately(lightAdd, 0f) || !Mathf.Approximately(shadowCrush, 1f))
+            {
+                activeOptions |= Options.RuntimeLightOptions;
+            }
+        
+            if (ph.PropertyEnabled("_UseInventory"))
+            {
+                activeOptions |= Options.InventoryOptions;
+            }
+        
+            float renderingModeVal = ph.Float(BaseStyles.renderingModeName);
+            float customRenderingModeVal = ph.Float(BaseStyles.customRenderingModeName);
+            float stencilVal = ph.Float("_Stencil");
+            float vcolorType = ph.Float("_VertexColorType");
+        
+            if (renderingModeVal > 0f || customRenderingModeVal > 0f || stencilVal > 0f || vcolorType != 2f)
+            {
+                activeOptions |= Options.AdvancedOptions;
+            }
+        
             return activeOptions;
         }
 
@@ -1066,7 +1154,8 @@ namespace SilentCelShading.Unity
                                 "_FurRandomization",
                                 "_FurThickness",
                                 "_FurGravity",
-                                "_FurLayerCount"
+                                "_FurLayerCount",
+                                "_FurAO"
                             );
                             break;
                         case FurMode.None:
