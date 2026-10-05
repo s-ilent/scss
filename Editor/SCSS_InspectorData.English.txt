@@ -1,248 +1,734 @@
-_MainTex	Main Texture	Main colour texture (RGBA), which controls the basic appearance of the shader. The colour channels and alpha channels are used.
-_MainTexBackface	Backface Texture 	Main colour texture for backface (RGBA). Same as the main colour texture, but for backface only.
-_UseBackfaceTexture	Backface Texture	Use a separate albedo texture for the material's backface.
-_LightingCalculationType	Lighting Calculation Type	Sets the method used to perform the direct/indirect lighting calculation.
-_ClippingMask	Clipping Mask	Additional texture for transparency, applied over other transparency sources.
-_Cutoff	Alpha Cutoff	Threshold for transparency cutoff. Values below the cutoff will be fully transparent.
-_AlphaSharp	Disable Dithering	Treats transparency cutoff as a hard edge, instead of a soft dithered one.
-_ColorMask	Tint Mask	Masks material colour tinting (G), rim light (B), and detail maps (A).
-_ShiftHue	Hue Shift	Shifts the hue of the main texture and tone, where the value is the number of degrees to shift the hue. 
-_ShiftSaturation	Saturation Shift	Shifts the level of saturation in the main texture and tone, dulling or increasing the vibrance of their respective colours.
-_ShiftValue	Luma Shift	Shifts the brightness of the main texture and tone.
-_BumpMap	Normal Map	Normal map (RGB), which adjusts the direction of the surface normals.
-_EmissionMap	Emission Map	Emission map (RGB), which controls emitted light that isn't affected by lighting.
-_DetailEmissionMap	Emission Detail Mask	An additional texture multiplied against the main emission map. This allows adding additional detail patterns to the emissive texture.
-_DetailEmissionUVSec	UV Source	Selects which UV channel to use for detail emission.
-_EmissionRimPower	Emission Rim Power	When above zero, applies an effect to the emission which darkens it at glancing angles. When below zero, the emission will only be visible at glancing angles. This can be used for a fluroescence effect. 
-_EmissionDetailParams	Emission Detail Parameters	XY: Scrolling speed, ZW: Phase
-s_EmissionDetailScroll	Scroll	Sets the scrolling speed for the emission detail texture.
-s_EmissionDetailPhase	Phase/Pulse	Sets the phase of the emission detail texture. X controls the pulsing speed, and Y controls the phase. The higher the phase, the shorter the interval between repetitions.
-_EmissionMap2nd	2nd Emission Map	Second emission map (RGB), which controls emitted light that isn't affected by lighting.
-_EmissionDetailParams2nd	2nd Emission Detail Parameters	XY: Scrolling speed, ZW: Phase
-_DetailEmissionMap2nd	2nd Emission Detail Mask	An additional texture multiplied against the main 2nd emission map. This allows adding additional detail patterns to the emissive texture.
-_EmissionRimPower2nd	2nd Emission Rim Power	When above zero, applies an effect to the 2nd emission which darkens it at glancing angles. When below zero, the emission will only be visible at glancing angles. This can be used for a fluroescence effect. 
-_SpecGlossMap	Specular Map	Specular Map (RGBA, RGB: Specular/Metalness, A: Smoothness)
-_SpecularType	Specular Style	Allows you to set whether specular is active, and what kind of specular to use if so.
-_Smoothness	Smoothness	The smoothness of the material. The specular map's alpha channel is used for this, with this slider being a multiplier.
-_Anisotropy	Anisotropy	Direction of the anisotropic specular highlights.
-_UseEnergyConservation	Use Energy Conservation	Reduces the intensity of the diffuse on specular areas, to realistically conserve energy.
-_UseMetallic	Use as Metalness	Metalness maps are greyscale maps that contain the metalness of a surface. This is different to specular maps, which are RGB (colour) maps that contain the specular parts of a surface. When this setting is active, the specular map is multiplied against the albedo to derive the final specular colour.
-_CelSpecularSoftness	Softness	Sets the softness of the falloff of cel specular highlights.
-_CelSpecularSteps	Steps	Sets the number of steps in cel specular highlights.
-_UseIridescenceRamp	Iridescent Specular	Applies an iridescence effect on specular reflections.
-_SpecIridescenceRamp	Iridescence Ramp	Controls the color variation of the iridescence effect based on the viewing angle. 
-_SpecularGlintSize	Glint Size	Controls the sharpness of individual sparkles. Lower values result in tiny glints, while higher values make the sparkles appear larger and more diffused.
-_SpecularGlintDensity	Glint Density	Sets the concentration of glint particles. Lower values create a sparse, scattered sparkle effect (like snow or coarse glitter), while higher values result in a dense, shimmering field (like metallic car paint or polished granite).
-_UseFresnel	Rim Lighting Style	Applies a customisable rim lighting effect.
-_FresnelWidth	Rim Width	Sets the width of the rim lighting.
-_FresnelStrength	Rim Softness	Sets the sharpness of the rim edge.
-_FresnelTint	Rim Tint	Tints the colours of the rim lighting. To make it brighter, change the brightness to a valur higher than 1.
-_UseFresnelLightMask	Use Light Direction Mask	Uses the light direction to split the rim light into two. The backside of the rim light can be adjusted seperately.
-_FresnelLightMask	Light Direction Mask Strength	The higher this is, the less the rim light becomes visible in the area between the rim and inverse rim.
-_FresnelTintInv	Inverse Rim Tint	Tints the colours of the inverse rim lighting. To make it brighter, change the brightness to a valur higher than 1.
-_FresnelWidthInv	Inverse Rim Width	Sets the width of the inverse rim lighting.
-_FresnelStrengthInv	Inverse Rim Softness	Sets the sharpness of the inverse rim edge.
-_CustomFresnelColor	Emissive Rim	RGB sets the colour of the additive rim light. Alpha controls the power/width of the effect.
-_OutlineMode	Outline Mode	Adds outlines to the model with the specified blend mode. Can not be used with fur. 
-_outline_color	Outline Colour	Sets the colour used for outlines. In tint mode, this is multiplied against the texture.
-_outline_width	Outline Width	Sets the width of outlines in centimetres (0.01 world-space units).
-_OutlineMask	Outline Mask	Additional texture to adjust the width of outlines.
-_OutlineNearDistance	Nearest Distance	Sets the camera distance at which outlines begin to shrink. As the camera approaches outlines, their size is adjusted to make them look more natural - this property controls how much they shrink, close up.
-_OutlineFarDistance	Farthest Distance	Sets the camera distance at which outlines stop growing. As the camera withdraws from outlines, their size is adjusted to make them look more natural - this property controls how much they grow, at a distance.
-_OutlineZPush	Outline Depth Offset	Sets a depth offset that pushes the outlines behind the model, hiding outlines from overlapping parts of the material.
-_FurMode	Fur Mode	Adds fur to the model. Can not be used with outlines.
-_FurLayerCount	Layer Count	Sets the number of fur layers. More layers result in denser fur, but may impact performance.
-_FurMask	Fur Mask	Determines where the fur appears on the model. White areas will have fur, black areas will not.
-_FurNoise	Fur Shape Texture	Sets the shape and distribution of the fur pattern along the fur shells. Using a fuzzy noise pattern is recommended. 
-_FurLength	Length	Sets the length of the fur. Higher values result in longer fur, but the shells of fur will become more visible. 
-_FurRandomization	Randomization	Adds randomness to the mesh shells of the fur, making it look more natural.
-_FurThickness	Thickness	Sets the distribution of the thickness of the fur strands. Higher values result in thinner-looking fur, concentrated at the base. 
-_FurGravity	Gravity	Sets the gravity effect on the fur. Positive values make the fur hang down, negative values make it stand up.
-_UseMatcap	Matcap Style	Enables the use of material capture textures.
-_MatcapTitle	Matcap Style	Enables the use of material capture textures.
-_Matcap1	Matcap 1	Matcap (RGB). Controlled by the matcap mask's R channel. The blend mode controls how the matcap is applied to the material.
-_Matcap1Strength	Intensity	Adjusts how strongly the matcap is applied to the material.
-_Matcap2	Matcap 2	Matcap (RGB). Controlled by the matcap mask's G channel. The blend mode controls how the matcap is applied to the material.
-_Matcap2Strength	Intensity	Adjusts how strongly the matcap is applied to the material.
-_Matcap3	Matcap 3	Matcap (RGB). Controlled by the matcap mask's B channel. The blend mode controls how the matcap is applied to the material.
-_Matcap3Strength	Intensity	Adjusts how strongly the matcap is applied to the material.
-_Matcap4	Matcap 4	Matcap (RGB). Controlled by the matcap mask's A channel. The blend mode controls how the matcap is applied to the material.
-_Matcap4Strength	Intensity	Adjusts how strongly the matcap is applied to the material.
-_MatcapStrength	Matcap Strength	Power of the matcap. Higher is stronger.
-_MatcapMask	Matcap Mask	Determines the strength of the matcaps by the intensity of the different colour channels.
-_UseSubsurfaceScattering	Subsurface Scattering	Enables a light scattering effect useful for cloth and skin.
-_ThicknessMap	Thickness Map	Thickness Map (RGB)
-_ThicknessMapPower	Power	Boosts the intensity of the thickness map.
-_ThicknessMapInvert	Invert	Inverts the map used for thickness from a scale where 1 produces an effect, to a scale where 0 produces an effect.
-_SSSCol	Color	The colour used for the subsurface scattering effect.
-_SSSIntensity	Intensity	Strength of the subsurface scattering effect.
-_SSSPow	Power	Controls the power of the scattering effect.
-_SSSDist	Distortion	Controls the level of distortion light receives when passing through the material.
-_SSSAmbient	Ambient	Controls the intensity of ambient light received from scattering.
-_UseHatching	Hatching	Toggles the hatching effect, which applies a stylized crosshatch pattern to the material.
-_HatchingTex	Hatching Map	Defines the texture used for the hatching effect. The pattern in this texture determines the appearance of the hatching.
-_HatchingScale	Hatching Scale	Adjusts the scale of the hatching texture. Higher values make the hatching pattern larger, while lower values make it finer.
-_HatchingMovementFPS	Hatching Movement FPS	Sets the frame rate for animating the hatching effect. Higher values result in faster movement of the hatching pattern.
-_HatchingShadingAdd	Shading Additive	Controls the additive intensity of the hatching effect in shaded areas. Higher values make the hatching more prominent.
-_HatchingShadingMul	Shading Multiply	Controls the multiplicative intensity of the hatching effect in shaded areas. Higher values darken the hatching pattern.
-_HatchingRimAdd	Rim Light Additive	Adjusts the intensity of the hatching effect in rim-lit areas. Higher values make the hatching more visible in these regions.
-_HatchingAlbedoMul	Albedo Multiply	Controls the blending of the hatching effect with the albedo texture. Higher values increase the influence of the hatching pattern on the material's base color.
-_UseAlphaFresnel	Alpha Fresnel	Toggles the alpha fresnel effect, which reduces the opacity of the material as it faces towards the viewer. Useful for simulating see-through materials with a certain thickness, like tights.
-_AlphaFresnelWidth	Width	Controls the width of the rim. Higher values cover more of the object.
-_AlphaFresnelSharpness	Sharpness	Controls the hardness of the edge. Must be <= Width to see a gradient.
-_AlphaFresnelStrength	Strength	 Controls the opacity of the transparent area (0 = Invisible, 1 = Solid).
-_AlphaFresnelThreshold	Threshold	Threshold to restrict where the effect applies, based on the main alpha before detail maps.
-_AlphaFresnelInvert	Invert	Inverts the effect, reducing the opacity of the material as it faces away from the viewer.
-_LightSkew	Light Skew	Skews the direction of the received lighting. The default is (1, 0.1, 1, 0), which corresponds to normal strength on the X and Z axis, while reducing the effect of the Y axis. This essentially stops you from getting those harsh lights from above or below that look so weird on cel shaded models. But that's just a default...
-_PixelSampleMode	Pixel Art Mode	Treats the main texture as pixel art. Great for retro avatars! Note: When using this, you should make sure mipmaps are Enabled and texture sampling is set to Trilinear.
-_UseDetailMaps	Detail Maps	Toggles the usage of detail maps.
-_DetailAlbedoMask	Detail Mask	A mask used to apply the detail maps.
-_DetailMap1	Detail Map 1	The first detail map. Controlled by the detail mask's R channel. The blend mode controls how the detail is applied to the material.
-_DetailMap1UV	Detail Map 1 UV	Selects which UV channel to use for the first detail map.
-_DetailMap1Type	Detail Map 1 Type	Defines the type of the first detail map (Albedo, Normal, Specular).
-_DetailMap1Blend	Detail Map 1 Blend Mode	Selects the blend mode used to apply the first detail map.
-_DetailMap1Strength	Detail Map 1 Power	Adjusts how strongly the first detail map is applied to the material.
-_DetailMap2	Detail Map 2	The second detail map. Controlled by the detail mask's R channel. The blend mode controls how the detail is applied to the material.
-_DetailMap2UV	Detail Map 2 UV	Selects which UV channel to use for the second detail map.
-_DetailMap2Type	Detail Map 2 Type	Defines the type of the second detail map (Albedo, Normal, Specular).
-_DetailMap2Blend	Detail Map 2 Blend Mode	Selects the blend mode used to apply the second detail map.
-_DetailMap2Strength	Detail Map 2 Power	Adjusts how strongly the second detail map is applied to the material.
-_DetailMap3	Detail Map 3	The third detail map. Controlled by the detail mask's R channel. The blend mode controls how the detail is applied to the material.
-_DetailMap3UV	Detail Map 3 UV	Selects which UV channel to use for the third detail map.
-_DetailMap3Type	Detail Map 3 Type	Defines the type of the third detail map (Albedo, Normal, Specular).
-_DetailMap3Blend	Detail Map 3 Blend Mode	Selects the blend mode used to apply the third detail map.
-_DetailMap3Strength	Detail Map 3 Power	Adjusts how strongly the third detail map is applied to the material.
-_DetailMap4	Detail Map 4	The fourth detail map. Controlled by the detail mask's R channel. The blend mode controls how the detail is applied to the material.
-_DetailMap4UV	Detail Map 4 UV	Selects which UV channel to use for the fourth detail map.
-_DetailMap4Type	Detail Map 4 Type	Defines the type of the fourth detail map (Albedo, Normal, Specular).
-_DetailMap4Blend	Detail Map 4 Blend Mode	Selects the blend mode used to apply the fourth detail map.
-_DetailMap4Strength	Detail Map 4 Power	Adjusts how strongly the fourth detail map is applied to the material.
-_SpecularHighlights	Specular Highlights	Toggles specular highlights. Only applicable if specular is active.
-_GlossyReflections	Reflections	Toggles glossy reflections. Only applicable if specular is active.
-_DiffuseGeomShadowFactor	Diffuse Geometric Shadowing Factor	Controls the power of the geometric shadowing function, which alters the falloff of diffuse light at glancing angles. It's more realistic, but that can be undesirable for cel shading.
-_LightWrappingCompensationFactor	Light Reduction	Compensation factor for the light wrapping inherent in cel shading. For cel shaded models, this should be around 0.75. Realistic lighting should set this to 1 to disable it.
-_IndirectShadingType	Indirect Shading Type	Sets the method used to shade indirect lighting. Directional will pick a single direction as a fake light source, so light will always be sharp. Dynamic will use the overall shading as a base, allowing for blobbier and more accurate lighting.
-_UseAnimation	Animation	Enables the spritesheet system, where textures provided to the shader are divided into sections and displayed seperately over time.
-_AnimationSpeed	Animation Speed	The animation speed is derived from the Unity time parameter, where 1.0 is one cycle every 20 seconds.
-_TotalFrames	Total Frames	The maximum number of frames that will play in the animation.
-_FrameNumber	Frame Number	Sets the frame number to begin playing the animation on.
-_Columns	Columns	Sets the number of frames present in a horizontal row.
-_Rows	Rows	Sets the number of frames present in a vertical column.
-_UseVanishing	Vanishing	Enables the vanishing effect, which fades the material out at a set start and end point. Ineffective in opaque blend mode.
-_VanishingStart	Start Vanishing	The inner bound of the vanishing effect. The higher this is, the further out the material will finishing vanishing. If Start is higher than End, the material will be invisible at a distance.
-_VanishingEnd	End Vanishing	The outer bound of the vanishing effect. The higher this is, the further out the material will begin to vanish. If End is higher than Start, the material will be invisible up close.
-_UseEmissiveLightSense	Light Sensitivity	Enables light sensitivity for emission, which will change the intensity of emission depending on the incoming light. This can be used to make emissive patterns that only glow in the dark, or that scale with light intensity.
-_EmissiveLightSenseStart	Glow Start	The threshold at which the glow starts. For example, setting this to 1 will hide the glow when there is 1 or more unit of light hitting the material.
-_EmissiveLightSenseEnd	Glow End	The threshold at which the glow ends.  For example, setting this to 0 will show the glow at full intensity when there is no light, and raising it will allow the maximum glow to be triggered even with light.
-_UseEmissiveAudiolink	Emissive AudioLink	Enables the emissive AudioLink effect, which will pulse in time to music in supported scenes. 
-_AudiolinkMaskMap	AudioLink Mask Map	A texture multiplied over the emissive AudioLink pulse to allow for masking or colouring it seperately from the sweep parameters.
-_AudiolinkSweepMap	AudioLink Sweep Map	A texture that defines the shape of the emissive AudioLink pulse. The colour and intensity of each pixel determine the channel and time offset, respectively.
-_AudiolinkIntensity	Intensity	Sets the brightness of the AudioLink pulse. 
-_alColorR	Colour (R)	The colour of the effect applied to the first channel of the AudioLink pulse. Controlled by the Detail Emission Mask's R channel.
-_alColorG	Colour (G)	The colour of the effect applied to the second channel of the AudioLink pulse. Controlled by the Detail Emission Mask's G channel.
-_alColorB	Colour (B)	The colour of the effect applied to the third channel of the AudioLink pulse. Controlled by the Detail Emission Mask's B channel.
-_alColorA	Colour (A)	The colour of the effect applied to the fourth channel of the AudioLink pulse. Controlled by the Detail Emission Mask's A channel.
-_alModeR	Mode (R)	The type of effect created by the first channel of the AudioLink pulse.
-_alModeG	Mode (G)	The type of effect created by the second channel of the AudioLink pulse.
-_alModeB	Mode (B)	The type of effect created by the third channel of the AudioLink pulse.
-_alModeA	Mode (A)	The type of effect created by the fourth channel of the AudioLink pulse.
-_alBandR	Band (R)	Specifies the AudioLink band with which the first channel effect is applied.
-_alBandG	Band (G)	Specifies the AudioLink band with which the second channel effect is applied.
-_alBandB	Band (B)	Specifies the AudioLink band with which the third channel effect is applied.
-_alBandA	Band (A)	Specifies the AudioLink band with which the fourth channel effect is applied.
-_alTimeRangeR	Time Range (R)	The size of the AudioLink pulse. The audio link is applied across the gradient of the texture. At 0, the pulse will appeas as a single flash. At 1, the pulse will show the entire AudioLink history across it.
-_alTimeRangeG	Time Range (G)	The size of the AudioLink pulse. The audio link is applied across the gradient of the texture. At 0, the pulse will appeas as a single flash. At 1, the pulse will show the entire AudioLink history across it.
-_alTimeRangeB	Time Range (B)	The size of the AudioLink pulse. The audio link is applied across the gradient of the texture. At 0, the pulse will appeas as a single flash. At 1, the pulse will show the entire AudioLink history across it.
-_alTimeRangeA	Time Range (A)	The size of the AudioLink pulse. The audio link is applied across the gradient of the texture. At 0, the pulse will appeas as a single flash. At 1, the pulse will show the entire AudioLink history across it.
-_alUseFallback	Enable Fallback	When a world does not have AudioLink, will display a constant pulse effect.
-_alFallbackBPM	Fallback BPM	The BPM to use for the fallback pulse.
-_ManualButton	This shader has a manual. Check it out!	For information on new features, old features, and just how to use the shader in general, check out the manual on the shader wiki!
-_Ramp	Lighting Ramp	Specifies the falloff of the lighting. In other words, it controls how light affects your model and how soft or sharp the transition between light and shadow is. \nNote: If a Lighting Ramp is not set, the material will have no shading.
-_ShadowMask	Shadow Mask	In Occlusion mode, specifies areas of shadow influence. RGB darkens, alpha lightens. In Tone mode, specifies colour of shading to use. RGB tints, alpha darkens.
-_ShadowLift	Shadow Lift	Increasing this warps the lighting received to make more things lit.
-_IndirectLightingBoost	Indirect Lighting Boost	Blends the lighting of shadows with the lighting of direct light, making them brighter.
-_Shadow	Shadow Mask Lightening	Sets the power of the shadow mask.
-_LightRampType	Lighting Ramp Type	For if you use lightramps that run from bottom to top instead of left to right, or none at all.
-_ShadowMaskType	Shadow Mask Style	Changes how the shadow mask is used.
-_VertexColorType	Vertex Colour Type	Sets how the vertex colour should be used. Outline colour/width only affects outlines. Custom data allows you to specify what each channel is used for.
-_VertexColorRType	Vertex Red Type	Sets how this vertex channel should be used. 
-_VertexColorGType	Vertex Green Type	Sets how this vertex channel should be used. 
-_VertexColorBType	Vertex Blue Type	Sets how this vertex channel should be used. 
-_VertexColorAType	Vertex Alpha Type	Sets how the vertex alpha should be used. 
-_AlbedoAlphaMode	Albedo Alpha Mode	Sets how the alpha channel of the albedo texture is used. 
-_GradientEditorButton	Open Gradient Editor	Opens the gradient editor window with the current material focused. This allows you to create a new lighting ramp and view the results on this material in realtime.
-_CrosstoneToneSeparation	1st Tone Blending Mode	Specifies the method used to blend tone with the albedo texture. Combined will merge one over the other, while Seperate will not.
-_Crosstone2ndSeparation	2nd Tone Blending Mode	Specifies the method used to blend 2nd tone with the tone texture. Combined will merge one over the other, while Seperate will not.
-_1st_ShadeMap	1st Shading Tone	Specifies the colour of shading to use for the first gradation. Tinted by the colour field.
-_1st_ShadeColor	1st Shading Colour	
-_1st_ShadeColor_Step	1st Shading Breakpoint	Sets the point at which the shading begins to transition from lit to shaded, based on the light hitting the material.
-_1st_ShadeColor_Feather	1st Shading Width	Sets the width of the transition between lit and shaded.
-_2nd_ShadeMap	2nd Shading Tone	Specifies the colour of shading to use for the second gradation. Tinted by the colour field.
-_2nd_ShadeColor	2nd Shading Colour	
-_2nd_ShadeColor_Step	2nd Shading Breakpoint	Sets the point at which the shading begins to transition from shaded to fully shaded, based on the light hitting the material.
-_2nd_ShadeColor_Feather	2nd Shading Width	Sets the width of the transition between shaded and fully shaded.
-_ShadingGradeMap	Shading Adjustment	Adds additional shading to darkened regions, and acts as occlusion. The slider modifies the midpoint of the shading adjustment.
-_ShadingGradeMapLevel	Shading Adjustment Level	Modifies the middle point of the shading adjustment.
-_ShadowBorderColor	Shading Tone Border	Adds a colour shift to the intersection between the shading tones. Black means no change.
-_ShadowBorderRange	Width	Sets the width of the colour shift. 
-_SDFMode	SDF Mode	Whether to treat the shading adjustment as an SDF shadow texture. An SDF shadow texture is a specially created shadow mask that replaces the lighting calculation for the surface. Note that in order for SDF shadows to work correctly, your mesh data must be oriented correctly. 
-_SDFSmoothness	SDF Smoothness	Adjusts the smoothness of the SDF - how wide the shadows spreads across the surface.
-_SDFFrontVector	SDF Front Vector	The forward direction vector, relative to your head mesh. 
-_SDFRightVector	SDF Right Vector	The right direction vector, relative to your head mesh. 
-_LightMultiplyAnimated	Runtime Light Adjustment	Modifies the output values. The lower this value, the darker the light reflected by the material.
-_LightAddAnimated	Runtime Light Increase	Modifies the output values. The higher this value, the greater the amount of baseline luminance is applied to the material. Not recommended for regular use.
-_LightClampAnimated	Runtime Light Clamp	Limits the output value of lighting. When enabled, total lighting applied is limited. Not recommended for regular use.
-_UseProximityShadow	Proximity Shadow	Applies extra shadowing to the material when the camera is closer than a certain distance. 
-_ProximityShadowDistance	Distance	Controls the distance at which to begin application of the shadow. Applies when the mesh is closer than this distance, in world-space units (centimetres).
-_ProximityShadowDistancePower	Power	Controls the rate at which the shadow is applied while inside the shadow application distance. 
-_ProximityShadowFrontColor	Shadow Colour (Front)	The colour of the shadowing on front-facing polygons. The alpha value controls the opacity of the effect.
-_ProximityShadowBackColor	Shadow Colour (Back)	The colour of the shadowing on back-facing polygons. The alpha value controls the opacity of the effect.
-_UseContactShadows	Contact Shadows	Applies contact shadows, which are shadows calculated by marching a ray through the screen's depth buffer. This results in sharper, cleaner shadows than normal Unity shadows - though they might have a performance penalty up-close. 
-_ContactShadowDistance	Shadow Spread	The maximum size contact shadows are allowed to reach. The lower this is, the cleaner and more defined contact shadows will be. Higher values will have a performance impact. 
-_ContactShadowSteps	Shadow Steps	Sets the quality of contact shadows. At higher number of steps, more calculations will be performed, leading to more accurate shadows. However, this comes with a performance cost. 
-_UseInventory	Inventory	Enables the inventory system. When enabled, the UV coordinates of the model are used to hide parts of the mesh. Every X units, where X is the inventory stride, the vertices assigned those UV coordinates are placed into a seperate item slot, and can be enabled or disabled using the toggles. The first slot, containing the 0-1 range, is always displayed.
-_InventoryStride	Inventory Stride	Sets the spacing between item slots. By default, this is 10, which means that if a vertex's UVs are 10 units away from the origin, they will be considered a seperate item slot.
-_InventoryUVSec	Inventory UV Source	Sets the UV channel used for the inventory system. This is useful if you have a mesh where the UV unwrapping doesn't fit neatly into a UV square, and can dedicate a second UV channel to indicating the item ID. 
-_Stencil	Stencil Test	Raising this enables reading or writing a stencil. When set, contains calue to compare against (if Comparison is anything but Always) and/or the value to be written to the buffer (if wither Pass, Fail or ZFail is set to Replace)
-_StencilComp	Comparison	The operation to be performed when reading the stencil value.
-_StencilOp	Operation	The operation to be performed when the stencil test passes.
-_StencilFail	Fail	The operation to be performed when the stencil test fails.
-_StencilZFail	ZFail	The operation to be performed when the stencil test passes, but the geometry is occluded.
-s_gradientEditorButton	Open Gradient Editor	Opens the gradient editor window with the current material focused. This allows you to create a new lighting ramp and view the results on this material in realtime.
-s_helpArea	Check out our resources!	Hover over the buttons for more info.
-s_manualButton	Manual	For information on new features, old features, and just how to use the shader in general, check out the manual on the shader wiki!
-s_socialButton	Discord	For support, feedback, and updates on new versions, join the Secret Shader Facility Discord!
-s_fanboxButton	Fanbox	If you like the shader, check out my Fanbox! You can become a FAN and get a special supporter card!
-s_simpleComplexity	Only show main options. (Simple mode)	Only show main options. (Simple mode)
-s_normalComplexity	Hide niche options. (Normal mode)	Hide niche options. (Normal mode)
-s_fullComplexity	Show all options. (Complex mode)	Show all options. (Complex mode)
-s_mainOptions	Main Options	Settings that control the basic appearance of the shader, which affect all subsequent settings.
-s_shadingOptions	Shading Options	Settings that control the main light shading calculations. However, they mostly don't affect other settings.
-s_renderingOptions	Rendering Options	Settings that control additional effects rendered after the main shading. These settings are specific to these effects. (Some specular settings will affect the base albedo, which influences how other effects appear.)
-s_emissionOptions	Emission Options	Settings that control additive light seemingly emitted from the material.
-s_detailOptions	Detail Options	Settings that control details added into the basic lighting and shading.
-s_miscOptions	Misc Options	Settings that control specific effects which aren't related to lighting.
-s_inventoryOptions	Simple Inventory Options	Settings that control the simple inventory system, based on the input UV coordinates.
-s_advancedOptions	System Options	Settings that control specific system parameters that can have a large effect on how the shading is calculated.
-s_bakeButton	Bake material	Creates a copy of the shader with the material properties pre-applied and flattened. This reduces the size of the shader in the final build and can improve performance, but you won't be able to change the shader properties until you un-bake it.
-s_bakeButtonPlural	Bake {0} materials	Creates a copy of the shader with the material properties pre-applied and flattened for each material. This reduces the size of the shader in the final build and can improve performance, but you won't be able to change the shader properties until you un-bake it.
-s_bakeButtonRevert	Un-bake material	This material is baked, and material properties can't be changed. Selecting this option will undo the baking process and return this material to using the regular version of the shader.
-s_bakeDepreciateWarning	The current material is using a baked shader, which is currently unsupported. If you want to modify it, please change it back to the regular Crosstone/Lightramp shader using the shader picker above.	Warning
-s_langButton	Language	Select the language for the material editor.
-ge_gradientEditorTitle	Current Material:	
-ge_resolutionTitle	Resolution:	
-ge_linearCheckbox	Treat as non-sRGB	
-ge_materialCheckbox	Show material selector	
-ge_helpCheckbox	Show help	
-ge_basicHelp	Select the top slot to open the gradient editor. You can change it and see how your material reacts in realtime. Note that if you don't save the lighting ramp, it will revert to the old one and your changes will be lost. Use Save Ramp to save.	
-ge_multiRampHelp	Use the + and - buttons to add additional ramp levels. They'll be blended based on Softness, which is set by vertex colour.	
-ge_reorderButton	Reorder	Make sure you don't want to undo anything before Reordering.
-ge_addButton	Add Gradient	
-ge_removeButton	Remove Gradient	
-ge_rampPropertyField	Ramp Property Name	
-ge_rampPropertyError	Ramp property not found!	
-ge_saveRampButton	Save Ramp	
-ge_noAssetPathError	Asset path is Null. Unable to set to Clamped!\n Ramp won't display correctly unless this is fixed.	
-ge_multiGradientPreset	Multi Gradient Preset	
-ge_saveNewButton	Save New	
-ge_saveMultiGradient	Save Multi Gradient	
+﻿_1st_ShadeColor = 1st Shading Colour
+
+_1st_ShadeColor_Feather = 1st Shading Width
+_1st_ShadeColor_Feather.tooltip = Sets the width of the transition between lit and shaded.
+
+_1st_ShadeColor_Step = 1st Shading Breakpoint
+_1st_ShadeColor_Step.tooltip = Sets the point at which the shading begins to transition from lit to shaded, based on the light hitting the material.
+
+_1st_ShadeMap = 1st Shading Tone
+_1st_ShadeMap.tooltip = Specifies the colour of shading to use for the first gradation. Tinted by the colour field.
+
+_2nd_ShadeColor = 2nd Shading Colour
+
+_2nd_ShadeColor_Feather = 2nd Shading Width
+_2nd_ShadeColor_Feather.tooltip = Sets the width of the transition between shaded and fully shaded.
+
+_2nd_ShadeColor_Step = 2nd Shading Breakpoint
+_2nd_ShadeColor_Step.tooltip = Sets the point at which the shading begins to transition from shaded to fully shaded, based on the light hitting the material.
+
+_2nd_ShadeMap = 2nd Shading Tone
+_2nd_ShadeMap.tooltip = Specifies the colour of shading to use for the second gradation. Tinted by the colour field.
+
+_alBandA = Band (A)
+_alBandA.tooltip = Specifies the AudioLink band with which the fourth channel effect is applied.
+
+_alBandB = Band (B)
+_alBandB.tooltip = Specifies the AudioLink band with which the third channel effect is applied.
+
+_alBandG = Band (G)
+_alBandG.tooltip = Specifies the AudioLink band with which the second channel effect is applied.
+
+_alBandR = Band (R)
+_alBandR.tooltip = Specifies the AudioLink band with which the first channel effect is applied.
+
+_AlbedoAlphaMode = Albedo Alpha Mode
+_AlbedoAlphaMode.tooltip = Sets how the alpha channel of the albedo texture is used.
+
+_alColorA = Colour (A)
+_alColorA.tooltip = The colour of the effect applied to the fourth channel of the AudioLink pulse. Controlled by the Detail Emission Mask's A channel.
+
+_alColorB = Colour (B)
+_alColorB.tooltip = The colour of the effect applied to the third channel of the AudioLink pulse. Controlled by the Detail Emission Mask's B channel.
+
+_alColorG = Colour (G)
+_alColorG.tooltip = The colour of the effect applied to the second channel of the AudioLink pulse. Controlled by the Detail Emission Mask's G channel.
+
+_alColorR = Colour (R)
+_alColorR.tooltip = The colour of the effect applied to the first channel of the AudioLink pulse. Controlled by the Detail Emission Mask's R channel.
+
+_alFallbackBPM = Fallback BPM
+_alFallbackBPM.tooltip = The BPM to use for the fallback pulse.
+
+_alModeA = Mode (A)
+_alModeA.tooltip = The type of effect created by the fourth channel of the AudioLink pulse.
+
+_alModeB = Mode (B)
+_alModeB.tooltip = The type of effect created by the third channel of the AudioLink pulse.
+
+_alModeG = Mode (G)
+_alModeG.tooltip = The type of effect created by the second channel of the AudioLink pulse.
+
+_alModeR = Mode (R)
+_alModeR.tooltip = The type of effect created by the first channel of the AudioLink pulse.
+
+_AlphaFresnelInvert = Invert
+_AlphaFresnelInvert.tooltip = Inverts the effect, reducing the opacity of the material as it faces away from the viewer.
+
+_AlphaFresnelSharpness = Sharpness
+_AlphaFresnelSharpness.tooltip = Controls the hardness of the edge. Must be <= Width to see a gradient.
+
+_AlphaFresnelStrength = Strength
+_AlphaFresnelStrength.tooltip = Controls the opacity of the transparent area (0 = Invisible, 1 = Solid).
+
+_AlphaFresnelThreshold = Threshold
+_AlphaFresnelThreshold.tooltip = Threshold to restrict where the effect applies, based on the main alpha before detail maps.
+
+_AlphaFresnelWidth = Width
+_AlphaFresnelWidth.tooltip = Controls the width of the rim. Higher values cover more of the object.
+
+_AlphaSharp = Disable Dithering
+_AlphaSharp.tooltip = Treats transparency cutoff as a hard edge, instead of a soft dithered one.
+
+_alTimeRangeA = Time Range (A)
+_alTimeRangeA.tooltip = The size of the AudioLink pulse. The audio link is applied across the gradient of the texture. At 0, the pulse will appeas as a single flash. At 1, the pulse will show the entire AudioLink history across it.
+
+_alTimeRangeB = Time Range (B)
+_alTimeRangeB.tooltip = The size of the AudioLink pulse. The audio link is applied across the gradient of the texture. At 0, the pulse will appeas as a single flash. At 1, the pulse will show the entire AudioLink history across it.
+
+_alTimeRangeG = Time Range (G)
+_alTimeRangeG.tooltip = The size of the AudioLink pulse. The audio link is applied across the gradient of the texture. At 0, the pulse will appeas as a single flash. At 1, the pulse will show the entire AudioLink history across it.
+
+_alTimeRangeR = Time Range (R)
+_alTimeRangeR.tooltip = The size of the AudioLink pulse. The audio link is applied across the gradient of the texture. At 0, the pulse will appeas as a single flash. At 1, the pulse will show the entire AudioLink history across it.
+
+_alUseFallback = Enable Fallback
+_alUseFallback.tooltip = When a world does not have AudioLink, will display a constant pulse effect.
+
+_AnimationSpeed = Animation Speed
+_AnimationSpeed.tooltip = The animation speed is derived from the Unity time parameter, where 1.0 is one cycle every 20 seconds.
+
+_Anisotropy = Anisotropy
+_Anisotropy.tooltip = Direction of the anisotropic specular highlights.
+
+_AudiolinkIntensity = Intensity
+_AudiolinkIntensity.tooltip = Sets the brightness of the AudioLink pulse.
+
+_AudiolinkMaskMap = AudioLink Mask Map
+_AudiolinkMaskMap.tooltip = A texture multiplied over the emissive AudioLink pulse to allow for masking or colouring it seperately from the sweep parameters.
+
+_AudiolinkSweepMap = AudioLink Sweep Map
+_AudiolinkSweepMap.tooltip = A texture that defines the shape of the emissive AudioLink pulse. The colour and intensity of each pixel determine the channel and time offset, respectively.
+
+_BumpMap = Normal Map
+_BumpMap.tooltip = Normal map (RGB), which adjusts the direction of the surface normals.
+
+_CelSpecularSoftness = Softness
+_CelSpecularSoftness.tooltip = Sets the softness of the falloff of cel specular highlights.
+
+_CelSpecularSteps = Steps
+_CelSpecularSteps.tooltip = Sets the number of steps in cel specular highlights.
+
+_ClippingMask = Clipping Mask
+_ClippingMask.tooltip = Additional texture for transparency, applied over other transparency sources.
+
+_ColorMask = Tint Mask
+_ColorMask.tooltip = Masks material colour tinting (G), rim light (B), and detail maps (A).
+
+_Columns = Columns
+_Columns.tooltip = Sets the number of frames present in a horizontal row.
+
+_ContactShadowDistance = Shadow Spread
+_ContactShadowDistance.tooltip = The maximum size contact shadows are allowed to reach. The lower this is, the cleaner and more defined contact shadows will be. Higher values will have a performance impact.
+
+_ContactShadowSteps = Shadow Steps
+_ContactShadowSteps.tooltip = Sets the quality of contact shadows. At higher number of steps, more calculations will be performed, leading to more accurate shadows. However, this comes with a performance cost.
+
+_Crosstone2ndSeparation = 2nd Tone Blending Mode
+_Crosstone2ndSeparation.tooltip = Specifies the method used to blend 2nd tone with the tone texture. Combined will merge one over the other, while Seperate will not.
+
+_CrosstoneToneSeparation = 1st Tone Blending Mode
+_CrosstoneToneSeparation.tooltip = Specifies the method used to blend tone with the albedo texture. Combined will merge one over the other, while Seperate will not.
+
+_CustomFresnelColor = Emissive Rim
+_CustomFresnelColor.tooltip = RGB sets the colour of the additive rim light. Alpha controls the power/width of the effect.
+
+_Cutoff = Alpha Cutoff
+_Cutoff.tooltip = Threshold for transparency cutoff. Values below the cutoff will be fully transparent.
+
+_DetailAlbedoMask = Detail Mask
+_DetailAlbedoMask.tooltip = A mask used to apply the detail maps.
+
+_DetailEmissionMap = Emission Detail Mask
+_DetailEmissionMap.tooltip = An additional texture multiplied against the main emission map. This allows adding additional detail patterns to the emissive texture.
+
+_DetailEmissionMap2nd = 2nd Emission Detail Mask
+_DetailEmissionMap2nd.tooltip = An additional texture multiplied against the main 2nd emission map. This allows adding additional detail patterns to the emissive texture.
+
+_DetailEmissionUVSec = UV Source
+_DetailEmissionUVSec.tooltip = Selects which UV channel to use for detail emission.
+
+_DetailMap1 = Detail Map 1
+_DetailMap1.tooltip = The first detail map. Controlled by the detail mask's R channel. The blend mode controls how the detail is applied to the material.
+
+_DetailMap1Blend = Detail Map 1 Blend Mode
+_DetailMap1Blend.tooltip = Selects the blend mode used to apply the first detail map.
+
+_DetailMap1Strength = Detail Map 1 Power
+_DetailMap1Strength.tooltip = Adjusts how strongly the first detail map is applied to the material.
+
+_DetailMap1Type = Detail Map 1 Type
+_DetailMap1Type.tooltip = Defines the type of the first detail map (Albedo, Normal, Specular).
+
+_DetailMap1UV = Detail Map 1 UV
+_DetailMap1UV.tooltip = Selects which UV channel to use for the first detail map.
+
+_DetailMap2 = Detail Map 2
+_DetailMap2.tooltip = The second detail map. Controlled by the detail mask's R channel. The blend mode controls how the detail is applied to the material.
+
+_DetailMap2Blend = Detail Map 2 Blend Mode
+_DetailMap2Blend.tooltip = Selects the blend mode used to apply the second detail map.
+
+_DetailMap2Strength = Detail Map 2 Power
+_DetailMap2Strength.tooltip = Adjusts how strongly the second detail map is applied to the material.
+
+_DetailMap2Type = Detail Map 2 Type
+_DetailMap2Type.tooltip = Defines the type of the second detail map (Albedo, Normal, Specular).
+
+_DetailMap2UV = Detail Map 2 UV
+_DetailMap2UV.tooltip = Selects which UV channel to use for the second detail map.
+
+_DetailMap3 = Detail Map 3
+_DetailMap3.tooltip = The third detail map. Controlled by the detail mask's R channel. The blend mode controls how the detail is applied to the material.
+
+_DetailMap3Blend = Detail Map 3 Blend Mode
+_DetailMap3Blend.tooltip = Selects the blend mode used to apply the third detail map.
+
+_DetailMap3Strength = Detail Map 3 Power
+_DetailMap3Strength.tooltip = Adjusts how strongly the third detail map is applied to the material.
+
+_DetailMap3Type = Detail Map 3 Type
+_DetailMap3Type.tooltip = Defines the type of the third detail map (Albedo, Normal, Specular).
+
+_DetailMap3UV = Detail Map 3 UV
+_DetailMap3UV.tooltip = Selects which UV channel to use for the third detail map.
+
+_DetailMap4 = Detail Map 4
+_DetailMap4.tooltip = The fourth detail map. Controlled by the detail mask's R channel. The blend mode controls how the detail is applied to the material.
+
+_DetailMap4Blend = Detail Map 4 Blend Mode
+_DetailMap4Blend.tooltip = Selects the blend mode used to apply the fourth detail map.
+
+_DetailMap4Strength = Detail Map 4 Power
+_DetailMap4Strength.tooltip = Adjusts how strongly the fourth detail map is applied to the material.
+
+_DetailMap4Type = Detail Map 4 Type
+_DetailMap4Type.tooltip = Defines the type of the fourth detail map (Albedo, Normal, Specular).
+
+_DetailMap4UV = Detail Map 4 UV
+_DetailMap4UV.tooltip = Selects which UV channel to use for the fourth detail map.
+
+_DiffuseGeomShadowFactor = Diffuse Geometric Shadowing Factor
+_DiffuseGeomShadowFactor.tooltip = Controls the power of the geometric shadowing function, which alters the falloff of diffuse light at glancing angles. It's more realistic, but that can be undesirable for cel shading.
+
+_EmissionDetailParams = Emission Detail Parameters
+_EmissionDetailParams.tooltip = XY: Scrolling speed, ZW: Phase
+
+_EmissionDetailParams2nd = 2nd Emission Detail Parameters
+_EmissionDetailParams2nd.tooltip = XY: Scrolling speed, ZW: Phase
+
+_EmissionMap = Emission Map
+_EmissionMap.tooltip = Emission map (RGB), which controls emitted light that isn't affected by lighting.
+
+_EmissionMap2nd = 2nd Emission Map
+_EmissionMap2nd.tooltip = Second emission map (RGB), which controls emitted light that isn't affected by lighting.
+
+_EmissionRimPower = Emission Rim Power
+_EmissionRimPower.tooltip = When above zero, applies an effect to the emission which darkens it at glancing angles. When below zero, the emission will only be visible at glancing angles. This can be used for a fluroescence effect.
+
+_EmissionRimPower2nd = 2nd Emission Rim Power
+_EmissionRimPower2nd.tooltip = When above zero, applies an effect to the 2nd emission which darkens it at glancing angles. When below zero, the emission will only be visible at glancing angles. This can be used for a fluroescence effect.
+
+_EmissiveLightSenseEnd = Glow End
+_EmissiveLightSenseEnd.tooltip = The threshold at which the glow ends.  For example, setting this to 0 will show the glow at full intensity when there is no light, and raising it will allow the maximum glow to be triggered even with light.
+
+_EmissiveLightSenseStart = Glow Start
+_EmissiveLightSenseStart.tooltip = The threshold at which the glow starts. For example, setting this to 1 will hide the glow when there is 1 or more unit of light hitting the material.
+
+_FrameNumber = Frame Number
+_FrameNumber.tooltip = Sets the frame number to begin playing the animation on.
+
+_FresnelLightMask = Light Direction Mask Strength
+_FresnelLightMask.tooltip = The higher this is, the less the rim light becomes visible in the area between the rim and inverse rim.
+
+_FresnelStrength = Rim Softness
+_FresnelStrength.tooltip = Sets the sharpness of the rim edge.
+
+_FresnelStrengthInv = Inverse Rim Softness
+_FresnelStrengthInv.tooltip = Sets the sharpness of the inverse rim edge.
+
+_FresnelTint = Rim Tint
+_FresnelTint.tooltip = Tints the colours of the rim lighting. To make it brighter, change the brightness to a valur higher than 1.
+
+_FresnelTintInv = Inverse Rim Tint
+_FresnelTintInv.tooltip = Tints the colours of the inverse rim lighting. To make it brighter, change the brightness to a valur higher than 1.
+
+_FresnelWidth = Rim Width
+_FresnelWidth.tooltip = Sets the width of the rim lighting.
+
+_FresnelWidthInv = Inverse Rim Width
+_FresnelWidthInv.tooltip = Sets the width of the inverse rim lighting.
+
+_FurAO = Occlusion
+_FurAO.tooltip = Defines the darkness of shadowing applied to fur. At zero, fur's shading will not be altered. As it increases, fur will receive shading the deeper it is, based on the fur shape. 
+
+_FurGravity = Gravity
+_FurGravity.tooltip = Sets the gravity effect on the fur. Positive values make the fur hang down, negative values make it stand up.
+
+_FurLayerCount = Layer Count
+_FurLayerCount.tooltip = Sets the number of fur layers. More layers result in denser fur, but may impact performance.
+
+_FurLength = Length
+_FurLength.tooltip = Sets the length of the fur. Higher values result in longer fur, but the shells of fur will become more visible.
+
+_FurMask = Fur Mask
+_FurMask.tooltip = Determines where the fur appears on the model. White areas will have fur, black areas will not.
+
+_FurMode = Fur Mode
+_FurMode.tooltip = Adds fur to the model. Can not be used with outlines.
+
+_FurNoise = Fur Shape Texture
+_FurNoise.tooltip = Sets the shape and distribution of the fur pattern along the fur shells. Using a fuzzy noise pattern is recommended.
+
+_FurRandomization = Randomization
+_FurRandomization.tooltip = Adds randomness to the mesh shells of the fur, making it look more natural.
+
+_FurThickness = Thickness
+_FurThickness.tooltip = Sets the distribution of the thickness of the fur strands. Higher values result in thinner-looking fur, concentrated at the base.
+
+_GlossyReflections = Reflections
+_GlossyReflections.tooltip = Toggles glossy reflections. Only applicable if specular is active.
+
+_GradientEditorButton = Open Gradient Editor
+_GradientEditorButton.tooltip = Opens the gradient editor window with the current material focused. This allows you to create a new lighting ramp and view the results on this material in realtime.
+
+_HatchingAlbedoMul = Albedo Multiply
+_HatchingAlbedoMul.tooltip = Controls the blending of the hatching effect with the albedo texture. Higher values increase the influence of the hatching pattern on the material's base color.
+
+_HatchingMovementFPS = Hatching Movement FPS
+_HatchingMovementFPS.tooltip = Sets the frame rate for animating the hatching effect. Higher values result in faster movement of the hatching pattern.
+
+_HatchingRimAdd = Rim Light Additive
+_HatchingRimAdd.tooltip = Adjusts the intensity of the hatching effect in rim-lit areas. Higher values make the hatching more visible in these regions.
+
+_HatchingScale = Hatching Scale
+_HatchingScale.tooltip = Adjusts the scale of the hatching texture. Higher values make the hatching pattern larger, while lower values make it finer.
+
+_HatchingShadingAdd = Shading Additive
+_HatchingShadingAdd.tooltip = Controls the additive intensity of the hatching effect in shaded areas. Higher values make the hatching more prominent.
+
+_HatchingShadingMul = Shading Multiply
+_HatchingShadingMul.tooltip = Controls the multiplicative intensity of the hatching effect in shaded areas. Higher values darken the hatching pattern.
+
+_HatchingTex = Hatching Map
+_HatchingTex.tooltip = Defines the texture used for the hatching effect. The pattern in this texture determines the appearance of the hatching.
+
+_IndirectLightingBoost = Indirect Lighting Boost
+_IndirectLightingBoost.tooltip = Blends the lighting of shadows with the lighting of direct light, making them brighter.
+
+_IndirectShadingType = Indirect Shading Type
+_IndirectShadingType.tooltip = Sets the method used to shade indirect lighting. Directional will pick a single direction as a fake light source, so light will always be sharp. Dynamic will use the overall shading as a base, allowing for blobbier and more accurate lighting.
+
+_InventoryStride = Inventory Stride
+_InventoryStride.tooltip = Sets the spacing between item slots. By default, this is 10, which means that if a vertex's UVs are 10 units away from the origin, they will be considered a seperate item slot.
+
+_InventoryUVSec = Inventory UV Source
+_InventoryUVSec.tooltip = Sets the UV channel used for the inventory system. This is useful if you have a mesh where the UV unwrapping doesn't fit neatly into a UV square, and can dedicate a second UV channel to indicating the item ID.
+
+_LightAddAnimated = Runtime Light Increase
+_LightAddAnimated.tooltip = Modifies the output values. The higher this value, the greater the amount of baseline luminance is applied to the material. Not recommended for regular use.
+
+_LightClampAnimated = Runtime Light Clamp
+_LightClampAnimated.tooltip = Limits the output value of lighting. When enabled, total lighting applied is limited. Not recommended for regular use.
+
+_LightingCalculationType = Lighting Calculation Type
+_LightingCalculationType.tooltip = Sets the method used to perform the direct/indirect lighting calculation.
+
+_LightMultiplyAnimated = Runtime Light Adjustment
+_LightMultiplyAnimated.tooltip = Modifies the output values. The lower this value, the darker the light reflected by the material.
+
+_LightRampType = Lighting Ramp Type
+_LightRampType.tooltip = For if you use lightramps that run from bottom to top instead of left to right, or none at all.
+
+_LightSkew = Light Skew
+_LightSkew.tooltip = Skews the direction of the received lighting. The default is (1, 0.1, 1, 0), which corresponds to normal strength on the X and Z axis, while reducing the effect of the Y axis. This essentially stops you from getting those harsh lights from above or below that look so weird on cel shaded models. But that's just a default...
+
+_LightWrappingCompensationFactor = Light Reduction
+_LightWrappingCompensationFactor.tooltip = Compensation factor for the light wrapping inherent in cel shading. For cel shaded models, this should be around 0.75. Realistic lighting should set this to 1 to disable it.
+
+_MainTex = Main Texture
+_MainTex.tooltip = Main colour texture (RGBA), which controls the basic appearance of the shader. The colour channels and alpha channels are used.
+
+_MainTexBackface = Backface Texture
+_MainTexBackface.tooltip = Main colour texture for backface (RGBA). Same as the main colour texture, but for backface only.
+
+_ManualButton = This shader has a manual. Check it out!
+_ManualButton.tooltip = For information on new features, old features, and just how to use the shader in general, check out the manual on the shader wiki!
+
+_Matcap1 = Matcap 1
+_Matcap1.tooltip = Matcap (RGB). Controlled by the matcap mask's R channel. The blend mode controls how the matcap is applied to the material.
+
+_Matcap1Strength = Intensity
+_Matcap1Strength.tooltip = Adjusts how strongly the matcap is applied to the material.
+
+_Matcap2 = Matcap 2
+_Matcap2.tooltip = Matcap (RGB). Controlled by the matcap mask's G channel. The blend mode controls how the matcap is applied to the material.
+
+_Matcap2Strength = Intensity
+_Matcap2Strength.tooltip = Adjusts how strongly the matcap is applied to the material.
+
+_Matcap3 = Matcap 3
+_Matcap3.tooltip = Matcap (RGB). Controlled by the matcap mask's B channel. The blend mode controls how the matcap is applied to the material.
+
+_Matcap3Strength = Intensity
+_Matcap3Strength.tooltip = Adjusts how strongly the matcap is applied to the material.
+
+_Matcap4 = Matcap 4
+_Matcap4.tooltip = Matcap (RGB). Controlled by the matcap mask's A channel. The blend mode controls how the matcap is applied to the material.
+
+_Matcap4Strength = Intensity
+_Matcap4Strength.tooltip = Adjusts how strongly the matcap is applied to the material.
+
+_MatcapMask = Matcap Mask
+_MatcapMask.tooltip = Determines the strength of the matcaps by the intensity of the different colour channels.
+
+_MatcapStrength = Matcap Strength
+_MatcapStrength.tooltip = Power of the matcap. Higher is stronger.
+
+_MatcapTitle = Matcap Style
+_MatcapTitle.tooltip = Enables the use of material capture textures.
+
+_OutlineFarDistance = Farthest Distance
+_OutlineFarDistance.tooltip = Sets the camera distance at which outlines stop growing. As the camera withdraws from outlines, their size is adjusted to make them look more natural - this property controls how much they grow, at a distance.
+
+_OutlineMask = Outline Mask
+_OutlineMask.tooltip = Additional texture to adjust the width of outlines.
+
+_OutlineMode = Outline Mode
+_OutlineMode.tooltip = Adds outlines to the model with the specified blend mode. Can not be used with fur.
+
+_OutlineNearDistance = Nearest Distance
+_OutlineNearDistance.tooltip = Sets the camera distance at which outlines begin to shrink. As the camera approaches outlines, their size is adjusted to make them look more natural - this property controls how much they shrink, close up.
+
+_OutlineZPush = Outline Depth Offset
+_OutlineZPush.tooltip = Sets a depth offset that pushes the outlines behind the model, hiding outlines from overlapping parts of the material.
+
+_outline_color = Outline Colour
+_outline_color.tooltip = Sets the colour used for outlines. In tint mode, this is multiplied against the texture.
+
+_outline_width = Outline Width
+_outline_width.tooltip = Sets the width of outlines in centimetres (0.01 world-space units).
+
+_PixelSampleMode = Pixel Art Mode
+_PixelSampleMode.tooltip = Treats the main texture as pixel art. Great for retro avatars! Note: When using this, you should make sure mipmaps are Enabled and texture sampling is set to Trilinear.
+
+_ProximityShadowBackColor = Shadow Colour (Back)
+_ProximityShadowBackColor.tooltip = The colour of the shadowing on back-facing polygons. The alpha value controls the opacity of the effect.
+
+_ProximityShadowDistance = Distance
+_ProximityShadowDistance.tooltip = Controls the distance at which to begin application of the shadow. Applies when the mesh is closer than this distance, in world-space units (centimetres).
+
+_ProximityShadowDistancePower = Power
+_ProximityShadowDistancePower.tooltip = Controls the rate at which the shadow is applied while inside the shadow application distance.
+
+_ProximityShadowFrontColor = Shadow Colour (Front)
+_ProximityShadowFrontColor.tooltip = The colour of the shadowing on front-facing polygons. The alpha value controls the opacity of the effect.
+
+_Ramp = Lighting Ramp
+_Ramp.tooltip = Specifies the falloff of the lighting. In other words, it controls how light affects your model and how soft or sharp the transition between light and shadow is. \nNote: If a Lighting Ramp is not set, the material will have no shading.
+
+_Rows = Rows
+_Rows.tooltip = Sets the number of frames present in a vertical column.
+
+_SDFFrontVector = SDF Front Vector
+_SDFFrontVector.tooltip = The forward direction vector, relative to your head mesh.
+
+_SDFMode = SDF Mode
+_SDFMode.tooltip = Whether to treat the shading adjustment as an SDF shadow texture. An SDF shadow texture is a specially created shadow mask that replaces the lighting calculation for the surface. Note that in order for SDF shadows to work correctly, your mesh data must be oriented correctly.
+
+_SDFRightVector = SDF Right Vector
+_SDFRightVector.tooltip = The right direction vector, relative to your head mesh.
+
+_SDFSmoothness = SDF Smoothness
+_SDFSmoothness.tooltip = Adjusts the smoothness of the SDF - how wide the shadows spreads across the surface.
+
+_ShadingGradeMap = Shading Adjustment
+_ShadingGradeMap.tooltip = Adds additional shading to darkened regions, and acts as occlusion. The slider modifies the midpoint of the shading adjustment.
+
+_ShadingGradeMapLevel = Shading Adjustment Level
+_ShadingGradeMapLevel.tooltip = Modifies the middle point of the shading adjustment.
+
+_Shadow = Shadow Mask Lightening
+_Shadow.tooltip = Sets the power of the shadow mask.
+
+_ShadowBorderColor = Shading Tone Border
+_ShadowBorderColor.tooltip = Adds a colour shift to the intersection between the shading tones. Black means no change.
+
+_ShadowBorderRange = Width
+_ShadowBorderRange.tooltip = Sets the width of the colour shift.
+
+_ShadowCrushAnimated = Runtime Shadow Crush
+_ShadowCrushAnimated.tooltip = Modifies ambient light. The lower this value, the darker the lighting in shaded regions will be. Not recommended for regular use.
+
+_ShadowLift = Shadow Lift
+_ShadowLift.tooltip = Increasing this warps the lighting received to make more things lit.
+
+_ShadowMask = Shadow Mask
+_ShadowMask.tooltip = In Occlusion mode, specifies areas of shadow influence. RGB darkens, alpha lightens. In Tone mode, specifies colour of shading to use. RGB tints, alpha darkens.
+
+_ShadowMaskType = Shadow Mask Style
+_ShadowMaskType.tooltip = Changes how the shadow mask is used.
+
+_ShiftHue = Hue Shift
+_ShiftHue.tooltip = Shifts the hue of the main texture and tone, where the value is the number of degrees to shift the hue.
+
+_ShiftSaturation = Saturation Shift
+_ShiftSaturation.tooltip = Shifts the level of saturation in the main texture and tone, dulling or increasing the vibrance of their respective colours.
+
+_ShiftValue = Luma Shift
+_ShiftValue.tooltip = Shifts the brightness of the main texture and tone.
+
+_Smoothness = Smoothness
+_Smoothness.tooltip = The smoothness of the material. The specular map's alpha channel is used for this, with this slider being a multiplier.
+
+_SpecGlossMap = Specular Map
+_SpecGlossMap.tooltip = Specular Map (RGBA, RGB: Specular/Metalness, A: Smoothness)
+
+_SpecIridescenceRamp = Iridescence Ramp
+_SpecIridescenceRamp.tooltip = Controls the color variation of the iridescence effect based on the viewing angle.
+
+_SpecularGlintDensity = Glint Density
+_SpecularGlintDensity.tooltip = Sets the concentration of glint particles. Lower values create a sparse, scattered sparkle effect (like snow or coarse glitter), while higher values result in a dense, shimmering field (like metallic car paint or polished granite).
+
+_SpecularGlintSize = Glint Size
+_SpecularGlintSize.tooltip = Controls the sharpness of individual sparkles. Lower values result in tiny glints, while higher values make the sparkles appear larger and more diffused.
+
+_SpecularHighlights = Specular Highlights
+_SpecularHighlights.tooltip = Toggles specular highlights. Only applicable if specular is active.
+
+_SpecularType = Specular Style
+_SpecularType.tooltip = Allows you to set whether specular is active, and what kind of specular to use if so.
+
+_SSSAmbient = Ambient
+_SSSAmbient.tooltip = Controls the intensity of ambient light received from scattering.
+
+_SSSCol = Color
+_SSSCol.tooltip = The colour used for the subsurface scattering effect.
+
+_SSSDist = Distortion
+_SSSDist.tooltip = Controls the level of distortion light receives when passing through the material.
+
+_SSSIntensity = Intensity
+_SSSIntensity.tooltip = Strength of the subsurface scattering effect.
+
+_SSSPow = Power
+_SSSPow.tooltip = Controls the power of the scattering effect.
+
+_Stencil = Stencil Test
+_Stencil.tooltip = Raising this enables reading or writing a stencil. When set, contains calue to compare against (if Comparison is anything but Always) and/or the value to be written to the buffer (if wither Pass, Fail or ZFail is set to Replace)
+
+_StencilComp = Comparison
+_StencilComp.tooltip = The operation to be performed when reading the stencil value.
+
+_StencilFail = Fail
+_StencilFail.tooltip = The operation to be performed when the stencil test fails.
+
+_StencilOp = Operation
+_StencilOp.tooltip = The operation to be performed when the stencil test passes.
+
+_StencilZFail = ZFail
+_StencilZFail.tooltip = The operation to be performed when the stencil test passes, but the geometry is occluded.
+
+_ThicknessMap = Thickness Map
+_ThicknessMap.tooltip = Thickness Map (RGB)
+
+_ThicknessMapInvert = Invert
+_ThicknessMapInvert.tooltip = Inverts the map used for thickness from a scale where 1 produces an effect, to a scale where 0 produces an effect.
+
+_ThicknessMapPower = Power
+_ThicknessMapPower.tooltip = Boosts the intensity of the thickness map.
+
+_TotalFrames = Total Frames
+_TotalFrames.tooltip = The maximum number of frames that will play in the animation.
+
+_UseAdvancedEmission = Advanced Emission
+_UseAdvancedEmission.tooltip = Applies additional effects to the emission map.
+
+_UseAlphaFresnel = Alpha Fresnel
+_UseAlphaFresnel.tooltip = Toggles the alpha fresnel effect, which reduces the opacity of the material as it faces towards the viewer. Useful for simulating see-through materials with a certain thickness, like tights.
+
+_UseAnimation = Animation
+_UseAnimation.tooltip = Enables the spritesheet system, where textures provided to the shader are divided into sections and displayed seperately over time.
+
+_UseBackfaceTexture = Backface Texture
+_UseBackfaceTexture.tooltip = Use a separate albedo texture for the material's backface.
+
+_UseContactShadows = Contact Shadows
+_UseContactShadows.tooltip = Applies contact shadows, which are shadows calculated by marching a ray through the screen's depth buffer. This results in sharper, cleaner shadows than normal Unity shadows - though they might have a performance penalty up-close.
+
+_UseDetailMaps = Detail Maps
+_UseDetailMaps.tooltip = Toggles the usage of detail maps.
+
+_UseEmissiveAudiolink = Emissive AudioLink
+_UseEmissiveAudiolink.tooltip = Enables the emissive AudioLink effect, which will pulse in time to music in supported scenes.
+
+_UseEmissiveLightSense = Light Sensitivity
+_UseEmissiveLightSense.tooltip = Enables light sensitivity for emission, which will change the intensity of emission depending on the incoming light. This can be used to make emissive patterns that only glow in the dark, or that scale with light intensity.
+
+_UseEnergyConservation = Use Energy Conservation
+_UseEnergyConservation.tooltip = Reduces the intensity of the diffuse on specular areas, to realistically conserve energy.
+
+_UseFresnel = Rim Lighting Style
+_UseFresnel.tooltip = Applies a customisable rim lighting effect.
+
+_UseFresnelLightMask = Use Light Direction Mask
+_UseFresnelLightMask.tooltip = Uses the light direction to split the rim light into two. The backside of the rim light can be adjusted seperately.
+
+_UseHatching = Hatching
+_UseHatching.tooltip = Toggles the hatching effect, which applies a stylized crosshatch pattern to the material.
+
+_UseInventory = Inventory
+_UseInventory.tooltip = Enables the inventory system. When enabled, the UV coordinates of the model are used to hide parts of the mesh. Every X units, where X is the inventory stride, the vertices assigned those UV coordinates are placed into a seperate item slot, and can be enabled or disabled using the toggles. The first slot, containing the 0-1 range, is always displayed.
+
+_UseIridescenceRamp = Iridescent Specular
+_UseIridescenceRamp.tooltip = Applies an iridescence effect on specular reflections.
+
+_UseMatcap = Matcap Style
+_UseMatcap.tooltip = Enables the use of material capture textures.
+
+_UseMetallic = Use as Metalness
+_UseMetallic.tooltip = Metalness maps are greyscale maps that contain the metalness of a surface. This is different to specular maps, which are RGB (colour) maps that contain the specular parts of a surface. When this setting is active, the specular map is multiplied against the albedo to derive the final specular colour.
+
+_UseProximityShadow = Proximity Shadow
+_UseProximityShadow.tooltip = Applies extra shadowing to the material when the camera is closer than a certain distance.
+
+_UseSubsurfaceScattering = Subsurface Scattering
+_UseSubsurfaceScattering.tooltip = Enables a light scattering effect useful for cloth and skin.
+
+_UseVanishing = Vanishing
+_UseVanishing.tooltip = Enables the vanishing effect, which fades the material out at a set start and end point. Ineffective in opaque blend mode.
+
+_VanishingEnd = End Vanishing
+_VanishingEnd.tooltip = The outer bound of the vanishing effect. The higher this is, the further out the material will begin to vanish. If End is higher than Start, the material will be invisible up close.
+
+_VanishingStart = Start Vanishing
+_VanishingStart.tooltip = The inner bound of the vanishing effect. The higher this is, the further out the material will finishing vanishing. If Start is higher than End, the material will be invisible at a distance.
+
+_VertexColorAType = Vertex Alpha Type
+_VertexColorAType.tooltip = Sets how the vertex alpha should be used.
+
+_VertexColorBType = Vertex Blue Type
+_VertexColorBType.tooltip = Sets how this vertex channel should be used.
+
+_VertexColorGType = Vertex Green Type
+_VertexColorGType.tooltip = Sets how this vertex channel should be used.
+
+_VertexColorRType = Vertex Red Type
+_VertexColorRType.tooltip = Sets how this vertex channel should be used.
+
+_VertexColorType = Vertex Colour Type
+_VertexColorType.tooltip = Sets how the vertex colour should be used. Outline colour/width only affects outlines. Custom data allows you to specify what each channel is used for.
+
+ge_addButton = Add Gradient
+
+ge_basicHelp = Select the top slot to open the gradient editor. You can change it and see how your material reacts in realtime. Note that if you don't save the lighting ramp, it will revert to the old one and your changes will be lost. Use Save Ramp to save.
+
+ge_gradientEditorTitle = Current Material:
+
+ge_helpCheckbox = Show help
+
+ge_linearCheckbox = Treat as non-sRGB
+
+ge_materialCheckbox = Show material selector
+
+ge_multiGradientPreset = Multi Gradient Preset
+
+ge_multiRampHelp = Use the + and - buttons to add additional ramp levels. They'll be blended based on Softness, which is set by vertex colour.
+
+ge_noAssetPathError = Asset path is Null. Unable to set to Clamped!\n Ramp won't display correctly unless this is fixed.
+
+ge_rampPropertyError = Ramp property not found!
+
+ge_rampPropertyField = Ramp Property Name
+
+ge_removeButton = Remove Gradient
+
+ge_reorderButton = Reorder
+ge_reorderButton.tooltip = Make sure you don't want to undo anything before Reordering.
+
+ge_resolutionTitle = Resolution:
+
+ge_saveMultiGradient = Save Multi Gradient
+
+ge_saveNewButton = Save New
+
+ge_saveRampButton = Save Ramp
+
+s_advancedOptions = System Options
+s_advancedOptions.tooltip = Settings that control specific system parameters that can have a large effect on how the shading is calculated.
+
+s_bakeButton = Bake material
+s_bakeButton.tooltip = Creates a copy of the shader with the material properties pre-applied and flattened. This reduces the size of the shader in the final build and can improve performance, but you won't be able to change the shader properties until you un-bake it.
+
+s_bakeButtonPlural = Bake {0} materials
+s_bakeButtonPlural.tooltip = Creates a copy of the shader with the material properties pre-applied and flattened for each material. This reduces the size of the shader in the final build and can improve performance, but you won't be able to change the shader properties until you un-bake it.
+
+s_bakeButtonRevert = Un-bake material
+s_bakeButtonRevert.tooltip = This material is baked, and material properties can't be changed. Selecting this option will undo the baking process and return this material to using the regular version of the shader.
+
+s_bakeDepreciateWarning = The current material is using a baked shader, which is currently unsupported. If you want to modify it, please change it back to the regular Crosstone/Lightramp shader using the shader picker above.
+s_bakeDepreciateWarning.tooltip = Warning
+
+s_detailOptions = Detail Options
+s_detailOptions.tooltip = Settings that control details added into the basic lighting and shading.
+
+s_EmissionDetailPhase = Phase/Pulse
+s_EmissionDetailPhase.tooltip = Sets the phase of the emission detail texture. X controls the pulsing speed, and Y controls the phase. The higher the phase, the shorter the interval between repetitions.
+
+s_EmissionDetailScroll = Scroll
+s_EmissionDetailScroll.tooltip = Sets the scrolling speed for the emission detail texture.
+
+s_emissionOptions = Emission Options
+s_emissionOptions.tooltip = Settings that control additive light seemingly emitted from the material.
+
+s_fanboxButton = Fanbox
+s_fanboxButton.tooltip = If you like the shader, check out my Fanbox! You can become a FAN and get a special supporter card!
+
+s_fullComplexity = Show all options. (Complex mode)
+s_fullComplexity.tooltip = Show all options. (Complex mode)
+
+s_gradientEditorButton = Open Gradient Editor
+s_gradientEditorButton.tooltip = Opens the gradient editor window with the current material focused. This allows you to create a new lighting ramp and view the results on this material in realtime.
+
+s_helpArea = Check out our resources!
+s_helpArea.tooltip = Hover over the buttons for more info.
+
+s_inventoryOptions = Simple Inventory Options
+s_inventoryOptions.tooltip = Settings that control the simple inventory system, based on the input UV coordinates.
+
+s_langButton = Language
+s_langButton.tooltip = Select the language for the material editor.
+
+s_mainOptions = Main Options
+s_mainOptions.tooltip = Settings that control the basic appearance of the shader, which affect all subsequent settings.
+
+s_manualButton = Manual
+s_manualButton.tooltip = For information on new features, old features, and just how to use the shader in general, check out the manual on the shader wiki!
+
+s_miscOptions = Misc Options
+s_miscOptions.tooltip = Settings that control specific effects which aren't related to lighting.
+
+s_normalComplexity = Hide niche options. (Normal mode)
+s_normalComplexity.tooltip = Hide niche options. (Normal mode)
+
+s_renderingOptions = Rendering Options
+s_renderingOptions.tooltip = Settings that control additional effects rendered after the main shading. These settings are specific to these effects. (Some specular settings will affect the base albedo, which influences how other effects appear.)
+
+s_shadingOptions = Shading Options
+s_shadingOptions.tooltip = Settings that control the main light shading calculations. However, they mostly don't affect other settings.
+
+s_simpleComplexity = Only show main options. (Simple mode)
+s_simpleComplexity.tooltip = Only show main options. (Simple mode)
+
+s_socialButton = Discord
+s_socialButton.tooltip = For support, feedback, and updates on new versions, join the Secret Shader Facility Discord!

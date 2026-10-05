@@ -1,248 +1,734 @@
-_MainTex	メイン テクスチャ	メインカラーテクスチャ（RGBA）。シェーダの基本的な外観を制御する。カラーチャンネルとアルファチャンネルが使われています。
-_MainTexBackface	バックフェイステクスチャ 	バックフェイス用メインカラーテクスチャ（RGBA）。メインカラーテクスチャと同じですが、バックフェイス用のみです。
-_UseBackfaceTexture	バックフェイステクスチャ	マテリアルのバックフェイスには、別のアルベドテクスチャを使用します。
-_LightingCalculationType	照明計算タイプ	直接/間接照明の計算方法を設定します。
-_ClippingMask	クリッピングマスク	他の透明度ソースの上に適用される、透明度のための追加テクスチャ。
-_Cutoff	カットアウトしきい値	透過性カットオフのしきい値。カットオフ値以下の値は完全に透明になります。
-_AlphaSharp	ディザリングの無効化	透過性のカットオフを、ソフトなディザではなく、ハードなエッジとして扱います。
-_ColorMask	マスクテクスチャ	マスク素材のカラーティンティング（G）、リムライト（B）、ディテールマップ（A）。
-_ShiftHue	色相シフト	メインテクスチャとトーンの色相をシフトします。値は色相をシフトする度合いです。
-_ShiftSaturation	彩度シフト	メインテクスチャとトーンの彩度をシフトし、 それぞれのカラーのバイブランスを鈍らせたり、 高めたりします。
-_ShiftValue	明るさシフト	メインテクスチャとトーンの明るさをシフトします。
-_BumpMap	ノーマルマップ	サーフェスの法線の方向を調整する法線マップ（RGB）。
-_EmissionMap	エミッションマップ	照明の影響を受けない発光を制御する「エミッションマップ（RGB）」。
-_UseAdvancedEmission	アドバンスト・エミッション	エミッションマップに追加エフェクトをかけます。
-_DetailEmissionMap	エミッション詳細マスク	メインのエミッシ ョンマップに乗算される追加のテクスチャです。これにより、エミッシブテクスチャーに追加のディテールパターンを加えることができます。
-_DetailEmissionUVSec	UVソース	ディテールの発光にどのUVチャンネルを使用するかを選択します。
-_EmissionDetailParams	エミッション詳細パラメータ	XY: スクロール速度、ZW: 位相
-_EmissionRimPower	エミッションリムパワー	ゼロより大きい場合、発光に効果を適用して斜めの角度で暗くします。ゼロ以下の場合、発光は斜めの角度でのみ見えます。これは蛍光効果に使用できます。
-_EmissionMap2nd	エミッションマップ2	照明の影響を受けない発光を制御する2番目のエミッションマップ（RGB）。
-_EmissionDetailParams2nd	エミッション詳細パラメータ2	XY: スクロール速度、ZW: 位相
-_DetailEmissionMap2nd	エミッション詳細マスク2	メインの2番目のエミッションマップに乗算される追加のテクスチャ。これにより、エミッシブテクスチャに追加のディテールパターンを追加できます。
-_EmissionRimPower2nd	エミッションリムパワー2	ゼロより大きい場合、2番目の発光に効果を適用して斜めの角度で暗くします。ゼロ以下の場合、発光は斜めの角度でのみ見えます。これは蛍光効果に使用できます。
-s_EmissionDetailScroll	スクロール	エミッション・ディテール・テクスチャのスクロール速度を設定します。
-s_EmissionDetailPhase	フェーズ/パルス	エミッション詳細テクスチャーの位相を設定します。X はパルスの速度を、Y は位相を制御します。位相を高くすると、繰り返しの間隔が短くなります。
-_SpecGlossMap	スペキュラマップ	スペキュラマップ（RGBA、RGB：スペキュラ／メタルネス、A：スムースネス
-_SpecularType	スペキュラースタイル	スペキュラに使用するシェーディングモードを設定します。
-_Smoothness	滑らかさ	マテリアルの滑らかさを設定します。スペキュラマップのアルファチャンネルが使用され、このスライダはその乗数になります。
-_Anisotropy	異方性	非等方性鏡面ハイライトの方向。
-_UseEnergyConservation	省エネルギーの保存	スペキュラ領域のディフューズの強度を下げ、リアルにエネルギーを節約します。
-_UseMetallic	メタルネスとして使用	メタルネスマップは、サーフェスのメタルネスを含むグレースケールのマップです。これは、表面の鏡面部分を含むRGB（カラー）マップであるスペキュラマップとは異なります。この設定を有効にすると、スペキュラマップとアルベドを掛け合わせて、最終的なスペキュラカラーを導き出します。
-_CelSpecularSoftness	柔らかさ	セルのスペキュラハイライトのフォールオフの柔らかさを設定します。
-_CelSpecularSteps	ステップ	セルのスペキュラハイライトのステップ数を設定します。
-_UseIridescenceRamp	虹色スペキュラ	スペキュラ反射に虹色効果を適用します。
-_SpecIridescenceRamp	虹色ランプ	視角に基づいて虹色効果の色の変化を制御します。
-_SpecularGlintSize	グリントサイズ	個々の煌めきの鋭さを設定します。値を小さくすると微細な輝きになり、値を大きくすると煌めきが拡散した表現になります。
-_SpecularGlintDensity	グリントの密度	グリント粒子の密度を設定します。値を小さくすると疎らな表現になり、値を大きくするとメタリック塗装のような高密度な質感になります。
-_UseFresnel	リムライトスタイル	カスタマイズ可能なリム・ライティング効果を適用します。
-_FresnelWidth	リム幅	リム照明の幅を設定します。
-_FresnelStrength	リムの柔らかさ	リムエッジのシャープネスを設定します。
-_FresnelTint	リムティント	リム照明の色を調色します。明るくしたい場合は、明るさを1以上の値に変更してください。
-_UseFresnelLightMask	ライトディレクションマスクの使用	光の方向性を利用して、リムライトを2つに分割。リムライトの裏側を個別に調整できます。
-_FresnelLightMask	光の方向 マスクの強さ	これを高くすると、リムと逆リムの間の部分でリムライトが見えなくなります。
-_FresnelTintInv	インバースリムティント	インバースリムライティングの色を調色します。明るくしたい場合は、明るさを1以上の値に変更してください。
-_FresnelWidthInv	逆転のリム幅	インバースリムライティングの幅を設定します。
-_FresnelStrengthInv	逆リムソフトネス	インバースリムエッジのシャープネスを設定します。
-_CustomFresnelColor	エミッシブリム	RGBは、加算リムライトの色を設定します。アルファは、エフェクトのパワー／幅をコントロールします。
-_OutlineMode	アウトラインモード	指定されたブレンドモードでマテリアルにアウトラインを追加します。
-_outline_color	アウトラインカラー	アウトラインに使用する色を設定します。ティントモードでは、これをテクスチャに掛け合わせます。
-_outline_width	輪郭幅	輪郭線の幅をcm単位で設定します。
-_OutlineMask	アウトラインマスク	アウトラインの幅を調整するための追加テクスチャ。
-_OutlineNearDistance	近距離	アウトラインが縮小し始めるカメラ距離を設定します。カメラが近づくと、アウトラインのサイズが調整され、より自然に見えます。このプロパティは、近くでの縮小度合いを制御します。
-_OutlineFarDistance	遠距離	アウトラインが成長を停止するカメラ距離を設定します。カメラが離れると、アウトラインのサイズが調整され、より自然に見えます。このプロパティは、遠くでの成長度合いを制御します。
-_OutlineZPush	輪郭の深さのオフセット	アウトラインをモデルの後ろに押しやり、マテリアルの重なった部分のアウトラインを隠すための深度オフセットを設定します。
-_FurMode	ファーモード	モデルに毛皮を追加します。アウトラインと一緒に使用することはできません。
-_FurLayerCount	レイヤーカウント	毛皮のレイヤー数を設定します。レイヤーが多いほど毛皮は密になりますが、パフォーマンスに影響を及ぼす可能性があります。
-_FurMask	ファーマスク	モデル上で毛皮が表示される場所を決定します。白いエリアには毛皮があり、黒いエリアにはありません。
-_FurNoise	ファーノイズテクスチャ	毛皮のパターンの形状と分布を毛皮のシェルに沿って設定します。ふわふわしたノイズパターンを使用することをお勧めします。
-_FurLength	長さ	毛皮の長さを設定します。値が高いほど毛皮は長くなりますが、毛皮のシェルがより目立つようになります。
-_FurRandomization	ランダム化	毛皮のメッシュシェルにランダム性を追加し、より自然に見えるようにします。
-_FurThickness	厚さ	毛皮の髪の毛の厚さの分布を設定します。値が高いほど、毛皮は薄く見え、基部に集中します。
-_UseMatcap	マットキャップスタイル	マテリアル・キャプチャー・テクスチャーの使用を可能にします。
-_MatcapTitle	マットキャップスタイル	マテリアル・キャプチャー・テクスチャーの使用を可能にします。
-_Matcap1	マットキャップ1	マットキャップ（RGB）。マットキャップマスクのRチャンネルで制御されます。ブレンドモードは、マットキャップをマテリアルにどのように適用するかを制御します。
-_Matcap1Strength	強度	マットキャップを素材にどれだけ強く適用するかを調整します。
-_Matcap2	マットキャップ2	マットキャップ（RGB）。マットキャップマスクのGチャンネルで制御されます。ブレンドモードは、マットキャップをマテリアルに適用する方法を制御します。
-_Matcap2Strength	強度	マットキャップを素材にどれだけ強く適用するかを調整します。
-_Matcap3	マットキャップ3	マットキャップ（RGB）。マットキャップマスクのBチャンネルで制御されます。ブレンドモードは、マットキャップをマテリアルにどのように適用するかを制御します。
-_Matcap3Strength	強度	マットキャップを素材にどれだけ強く適用するかを調整します。
-_Matcap4	マットキャップ4	マットキャップ（RGB）。マットキャップマスクのAチャンネルで制御されます。ブレンドモードは、マットキャップをマテリアルにどのように適用するかを制御します。
-_Matcap4Strength	強度	マットキャップを素材にどれだけ強く適用するかを調整します。
-_MatcapStrength	マットキャップの強さ	マットキャップの威力。高い方が強い
-_MatcapMask	マットキャップマスク	異なるカラーチャンネルの強度によって、マットキャップの強度を決定します。
-_UseSubsurfaceScattering	サブサーフェイス・スキャッタリング	布や肌に有効な光の散乱効果が得られます。
-_ThicknessMap	厚みマップ	シックネスマップ(RGB)
-_ThicknessMapPower	パワー	厚みマップの強度を上げます。
-_ThicknessMapInvert	厚みの反転	厚みに使われているマップを、1で効果が出るスケールから、0で効果が出るスケールに反転させます。
-_SSSCol	色を散らす	サブサーフェイス・スキャッタリング効果に使用される色です。
-_SSSIntensity	散乱強度	表面下の散乱効果の強さ。
-_SSSPow	散乱パワー	散乱効果のパワーをコントロールします。
-_SSSDist	散乱歪み	光が素材を通過する際に受ける歪みの度合いを調整します。
-_SSSAmbient	散乱環境	散乱光から受ける環境光の強度をコントロールします。
-_UseHatching	ハッチング	マテリアルにスタイライズされたクロスハッチパターンを適用するハッチング効果を切り替えます。
-_HatchingTex	ハッチングマップ	ハッチング効果に使用されるテクスチャを定義します。このテクスチャのパターンがハッチングの外観を決定します。
-_HatchingScale	ハッチングスケール	ハッチングテクスチャのスケールを調整します。値が高いほどハッチングパターンが大きくなり、値が低いほど細かくなります。
-_HatchingMovementFPS	ハッチング移動FPS	ハッチング効果をアニメーション化するフレームレートを設定します。値が高いほどハッチングパターンの移動が速くなります。
-_HatchingShadingAdd	シェーディング加算レベル	影のある部分でのハッチング効果の加算強度を制御します。値が高いほどハッチングが目立ちます。
-_HatchingShadingMul	シェーディング乗算レベル	影のある部分でのハッチング効果の乗算強度を制御します。値が高いほどハッチングパターンが暗くなります。
-_HatchingRimAdd	リムライト加算レベル	リムライトのある部分でのハッチング効果の強度を調整します。値が高いほどこれらの領域でハッチングが目立ちます。
-_HatchingAlbedoMul	アルベド乗算レベル	ハッチング効果とアルベドテクスチャのブレンドを制御します。値が高いほど、ハッチングパターンがマテリアルのベースカラーに与える影響が強くなります。
-_UseAlphaFresnel	リム透過	視線に対して正面を向いている部分の透明度を上げ、アルファフレネル効果を有効にします。タイツなど、厚みのある透ける素材の表現に有用です。
-_AlphaFresnelWidth	リムの幅	リム（縁）の幅を調整します。値を大きくすると、効果が適用される範囲が広がります。
-_AlphaFresnelSharpness	境界の鋭さ	境界の鮮明度を調整します。グラデーションを作るには、幅以下の値に設定してください。
-_AlphaFresnelStrength	不透明度	効果の強さ（透明部分の不透明度）を調整します。
-_AlphaFresnelThreshold	適用しきい値	効果を適用する範囲を制限するためのしきい値です。ディテールマップ適用前のメインテクスチャのアルファ値を基準にします。
-_AlphaFresnelInvert	反転	効果を反転し、視線に対して角度がある（輪郭に近い）部分の不透明度を下げます。
-_LightSkew	ライトスキュー	受け取った照明の方向を歪めます。デフォルトは(1, 0.1, 1, 0)で、これはX軸とZ軸が通常の強さに対応し、Y軸の効果を減少させます。これにより、セルシェーディングされたモデルで奇妙に見える、上や下からのきついライトを防ぐことができます。しかし、これはあくまでも初期設定です...。
-_PixelSampleMode	ピクセルアートモード	メインテクスチャをピクセルアートとして扱う。レトロなアバターに最適です。注：この機能を使用する際は、ミップマップが「有効」になっており、テクスチャのサンプリングが「トリリニア」に設定されていることを確認してください。
-_UseDetailMaps	詳細マップ	詳細マップの使用を切り替えます。
-_DetailAlbedoMask	詳細マスク	詳細マップを適用するためのマスクです。
-_DetailMap1	詳細マップ1	最初の詳細マップです。詳細マスクのRチャンネルによって制御されます。ブレンドモードは、詳細がマテリアルにどのように適用されるかを制御します。
-_DetailMap1UV	詳細マップ1 UV	最初の詳細マップに使用するUVチャンネルを選択します。
-_DetailMap1Type	詳細マップ1のタイプ	最初の詳細マップのタイプ（アルベド、ノーマル、スペキュラ）を定義します。
-_DetailMap1Blend	詳細マップ1ブレンドモード	最初の詳細マップを適用するために使用されるブレンドモードを選択します。
-_DetailMap1Strength	詳細マップ1パワー	最初の詳細マップがマテリアルにどの程度強く適用されるかを調整します。
-_DetailMap2	詳細マップ2	2番目の詳細マップです。詳細マスクのRチャンネルによって制御されます。ブレンドモードは、詳細がマテリアルにどのように適用されるかを制御します。
-_DetailMap2UV	詳細マップ2 UV	2番目の詳細マップに使用するUVチャンネルを選択します。
-_DetailMap2Type	詳細マップ2のタイプ	2番目の詳細マップのタイプ（アルベド、ノーマル、スペキュラ）を定義します。
-_DetailMap2Blend	詳細マップ2ブレンドモード	2番目の詳細マップを適用するために使用されるブレンドモードを選択します。
-_DetailMap2Strength	詳細マップ2パワー	2番目の詳細マップがマテリアルにどの程度強く適用されるかを調整します。
-_DetailMap3	詳細マップ3	3番目の詳細マップです。詳細マスクのRチャンネルによって制御されます。ブレンドモードは、詳細がマテリアルにどのように適用されるかを制御します。
-_DetailMap3UV	詳細マップ3 UV	3番目の詳細マップに使用するUVチャンネルを選択します。
-_DetailMap3Type	詳細マップ3のタイプ	3番目の詳細マップのタイプ（アルベド、ノーマル、スペキュラ）を定義します。
-_DetailMap3Blend	詳細マップ3ブレンドモード	3番目の詳細マップを適用するために使用されるブレンドモードを選択します。
-_DetailMap3Strength	詳細マップ3パワー	3番目の詳細マップがマテリアルにどの程度強く適用されるかを調整します。
-_DetailMap4	詳細マップ4	4番目の詳細マップです。詳細マスクのRチャンネルによって制御されます。ブレンドモードは、詳細がマテリアルにどのように適用されるかを制御します。
-_DetailMap4UV	詳細マップ4 UV	4番目の詳細マップに使用するUVチャンネルを選択します。
-_DetailMap4Type	詳細マップ4のタイプ	4番目の詳細マップのタイプ（アルベド、ノーマル、スペキュラ）を定義します。
-_DetailMap4Blend	詳細マップ4ブレンドモード	4番目の詳細マップを適用するために使用されるブレンドモードを選択します。
-_DetailMap4Strength	詳細マップ4パワー	4番目の詳細マップがマテリアルにどの程度強く適用されるかを調整します。
-_SpecularHighlights	スペキュラハイライト	スペキュラハイライトを切り替えます。Specularが有効な場合にのみ適用されます。
-_GlossyReflections	リフレクションズ	光沢のある反射をトグルします。Specularが有効な場合のみ適用されます。
-_DiffuseGeomShadowFactor	幾何陰・遮蔽	幾何学的シャドウイング機能のパワーをコントロールします。この機能は、拡散光が斜めになったときのフォールオフを変えます。よりリアルになりますが、セルシェーディングには望ましくない場合もあります。
-_LightWrappingCompensationFactor	減光	セルシェーディング特有の光の回り込みに対する補正係数。セルシェーディングされたモデルの場合、これは0.75程度にしてください。リアルなライティングでは、これを1に設定して無効にします。
-_IndirectShadingType	遮光タイプ	間接照明のシェーディングに使用する方法を設定します。指向性は、単一の方向を偽の光源として選ぶので、光は常にシャープになります。ダイナミック」は、全体のシェーディングをベースにして、よりぼやけた正確なライティングを可能にします。
-_UseAnimation	アニメーション	スプライトシートシステムを有効にします。シェーダーに提供されたテクスチャをセクションに分けて、時間の経過とともに別々に表示します。
-_AnimationSpeed	アニメーションの速度	アニメーションの速度は、Unityの時間パラメータに由来しており、1.0は20秒で1サイクルとなります。
-_TotalFrames	合計フレーム数	アニメーションで再生されるフレームの最大数。
-_FrameNumber	フレーム番号	アニメーションの再生を開始するフレーム番号を設定します。
-_Columns	コラム	1つの横列に存在するフレームの数を設定します。
-_Rows	ロー	垂直方向の列に存在するフレームの数を設定します。
-_UseVanishing	バニシング	バニシング効果を有効にすると、設定した開始点と終了点でマテリアルがフェードアウトします。不透明なブレンドモードでは効果がありません。
-_VanishingStart	バニシング開始	バニシング効果の内側の境界線です。この値が高いほど、マテリアルが消失し終わるまでの距離が長くなります。StartがEndよりも高い場合、マテリアルは遠くから見えなくなります。
-_VanishingEnd	エンドバニシング	バニシング効果の外枠。この値が高いほど、素材が消え始める範囲が広くなります。End」が「Start」よりも高い場合、素材は近くでは見えなくなります。
-_UseEmissiveLightSense	光感度	発光の光感度を有効にすると、入射光に応じて発光の強度が変化します。これを利用して、暗闇でのみ光る発光パターンや、光の強さに応じて変化する発光パターンを作ることができます。
-_EmissiveLightSenseStart	グロー・スタート	輝きが始まるしきい値です。例えば、これを1に設定すると、マテリアルに1単位以上の光が当たったときにグローを隠すことができます。
-_EmissiveLightSenseEnd	グロー・エンド	グローが終了する閾値です。  例えば、これを0に設定すると、光がないときにグローが最大の強度で表示され、これを上げると、光があっても最大のグローがトリガーされるようになります。
-_UseEmissiveAudiolink	AudioLinkエミッション	AudioLink効果を有効にし、利用可能な場 合は音楽に合わせてパルスを出力します。
-_AudiolinkMaskMap	マスクマップ	AudioLinkのパルスに適用されるテクスチャで、スイープパラメータとは別にマスキングまたはカラーリングを行うことができます。
-_AudiolinkSweepMap	スイープマップ	AudioLinkのパルスの形状を定義するテクスチャです。各ピクセルの色と強さで、それぞれチャンネルと時間オフセットが決まります。
-_AudiolinkIntensity	Intensity	AudioLinkパルスの明るさを設定します。
-_alColorR	カラー（R）	AudioLinkパルスの1チャンネル目に適用されるエフェクトの色。Detail Emission MaskのRチャンネルで制御される。
-_alColorG	カラー（G）	AudioLinkパルスの2チャンネル目に適用されるエフェクトの色。Detail Emission MaskのGチャンネルで制御される。
-_alColorB	カラー（B）	AudioLinkパルスの3チャンネル目に適用されるエフェクトの色。Detail Emission MaskのBチャンネルで制御される。
-_alColorA	カラー（A）	AudioLinkパルスの4チャンネル目に適用されるエフェクトの色。Detail Emission MaskのAチャンネルで制御される。
-_alModeR	モード（R）	AudioLinkパルスの1チャンネルで作られるエフェクトの種類。
-_alModeG	モード（G）	AudioLinkパルスの2チャンネルで作られるエフェクトの種類。
-_alModeB	モード（B）	AudioLinkパルスの3チャンネルで作られるエフェクトの種類。
-_alModeA	モード（A）	AudioLinkパルスの4チャンネルで作られるエフェクトの種類。
-_alBandR	バンド（R）	エフェクト1を適用するAudioLinkパルスを指定します。
-_alBandG	バンド（G）	エフェクト2を適用するAudioLinkパルスを指定します。
-_alBandB	バンド（B）	エフェクト3を適用するAudioLinkパルスを指定します。
-_alBandA	バンド（A）	エフェクト4を適用するAudioLinkパルスを指定します。
-_alTimeRangeR	タイムレンジ（R）	AudioLinkパルスの大きさです。オーディオリンクはテクスチャのグラデーションに沿って適用されます。0では、パルスは1つのフラッシュとして表示されます。1にすると、パルスはAudioLinkの履歴全体を表示します。
-_alTimeRangeG	タイムレンジ（G）	AudioLinkパルスの大きさです。オーディオリンクはテクスチャのグラデーションに沿って適用されます。0では、パルスは1つのフラッシュとして表示されます。1にすると、パルスはAudioLinkの履歴全体を表示します。
-_alTimeRangeB	タイムレンジ（B）	AudioLinkパルスの大きさです。オーディオリンクはテクスチャのグラデーションに沿って適用されます。0では、パルスは1つのフラッシュとして表示されます。1にすると、パルスはAudioLinkの履歴全体を表示します。
-_alTimeRangeA	タイムレンジ（A）	AudioLinkパルスの大きさです。オーディオリンクはテクスチャのグラデーションに沿って適用されます。0では、パルスは1つのフラッシュとして表示されます。1にすると、パルスはAudioLinkの履歴全体を表示します。
-_alUseFallback	フォールバックの有効化	AudioLinkが搭載されていないワールドでは、コンスタントパルスエフェクトが表示されます。
-_alFallbackBPM	フォールバックBPM	予備のパルスに使用するBPMです。
-_ManualButton	このシェーダーにはマニュアルがあります。ぜひチェックしてみてください。	新機能や旧機能、シェーダーの使い方などについては、シェーダーのウィキにあるマニュアルをご覧ください。
-_Ramp	照明ランプ	ライティングのフォールオフを指定します。言い換えれば、光がモデルにどのように影響するか、光と影の間の移行がどれだけソフトかシャープかをコントロールします。注意：Lighting Rampが設定されていない場合、マテリアルにはシェーディングがありません。
-_ShadowMask	シャドウマスク	オクルージョンモードでは、影の影響を受ける領域を指定します。RGBは暗く、アルファは明るくなります。トーンモードでは、使用するシェーディングの色を指定します。RGBが濃く、アルファが薄くなります。
-_ShadowLift	シャドーリフト	これを増やすと、受け取った照明をワープさせて、より多くのものが照らされるようになります。
-_IndirectLightingBoost	間接照明ブースト	影の照明と直接光の照明をブレンドして、より明るくします。
-_Shadow	シャドウマスク ライトニング	シャドウマスクのパワーを設定します。
-_LightRampType	照明ランプの種類	ライトランプを左右ではなく、下から上に向けて使用する場合や、全く使用しない場合などです。
-_ShadowMaskType	シャドウ・マスク・スタイル	シャドウマスクの使用方法を変更します。
-_VertexColorType	バーテックス・カラー・タイプ	頂点の色をどのように使用するかを設定します。Outline カラー/幅はアウトラインにのみ影響します。カスタムデータを使用すると、各チャンネルの用途を指定できます。
-_VertexColorRType	Red Type	このバーテックスの赤チャンネルの使用方法を設定します。
-_VertexColorGType	Green Type	このバーテックスの赤チャンネルの使用方法を設定します。
-_VertexColorBType	Blue Type	このバーテックスの赤チャンネルの使用方法を設定します。
-_VertexColorAType	Alpha Type	バーテックスアルファの使用方法を設定します。
-_AlbedoAlphaMode	アルベドアルファモード	メインテクスチャのアルファチャンネルをどのように使用するかを設定します。
-_GradientEditorButton	グラデーションエディタを開く	現在のマテリアルに焦点を当てたグラデーションエディタウィンドウを開きます。これにより、新しい照明ランプを作成し、その結果をこのマテリアル上でリアルタイムに確認することができます。
-_CrosstoneToneSeparation	1stトーンブレンドモード	アルベドテクスチャにトーンをブレンドする方法を指定します。Combinedは一方を他方に統合し、Seperateは統合しません。
-_Crosstone2ndSeparation	2ndトーンブレンドモード	2つ目のトーンをトーンテクスチャにブレンドする方法を指定します。Combinedは一方を他方に合成し、Seperateは合成しません。
-_1st_ShadeMap	1影色テクスチャ	最初のグラデーションに使用するシェーディングの色を指定します。カラーフィールドで着色します。
-_1st_ShadeColor	1影色	
-_1st_ShadeColor_Step	1影の境界位置	マテリアルに当たる光に応じて、シェーディングがライトからシェーディングへと移行し始めるポイントを設定します。
-_1st_ShadeColor_Feather	1影の境界のぼかし強度	ライトとシェードの間のトランジションの幅を設定します。
-_2nd_ShadeMap	2影色テクスチャ	2つ目のグラデーションに使用するシェーディングの色を指定します。カラーフィールドで着色します。
-_2nd_ShadeColor	2影色	
-_2nd_ShadeColor_Step	2影の境界位置	マテリアルに当たる光に基づいて、シェーディングがシェーディングから完全なシェーディングへと移行し始めるポイントを設定します。
-_2nd_ShadeColor_Feather	2影の境界のぼかし強度	シェーディングとフルシェーディングの間のトランジションの幅を設定します。
-_ShadingGradeMap	シェーディング調整	暗くなった部分に追加のシェーディングを加え、オクルージョンとして機能します。スライダはシェーディング調整の中間点を変更します。
-_ShadingGradeMapLevel	シェーディング調整レベル	シェーディング調整の中間点を変更します。
-_ShadowBorderColor	シェーディングトーン ボーダー	シェーディングトーン間の交差部分の色を変更します。
-_ShadowBorderRange	境界位置	カラーシフトの境界位置を設定します。
-_SDFMode	SDFモード	シェーディング調整をSDFシャドウテクスチャとして扱うかどうか。SDFシャドウテクスチャは、サーフェスのライティング計算を置き換える特殊なシャドウマスクです。SDFシャドウが正しく機能するためには、メッシュデータが正しく方向付けられている必要があります。設定メニュー用の特定フォーマットの文字列です。
-_SDFSmoothness	SDF スムーズさ	SDFの滑らかさを調整します。サーフェス上で影が広がる幅を設定します。
-_SDFFrontVector	SDF 正面ベクトル	ヘッドメッシュに対する相対的な、前方方向のベクトルです。
-_SDFRightVector	SDF 右ベクトル	ヘッドメッシュに対する相対的な、右方向のベクトルです。
-_LightMultiplyAnimated	ランタイムライト調整	出力値を変更します。この値が低いほど、素材で反射した光は暗くなります。
-_LightClampAnimated	ランタイムライトクランプ	照明の出力値を制限します。有効にすると、適用される全照明が制限されます。通常の使用には適していません。
-_LightAddAnimated	ランタイムライトアップ	出力値を変更します。この値が高いほど、ベースライン輝度の量が大きくなり、マテリアルに適用されます。通常の使用にはお勧めしません。
-_UseProximityShadow	プロキシミティシャドウ	カメラが一定距離以上近づいたときに、素材に余計な影をつける設定です。
-_ProximityShadowDistance	距離	この設定は、シャドウの適用を開始する距離を制御します。ワールドスペースの単位（cm）で、メッシュがこの距離より近い場合に適用されます。
-_ProximityShadowDistancePower	べき指数	シャドウの適用距離の範囲内で、シャドウを適用する速度を制御する設定です。
-_ProximityShadowFrontColor	シャドウカラー	正面を向いたポリゴンに対するエフェクトの色を設定します。アルファは不透明度を制御します。
-_ProximityShadowBackColor	シャドウカラー（裏）	後ろ向きのポリゴンに対するエフェクトの色を設定します。アルファは不透明度を制御します。
-_UseContactShadows	接触影	スクリーンの深度バッファを通じてレイをマーチングすることで計算される接触影を適用します。これにより、通常のUnityの影よりも鮮明でクリーンな影が得られますが、近接するとパフォーマンスのペナルティが発生する可能性があります。
-_ContactShadowDistance	影の広がり	接触影が到達できる最大サイズを設定します。この値が低いほど、接触影はより鮮明で定義されます。高い値はパフォーマンスに影響を与えます。 
-_ContactShadowSteps	影のステップ	接触影の品質を設定します。ステップ数が多いほど、より多くの計算が行われ、影がより正確になります。ただし、これにはパフォーマンスのコストが伴います。
-_UseInventory	インベントリー	インベントリシステムを有効にします。有効にすると、モデルの UV 座標がメッシュの一部を隠すために使用されます。X単位ごと（Xはインベントリのストライド）に、そのUV座標が割り当てられた頂点が別のアイテムスロットに配置され、トグルを使って有効または無効にすることができます。最初のスロットは、0-1の範囲を含み、常に表示されます。
-_InventoryStride	インベントリーストライド	アイテムスロットの間隔を設定します。デフォルトでは10となっており、頂点のUVが原点から10ユニット離れている場合、それらは別のアイテムスロットとみなされることになります。
-_InventoryUVSec	インベントリUVソース	インベントリシステムで使用されるUVチャンネルを設定します。これは、UVの展開がUVスクエアにきれいに収まらないメッシュがあり、アイテムIDを示すために2つ目のUVチャンネルを専用にできる場合に便利です。
-_Stencil	ステンシルテスト	これを上げると、ステンシルの読み取りまたは書き込みが可能になります。セットされていると、比較するためのカルー（比較がAlways以外の場合）や、バッファに書き込む値（Pass、Fail、ZFailのいずれかがReplaceに設定されている場合）が含まれます。
-_StencilComp	比較	ステンシル値の読み出し時に行う操作です。
-_StencilOp	操作方法	ステンシルテストに合格したときに行う操作です。
-_StencilFail	失敗	ステンシルテストが失敗したときに実行する操作です。 
-_StencilZFail	ZFail	ステンシルテストに合格したものの、ジオメトリがオクルージョンした場合に実行される操作。
-s_gradientEditorButton	グラデーションエディタを開く	現在のマテリアルに焦点を当てたグラデーションエディタウィンドウを開きます。これにより、新しい照明ランプを作成し、その結果をこのマテリアル上でリアルタイムに確認することができます。
-s_helpArea	私たちのリソースをチェックしてください	ボタンにカーソルを合わせると詳細が表示されます。
-s_manualButton	マニュアル	新機能や旧機能、シェーダーの使い方などについては、シェーダーのウィキにあるマニュアルをご覧ください。
-s_socialButton	Discord	サポート、フィードバック、新バージョンのアップデートについては、Secret Shader FacilityのDiscordにご参加ください。
-s_fanboxButton	Fanbox	シェーダーが気に入ったら、Fanboxにアクセスしてください！ FANになって特製サポーターカードをゲットしましょう！
-s_simpleComplexity	メインのオプションのみを表示します。(シンプルモード)	メインのオプションのみを表示します。(シンプルモード)
-s_normalComplexity	ニッチなオプションを隠す。(ノーマルモード)	ニッチなオプションを隠す。(ノーマルモード)
-s_fullComplexity	すべてのオプションを表示します。(コンプレックスモード)	すべてのオプションを表示します。(コンプレックスモード)
-s_mainOptions	主要オプション	シェーダーの基本的な外観を制御する設定で、後続のすべての設定に影響します。
-s_shadingOptions	シェーディングオプション	主なライトシェーディングの計算を制御する設定。ただし、ほとんどの場合、他の設定には影響しません。
-s_renderingOptions	レンダリングオプション	メインシェーディングの後にレンダリングされる追加エフェクトを制御する設定です。これらの設定は、これらのエフェクトに固有のものです。(一部のスペキュラ設定はベースアルベドに影響し、他のエフェクトの表示方法に影響します)。
-s_emissionOptions	発光オプション	マテリアルから放射される加法的な光を制御するための設定。
-s_detailOptions	詳細オプション	基本的なライティングやシェーディングに加え、ディテールをコントロールする設定。
-s_miscOptions	その他のオプション	照明とは関係のない特定の効果をコントロールする設定。
-s_inventoryOptions	シンプルな在庫オプション	入力されたUV座標に基づいて、簡易在庫システムを制御する設定。
-s_advancedOptions	システムオプション	シェーディングの計算方法に大きな影響を与える、システムの特定のパラメータを制御する設定。
-s_bakeButton	素材設定のベーク	マテリアル・プロパティがあらかじめ適用され、フラット化されたシェーダのコピーを作成します。これにより、最終的なビルドでのシェーダーのサイズが小さくなり、パフォーマンスが向上しますが、アンベイクするまでシェーダーのプロパティを変更することはできません。
-s_bakeButtonPlural	{0}の素材設定のベーク	マテリアル・プロパティが事前に適用され、各マテリアルに対してフラット化されたシェーダのコピーを作成します。これにより、最終的なビルドでのシェーダーのサイズが小さくなり、パフォーマンスが向上しますが、アンベイクするまでシェーダーのプロパティを変更することはできません。
-s_bakeButtonRevert	ベークの元に戻す	このマテリアルはベイクされており、マテリアルのプロパティは変更できません。このオプションを選択すると、ベイク処理を元に戻し、このマテリアルを通常バージョンのシェーダーを使用するようにします。
-s_bakeDepreciateWarning	現在のマテリアルはベイクされたシェーダーを使用していますが、これは現在サポートされていません。修正したい場合は、上のシェーダーピッカーを使用して、通常のCrosstone/Lightrampシェーダーに戻してください。	警告
-s_langButton	言語	マテリアルエディターの言語を選択します。
-ge_gradientEditorTitle	現在の素材。	
-ge_resolutionTitle	解決。	
-ge_linearCheckbox	Mon-sRGBとして扱う	
-ge_materialCheckbox	素材セレクタの表示	
-ge_helpCheckbox	ヘルプを表示する	
-ge_basicHelp	一番上のスロットを選択すると、グラデーションエディターが開きます。これを変更して、マテリアルがどのように反応するかをリアルタイムで確認することができます。注意：ライティングランプを保存しないと、古いランプに戻ってしまい、変更した内容が失われてしまいます。保存するには「Save Ramp」を使います。	
-ge_multiRampHelp	ボタンでランプレベルを追加します。頂点の色で設定される「ソフトネス」に基づいてブレンドされます。	
-ge_reorderButton	再注文	並び替える前に、元に戻したくないことを確認してください。
-ge_addButton	グラデーションの追加	
-ge_removeButton	グラデーションの除去	
-ge_rampPropertyField	ランプのプロパティ名	
-ge_rampPropertyError	ランプのプロパティが見つかりません。	
-ge_saveRampButton	セーブランプ	
-ge_noAssetPathError	アセットパスがNullになっています。Clampタイリングモードを設定できません！ \nRampはこの問題を解決しないと正しく表示されません。	
-ge_multiGradientPreset	マルチグラデーション・プリセット	
-ge_saveNewButton	新規保存	
-ge_saveMultiGradient	マルチグラデーションの保存	
+﻿_1st_ShadeColor = 1影色
+
+_1st_ShadeColor_Feather = 1影の境界のぼかし強度
+_1st_ShadeColor_Feather.tooltip = ライトとシェードの間のトランジションの幅を設定します。
+
+_1st_ShadeColor_Step = 1影の境界位置
+_1st_ShadeColor_Step.tooltip = マテリアルに当たる光に応じて、シェーディングがライトからシェーディングへと移行し始めるポイントを設定します。
+
+_1st_ShadeMap = 1影色テクスチャ
+_1st_ShadeMap.tooltip = 最初のグラデーションに使用するシェーディングの色を指定します。カラーフィールドで着色します。
+
+_2nd_ShadeColor = 2影色
+
+_2nd_ShadeColor_Feather = 2影の境界のぼかし強度
+_2nd_ShadeColor_Feather.tooltip = シェーディングとフルシェーディングの間のトランジションの幅を設定します。
+
+_2nd_ShadeColor_Step = 2影の境界位置
+_2nd_ShadeColor_Step.tooltip = マテリアルに当たる光に基づいて、シェーディングがシェーディングから完全なシェーディングへと移行し始めるポイントを設定します。
+
+_2nd_ShadeMap = 2影色テクスチャ
+_2nd_ShadeMap.tooltip = 2つ目のグラデーションに使用するシェーディングの色を指定します。カラーフィールドで着色します。
+
+_alBandA = バンド（A）
+_alBandA.tooltip = エフェクト4を適用するAudioLinkパルスを指定します。
+
+_alBandB = バンド（B）
+_alBandB.tooltip = エフェクト3を適用するAudioLinkパルスを指定します。
+
+_alBandG = バンド（G）
+_alBandG.tooltip = エフェクト2を適用するAudioLinkパルスを指定します。
+
+_alBandR = バンド（R）
+_alBandR.tooltip = エフェクト1を適用するAudioLinkパルスを指定します。
+
+_AlbedoAlphaMode = アルベドアルファモード
+_AlbedoAlphaMode.tooltip = メインテクスチャのアルファチャンネルをどのように使用するかを設定します。
+
+_alColorA = カラー（A）
+_alColorA.tooltip = AudioLinkパルスの4チャンネル目に適用されるエフェクトの色。Detail Emission MaskのAチャンネルで制御される。
+
+_alColorB = カラー（B）
+_alColorB.tooltip = AudioLinkパルスの3チャンネル目に適用されるエフェクトの色。Detail Emission MaskのBチャンネルで制御される。
+
+_alColorG = カラー（G）
+_alColorG.tooltip = AudioLinkパルスの2チャンネル目に適用されるエフェクトの色。Detail Emission MaskのGチャンネルで制御される。
+
+_alColorR = カラー（R）
+_alColorR.tooltip = AudioLinkパルスの1チャンネル目に適用されるエフェクトの色。Detail Emission MaskのRチャンネルで制御される。
+
+_alFallbackBPM = フォールバックBPM
+_alFallbackBPM.tooltip = 予備のパルスに使用するBPMです。
+
+_alModeA = モード（A）
+_alModeA.tooltip = AudioLinkパルスの4チャンネルで作られるエフェクトの種類。
+
+_alModeB = モード（B）
+_alModeB.tooltip = AudioLinkパルスの3チャンネルで作られるエフェクトの種類。
+
+_alModeG = モード（G）
+_alModeG.tooltip = AudioLinkパルスの2チャンネルで作られるエフェクトの種類。
+
+_alModeR = モード（R）
+_alModeR.tooltip = AudioLinkパルスの1チャンネルで作られるエフェクトの種類。
+
+_AlphaFresnelInvert = 反転
+_AlphaFresnelInvert.tooltip = 効果を反転し、視線に対して角度がある（輪郭に近い）部分の不透明度を下げます。
+
+_AlphaFresnelSharpness = 境界の鋭さ
+_AlphaFresnelSharpness.tooltip = 境界の鮮明度を調整します。グラデーションを作るには、幅以下の値に設定してください。
+
+_AlphaFresnelStrength = 不透明度
+_AlphaFresnelStrength.tooltip = 効果の強さ（透明部分の不透明度）を調整します。
+
+_AlphaFresnelThreshold = 適用しきい値
+_AlphaFresnelThreshold.tooltip = 効果を適用する範囲を制限するためのしきい値です。ディテールマップ適用前のメインテクスチャのアルファ値を基準にします。
+
+_AlphaFresnelWidth = リムの幅
+_AlphaFresnelWidth.tooltip = リム（縁）の幅を調整します。値を大きくすると、効果が適用される範囲が広がります。
+
+_AlphaSharp = ディザリングの無効化
+_AlphaSharp.tooltip = 透過性のカットオフを、ソフトなディザではなく、ハードなエッジとして扱います。
+
+_alTimeRangeA = タイムレンジ（A）
+_alTimeRangeA.tooltip = AudioLinkパルスの大きさです。オーディオリンクはテクスチャのグラデーションに沿って適用されます。0では、パルスは1つのフラッシュとして表示されます。1にすると、パルスはAudioLinkの履歴全体を表示します。
+
+_alTimeRangeB = タイムレンジ（B）
+_alTimeRangeB.tooltip = AudioLinkパルスの大きさです。オーディオリンクはテクスチャのグラデーションに沿って適用されます。0では、パルスは1つのフラッシュとして表示されます。1にすると、パルスはAudioLinkの履歴全体を表示します。
+
+_alTimeRangeG = タイムレンジ（G）
+_alTimeRangeG.tooltip = AudioLinkパルスの大きさです。オーディオリンクはテクスチャのグラデーションに沿って適用されます。0では、パルスは1つのフラッシュとして表示されます。1にすると、パルスはAudioLinkの履歴全体を表示します。
+
+_alTimeRangeR = タイムレンジ（R）
+_alTimeRangeR.tooltip = AudioLinkパルスの大きさです。オーディオリンクはテクスチャのグラデーションに沿って適用されます。0では、パルスは1つのフラッシュとして表示されます。1にすると、パルスはAudioLinkの履歴全体を表示します。
+
+_alUseFallback = フォールバックの有効化
+_alUseFallback.tooltip = AudioLinkが搭載されていないワールドでは、コンスタントパルスエフェクトが表示されます。
+
+_AnimationSpeed = アニメーションの速度
+_AnimationSpeed.tooltip = アニメーションの速度は、Unityの時間パラメータに由来しており、1.0は20秒で1サイクルとなります。
+
+_Anisotropy = 異方性
+_Anisotropy.tooltip = 非等方性鏡面ハイライトの方向。
+
+_AudiolinkIntensity = Intensity
+_AudiolinkIntensity.tooltip = AudioLinkパルスの明るさを設定します。
+
+_AudiolinkMaskMap = マスクマップ
+_AudiolinkMaskMap.tooltip = AudioLinkのパルスに適用されるテクスチャで、スイープパラメータとは別にマスキングまたはカラーリングを行うことができます。
+
+_AudiolinkSweepMap = スイープマップ
+_AudiolinkSweepMap.tooltip = AudioLinkのパルスの形状を定義するテクスチャです。各ピクセルの色と強さで、それぞれチャンネルと時間オフセットが決まります。
+
+_BumpMap = ノーマルマップ
+_BumpMap.tooltip = サーフェスの法線の方向を調整する法線マップ（RGB）。
+
+_CelSpecularSoftness = 柔らかさ
+_CelSpecularSoftness.tooltip = セルのスペキュラハイライトのフォールオフの柔らかさを設定します。
+
+_CelSpecularSteps = ステップ
+_CelSpecularSteps.tooltip = セルのスペキュラハイライトのステップ数を設定します。
+
+_ClippingMask = クリッピングマスク
+_ClippingMask.tooltip = 他の透明度ソースの上に適用される、透明度のための追加テクスチャ。
+
+_ColorMask = マスクテクスチャ
+_ColorMask.tooltip = マスク素材のカラーティンティング（G）、リムライト（B）、ディテールマップ（A）。
+
+_Columns = コラム
+_Columns.tooltip = 1つの横列に存在するフレームの数を設定します。
+
+_ContactShadowDistance = 影の広がり
+_ContactShadowDistance.tooltip = 接触影が到達できる最大サイズを設定します。この値が低いほど、接触影はより鮮明で定義されます。高い値はパフォーマンスに影響を与えます。
+
+_ContactShadowSteps = 影のステップ
+_ContactShadowSteps.tooltip = 接触影の品質を設定します。ステップ数が多いほど、より多くの計算が行われ、影がより正確になります。ただし、これにはパフォーマンスのコストが伴います。
+
+_Crosstone2ndSeparation = 2ndトーンブレンドモード
+_Crosstone2ndSeparation.tooltip = 2つ目のトーンをトーンテクスチャにブレンドする方法を指定します。Combinedは一方を他方に合成し、Seperateは合成しません。
+
+_CrosstoneToneSeparation = 1stトーンブレンドモード
+_CrosstoneToneSeparation.tooltip = アルベドテクスチャにトーンをブレンドする方法を指定します。Combinedは一方を他方に統合し、Seperateは統合しません。
+
+_CustomFresnelColor = エミッシブリム
+_CustomFresnelColor.tooltip = RGBは、加算リムライトの色を設定します。アルファは、エフェクトのパワー／幅をコントロールします。
+
+_Cutoff = カットアウトしきい値
+_Cutoff.tooltip = 透過性カットオフのしきい値。カットオフ値以下の値は完全に透明になります。
+
+_DetailAlbedoMask = 詳細マスク
+_DetailAlbedoMask.tooltip = 詳細マップを適用するためのマスクです。
+
+_DetailEmissionMap = エミッション詳細マスク
+_DetailEmissionMap.tooltip = メインのエミッシ ョンマップに乗算される追加のテクスチャです。これにより、エミッシブテクスチャーに追加のディテールパターンを加えることができます。
+
+_DetailEmissionMap2nd = エミッション詳細マスク2
+_DetailEmissionMap2nd.tooltip = メインの2番目のエミッションマップに乗算される追加のテクスチャ。これにより、エミッシブテクスチャに追加のディテールパターンを追加できます。
+
+_DetailEmissionUVSec = UVソース
+_DetailEmissionUVSec.tooltip = ディテールの発光にどのUVチャンネルを使用するかを選択します。
+
+_DetailMap1 = 詳細マップ1
+_DetailMap1.tooltip = 最初の詳細マップです。詳細マスクのRチャンネルによって制御されます。ブレンドモードは、詳細がマテリアルにどのように適用されるかを制御します。
+
+_DetailMap1Blend = 詳細マップ1ブレンドモード
+_DetailMap1Blend.tooltip = 最初の詳細マップを適用するために使用されるブレンドモードを選択します。
+
+_DetailMap1Strength = 詳細マップ1パワー
+_DetailMap1Strength.tooltip = 最初の詳細マップがマテリアルにどの程度強く適用されるかを調整します。
+
+_DetailMap1Type = 詳細マップ1のタイプ
+_DetailMap1Type.tooltip = 最初の詳細マップのタイプ（アルベド、ノーマル、スペキュラ）を定義します。
+
+_DetailMap1UV = 詳細マップ1 UV
+_DetailMap1UV.tooltip = 最初の詳細マップに使用するUVチャンネルを選択します。
+
+_DetailMap2 = 詳細マップ2
+_DetailMap2.tooltip = 2番目の詳細マップです。詳細マスクのRチャンネルによって制御されます。ブレンドモードは、詳細がマテリアルにどのように適用されるかを制御します。
+
+_DetailMap2Blend = 詳細マップ2ブレンドモード
+_DetailMap2Blend.tooltip = 2番目の詳細マップを適用するために使用されるブレンドモードを選択します。
+
+_DetailMap2Strength = 詳細マップ2パワー
+_DetailMap2Strength.tooltip = 2番目の詳細マップがマテリアルにどの程度強く適用されるかを調整します。
+
+_DetailMap2Type = 詳細マップ2のタイプ
+_DetailMap2Type.tooltip = 2番目の詳細マップのタイプ（アルベド、ノーマル、スペキュラ）を定義します。
+
+_DetailMap2UV = 詳細マップ2 UV
+_DetailMap2UV.tooltip = 2番目の詳細マップに使用するUVチャンネルを選択します。
+
+_DetailMap3 = 詳細マップ3
+_DetailMap3.tooltip = 3番目の詳細マップです。詳細マスクのRチャンネルによって制御されます。ブレンドモードは、詳細がマテリアルにどのように適用されるかを制御します。
+
+_DetailMap3Blend = 詳細マップ3ブレンドモード
+_DetailMap3Blend.tooltip = 3番目の詳細マップを適用するために使用されるブレンドモードを選択します。
+
+_DetailMap3Strength = 詳細マップ3パワー
+_DetailMap3Strength.tooltip = 3番目の詳細マップがマテリアルにどの程度強く適用されるかを調整します。
+
+_DetailMap3Type = 詳細マップ3のタイプ
+_DetailMap3Type.tooltip = 3番目の詳細マップのタイプ（アルベド、ノーマル、スペキュラ）を定義します。
+
+_DetailMap3UV = 詳細マップ3 UV
+_DetailMap3UV.tooltip = 3番目の詳細マップに使用するUVチャンネルを選択します。
+
+_DetailMap4 = 詳細マップ4
+_DetailMap4.tooltip = 4番目の詳細マップです。詳細マスクのRチャンネルによって制御されます。ブレンドモードは、詳細がマテリアルにどのように適用されるかを制御します。
+
+_DetailMap4Blend = 詳細マップ4ブレンドモード
+_DetailMap4Blend.tooltip = 4番目の詳細マップを適用するために使用されるブレンドモードを選択します。
+
+_DetailMap4Strength = 詳細マップ4パワー
+_DetailMap4Strength.tooltip = 4番目の詳細マップがマテリアルにどの程度強く適用されるかを調整します。
+
+_DetailMap4Type = 詳細マップ4のタイプ
+_DetailMap4Type.tooltip = 4番目の詳細マップのタイプ（アルベド、ノーマル、スペキュラ）を定義します。
+
+_DetailMap4UV = 詳細マップ4 UV
+_DetailMap4UV.tooltip = 4番目の詳細マップに使用するUVチャンネルを選択します。
+
+_DiffuseGeomShadowFactor = 幾何陰・遮蔽
+_DiffuseGeomShadowFactor.tooltip = 幾何学的シャドウイング機能のパワーをコントロールします。この機能は、拡散光が斜めになったときのフォールオフを変えます。よりリアルになりますが、セルシェーディングには望ましくない場合もあります。
+
+_EmissionDetailParams = エミッション詳細パラメータ
+_EmissionDetailParams.tooltip = XY: スクロール速度、ZW: 位相
+
+_EmissionDetailParams2nd = エミッション詳細パラメータ2
+_EmissionDetailParams2nd.tooltip = XY: スクロール速度、ZW: 位相
+
+_EmissionMap = エミッションマップ
+_EmissionMap.tooltip = 照明の影響を受けない発光を制御する「エミッションマップ（RGB）」。
+
+_EmissionMap2nd = エミッションマップ2
+_EmissionMap2nd.tooltip = 照明の影響を受けない発光を制御する2番目のエミッションマップ（RGB）。
+
+_EmissionRimPower = エミッションリムパワー
+_EmissionRimPower.tooltip = ゼロより大きい場合、発光に効果を適用して斜めの角度で暗くします。ゼロ以下の場合、発光は斜めの角度でのみ見えます。これは蛍光効果に使用できます。
+
+_EmissionRimPower2nd = エミッションリムパワー2
+_EmissionRimPower2nd.tooltip = ゼロより大きい場合、2番目の発光に効果を適用して斜めの角度で暗くします。ゼロ以下の場合、発光は斜めの角度でのみ見えます。これは蛍光効果に使用できます。
+
+_EmissiveLightSenseEnd = グロー・エンド
+_EmissiveLightSenseEnd.tooltip = グローが終了する閾値です。  例えば、これを0に設定すると、光がないときにグローが最大の強度で表示され、これを上げると、光があっても最大のグローがトリガーされるようになります。
+
+_EmissiveLightSenseStart = グロー・スタート
+_EmissiveLightSenseStart.tooltip = 輝きが始まるしきい値です。例えば、これを1に設定すると、マテリアルに1単位以上の光が当たったときにグローを隠すことができます。
+
+_FrameNumber = フレーム番号
+_FrameNumber.tooltip = アニメーションの再生を開始するフレーム番号を設定します。
+
+_FresnelLightMask = 光の方向 マスクの強さ
+_FresnelLightMask.tooltip = これを高くすると、リムと逆リムの間の部分でリムライトが見えなくなります。
+
+_FresnelStrength = リムの柔らかさ
+_FresnelStrength.tooltip = リムエッジのシャープネスを設定します。
+
+_FresnelStrengthInv = 逆リムソフトネス
+_FresnelStrengthInv.tooltip = インバースリムエッジのシャープネスを設定します。
+
+_FresnelTint = リムティント
+_FresnelTint.tooltip = リム照明の色を調色します。明るくしたい場合は、明るさを1以上の値に変更してください。
+
+_FresnelTintInv = インバースリムティント
+_FresnelTintInv.tooltip = インバースリムライティングの色を調色します。明るくしたい場合は、明るさを1以上の値に変更してください。
+
+_FresnelWidth = リム幅
+_FresnelWidth.tooltip = リム照明の幅を設定します。
+
+_FresnelWidthInv = 逆転のリム幅
+_FresnelWidthInv.tooltip = インバースリムライティングの幅を設定します。
+
+_FurAO = オクルージョン
+_FurAO.tooltip = ファーに適用されるシャドウの暗さを定義します。0の場合、ファーのシェーディングは変更されません。値が大きくなるにつれて、ファーの形状に基づいて、より深い部分のファーにシャドウが適用されます。
+
+_FurGravity = 重力
+_FurGravity.tooltip = 毛皮に対する重力の影響を設定します。正の値にすると毛皮が垂れ下がり、負の値にすると直立します。
+
+_FurLayerCount = レイヤーカウント
+_FurLayerCount.tooltip = 毛皮のレイヤー数を設定します。レイヤーが多いほど毛皮は密になりますが、パフォーマンスに影響を及ぼす可能性があります。
+
+_FurLength = 長さ
+_FurLength.tooltip = 毛皮の長さを設定します。値が高いほど毛皮は長くなりますが、毛皮のシェルがより目立つようになります。
+
+_FurMask = ファーマスク
+_FurMask.tooltip = モデル上で毛皮が表示される場所を決定します。白いエリアには毛皮があり、黒いエリアにはありません。
+
+_FurMode = ファーモード
+_FurMode.tooltip = モデルに毛皮を追加します。アウトラインと一緒に使用することはできません。
+
+_FurNoise = ファーノイズテクスチャ
+_FurNoise.tooltip = 毛皮のパターンの形状と分布を毛皮のシェルに沿って設定します。ふわふわしたノイズパターンを使用することをお勧めします。
+
+_FurRandomization = ランダム化
+_FurRandomization.tooltip = 毛皮のメッシュシェルにランダム性を追加し、より自然に見えるようにします。
+
+_FurThickness = 厚さ
+_FurThickness.tooltip = 毛皮の髪の毛の厚さの分布を設定します。値が高いほど、毛皮は薄く見え、基部に集中します。
+
+_GlossyReflections = リフレクションズ
+_GlossyReflections.tooltip = 光沢のある反射をトグルします。Specularが有効な場合のみ適用されます。
+
+_GradientEditorButton = グラデーションエディタを開く
+_GradientEditorButton.tooltip = 現在のマテリアルに焦点を当てたグラデーションエディタウィンドウを開きます。これにより、新しい照明ランプを作成し、その結果をこのマテリアル上でリアルタイムに確認することができます。
+
+_HatchingAlbedoMul = アルベド乗算レベル
+_HatchingAlbedoMul.tooltip = ハッチング効果とアルベドテクスチャのブレンドを制御します。値が高いほど、ハッチングパターンがマテリアルのベースカラーに与える影響が強くなります。
+
+_HatchingMovementFPS = ハッチング移動FPS
+_HatchingMovementFPS.tooltip = ハッチング効果をアニメーション化するフレームレートを設定します。値が高いほどハッチングパターンの移動が速くなります。
+
+_HatchingRimAdd = リムライト加算レベル
+_HatchingRimAdd.tooltip = リムライトのある部分でのハッチング効果の強度を調整します。値が高いほどこれらの領域でハッチングが目立ちます。
+
+_HatchingScale = ハッチングスケール
+_HatchingScale.tooltip = ハッチングテクスチャのスケールを調整します。値が高いほどハッチングパターンが大きくなり、値が低いほど細かくなります。
+
+_HatchingShadingAdd = シェーディング加算レベル
+_HatchingShadingAdd.tooltip = 影のある部分でのハッチング効果の加算強度を制御します。値が高いほどハッチングが目立ちます。
+
+_HatchingShadingMul = シェーディング乗算レベル
+_HatchingShadingMul.tooltip = 影のある部分でのハッチング効果の乗算強度を制御します。値が高いほどハッチングパターンが暗くなります。
+
+_HatchingTex = ハッチングマップ
+_HatchingTex.tooltip = ハッチング効果に使用されるテクスチャを定義します。このテクスチャのパターンがハッチングの外観を決定します。
+
+_IndirectLightingBoost = 間接照明ブースト
+_IndirectLightingBoost.tooltip = 影の照明と直接光の照明をブレンドして、より明るくします。
+
+_IndirectShadingType = 遮光タイプ
+_IndirectShadingType.tooltip = 間接照明のシェーディングに使用する方法を設定します。指向性は、単一の方向を偽の光源として選ぶので、光は常にシャープになります。ダイナミック」は、全体のシェーディングをベースにして、よりぼやけた正確なライティングを可能にします。
+
+_InventoryStride = インベントリーストライド
+_InventoryStride.tooltip = アイテムスロットの間隔を設定します。デフォルトでは10となっており、頂点のUVが原点から10ユニット離れている場合、それらは別のアイテムスロットとみなされることになります。
+
+_InventoryUVSec = インベントリUVソース
+_InventoryUVSec.tooltip = インベントリシステムで使用されるUVチャンネルを設定します。これは、UVの展開がUVスクエアにきれいに収まらないメッシュがあり、アイテムIDを示すために2つ目のUVチャンネルを専用にできる場合に便利です。
+
+_LightAddAnimated = ランタイムライトアップ
+_LightAddAnimated.tooltip = 出力値を変更します。この値が高いほど、ベースライン輝度の量が大きくなり、マテリアルに適用されます。通常の使用にはお勧めしません。
+
+_LightClampAnimated = ランタイムライトクランプ
+_LightClampAnimated.tooltip = 照明の出力値を制限します。有効にすると、適用される全照明が制限されます。通常の使用には適していません。
+
+_LightingCalculationType = 照明計算タイプ
+_LightingCalculationType.tooltip = 直接/間接照明の計算方法を設定します。
+
+_LightMultiplyAnimated = ランタイムライト調整
+_LightMultiplyAnimated.tooltip = 出力値を変更します。この値が低いほど、素材で反射した光は暗くなります。
+
+_LightRampType = 照明ランプの種類
+_LightRampType.tooltip = ライトランプを左右ではなく、下から上に向けて使用する場合や、全く使用しない場合などです。
+
+_LightSkew = ライトスキュー
+_LightSkew.tooltip = 受け取った照明の方向を歪めます。デフォルトは(1, 0.1, 1, 0)で、これはX軸とZ軸が通常の強さに対応し、Y軸の効果を減少させます。これにより、セルシェーディングされたモデルで奇妙に見える、上や下からのきついライトを防ぐことができます。しかし、これはあくまでも初期設定です...。
+
+_LightWrappingCompensationFactor = 減光
+_LightWrappingCompensationFactor.tooltip = セルシェーディング特有の光の回り込みに対する補正係数。セルシェーディングされたモデルの場合、これは0.75程度にしてください。リアルなライティングでは、これを1に設定して無効にします。
+
+_MainTex = メイン テクスチャ
+_MainTex.tooltip = メインカラーテクスチャ（RGBA）。シェーダの基本的な外観を制御する。カラーチャンネルとアルファチャンネルが使われています。
+
+_MainTexBackface = バックフェイステクスチャ
+_MainTexBackface.tooltip = バックフェイス用メインカラーテクスチャ（RGBA）。メインカラーテクスチャと同じですが、バックフェイス用のみです。
+
+_ManualButton = このシェーダーにはマニュアルがあります。ぜひチェックしてみてください。
+_ManualButton.tooltip = 新機能や旧機能、シェーダーの使い方などについては、シェーダーのウィキにあるマニュアルをご覧ください。
+
+_Matcap1 = マットキャップ1
+_Matcap1.tooltip = マットキャップ（RGB）。マットキャップマスクのRチャンネルで制御されます。ブレンドモードは、マットキャップをマテリアルにどのように適用するかを制御します。
+
+_Matcap1Strength = 強度
+_Matcap1Strength.tooltip = マットキャップを素材にどれだけ強く適用するかを調整します。
+
+_Matcap2 = マットキャップ2
+_Matcap2.tooltip = マットキャップ（RGB）。マットキャップマスクのGチャンネルで制御されます。ブレンドモードは、マットキャップをマテリアルに適用する方法を制御します。
+
+_Matcap2Strength = 強度
+_Matcap2Strength.tooltip = マットキャップを素材にどれだけ強く適用するかを調整します。
+
+_Matcap3 = マットキャップ3
+_Matcap3.tooltip = マットキャップ（RGB）。マットキャップマスクのBチャンネルで制御されます。ブレンドモードは、マットキャップをマテリアルにどのように適用するかを制御します。
+
+_Matcap3Strength = 強度
+_Matcap3Strength.tooltip = マットキャップを素材にどれだけ強く適用するかを調整します。
+
+_Matcap4 = マットキャップ4
+_Matcap4.tooltip = マットキャップ（RGB）。マットキャップマスクのAチャンネルで制御されます。ブレンドモードは、マットキャップをマテリアルにどのように適用するかを制御します。
+
+_Matcap4Strength = 強度
+_Matcap4Strength.tooltip = マットキャップを素材にどれだけ強く適用するかを調整します。
+
+_MatcapMask = マットキャップマスク
+_MatcapMask.tooltip = 異なるカラーチャンネルの強度によって、マットキャップの強度を決定します。
+
+_MatcapStrength = マットキャップの強さ
+_MatcapStrength.tooltip = マットキャップの威力。高い方が強い
+
+_MatcapTitle = マットキャップスタイル
+_MatcapTitle.tooltip = マテリアル・キャプチャー・テクスチャーの使用を可能にします。
+
+_OutlineFarDistance = 遠距離
+_OutlineFarDistance.tooltip = アウトラインが成長を停止するカメラ距離を設定します。カメラが離れると、アウトラインのサイズが調整され、より自然に見えます。このプロパティは、遠くでの成長度合いを制御します。
+
+_OutlineMask = アウトラインマスク
+_OutlineMask.tooltip = アウトラインの幅を調整するための追加テクスチャ。
+
+_OutlineMode = アウトラインモード
+_OutlineMode.tooltip = 指定されたブレンドモードでマテリアルにアウトラインを追加します。
+
+_OutlineNearDistance = 近距離
+_OutlineNearDistance.tooltip = アウトラインが縮小し始めるカメラ距離を設定します。カメラが近づくと、アウトラインのサイズが調整され、より自然に見えます。このプロパティは、近くでの縮小度合いを制御します。
+
+_OutlineZPush = 輪郭の深さのオフセット
+_OutlineZPush.tooltip = アウトラインをモデルの後ろに押しやり、マテリアルの重なった部分のアウトラインを隠すための深度オフセットを設定します。
+
+_outline_color = アウトラインカラー
+_outline_color.tooltip = アウトラインに使用する色を設定します。ティントモードでは、これをテクスチャに掛け合わせます。
+
+_outline_width = 輪郭幅
+_outline_width.tooltip = 輪郭線の幅をcm単位で設定します。
+
+_PixelSampleMode = ピクセルアートモード
+_PixelSampleMode.tooltip = メインテクスチャをピクセルアートとして扱う。レトロなアバターに最適です。注：この機能を使用する際は、ミップマップが「有効」になっており、テクスチャのサンプリングが「トリリニア」に設定されていることを確認してください。
+
+_ProximityShadowBackColor = シャドウカラー（裏）
+_ProximityShadowBackColor.tooltip = 後ろ向きのポリゴンに対するエフェクトの色を設定します。アルファは不透明度を制御します。
+
+_ProximityShadowDistance = 距離
+_ProximityShadowDistance.tooltip = この設定は、シャドウの適用を開始する距離を制御します。ワールドスペースの単位（cm）で、メッシュがこの距離より近い場合に適用されます。
+
+_ProximityShadowDistancePower = べき指数
+_ProximityShadowDistancePower.tooltip = シャドウの適用距離の範囲内で、シャドウを適用する速度を制御する設定です。
+
+_ProximityShadowFrontColor = シャドウカラー
+_ProximityShadowFrontColor.tooltip = 正面を向いたポリゴンに対するエフェクトの色を設定します。アルファは不透明度を制御します。
+
+_Ramp = 照明ランプ
+_Ramp.tooltip = ライティングのフォールオフを指定します。言い換えれば、光がモデルにどのように影響するか、光と影の間の移行がどれだけソフトかシャープかをコントロールします。注意：Lighting Rampが設定されていない場合、マテリアルにはシェーディングがありません。
+
+_Rows = ロー
+_Rows.tooltip = 垂直方向の列に存在するフレームの数を設定します。
+
+_SDFFrontVector = SDF 正面ベクトル
+_SDFFrontVector.tooltip = ヘッドメッシュに対する相対的な、前方方向のベクトルです。
+
+_SDFMode = SDFモード
+_SDFMode.tooltip = シェーディング調整をSDFシャドウテクスチャとして扱うかどうか。SDFシャドウテクスチャは、サーフェスのライティング計算を置き換える特殊なシャドウマスクです。SDFシャドウが正しく機能するためには、メッシュデータが正しく方向付けられている必要があります。設定メニュー用の特定フォーマットの文字列です。
+
+_SDFRightVector = SDF 右ベクトル
+_SDFRightVector.tooltip = ヘッドメッシュに対する相対的な、右方向のベクトルです。
+
+_SDFSmoothness = SDF スムーズさ
+_SDFSmoothness.tooltip = SDFの滑らかさを調整します。サーフェス上で影が広がる幅を設定します。
+
+_ShadingGradeMap = シェーディング調整
+_ShadingGradeMap.tooltip = 暗くなった部分に追加のシェーディングを加え、オクルージョンとして機能します。スライダはシェーディング調整の中間点を変更します。
+
+_ShadingGradeMapLevel = シェーディング調整レベル
+_ShadingGradeMapLevel.tooltip = シェーディング調整の中間点を変更します。
+
+_Shadow = シャドウマスク ライトニング
+_Shadow.tooltip = シャドウマスクのパワーを設定します。
+
+_ShadowBorderColor = シェーディングトーン ボーダー
+_ShadowBorderColor.tooltip = シェーディングトーン間の交差部分の色を変更します。
+
+_ShadowBorderRange = 境界位置
+_ShadowBorderRange.tooltip = カラーシフトの境界位置を設定します。
+
+_ShadowCrushAnimated = ランタイムシャドウクラッシュ
+_ShadowCrushAnimated.tooltip = 環境光を修正します。この値が低いほど、シャドウ領域のライティングが暗くなります。通常の使用は推奨されません。
+
+_ShadowLift = シャドーリフト
+_ShadowLift.tooltip = これを増やすと、受け取った照明をワープさせて、より多くのものが照らされるようになります。
+
+_ShadowMask = シャドウマスク
+_ShadowMask.tooltip = オクルージョンモードでは、影の影響を受ける領域を指定します。RGBは暗く、アルファは明るくなります。トーンモードでは、使用するシェーディングの色を指定します。RGBが濃く、アルファが薄くなります。
+
+_ShadowMaskType = シャドウ・マスク・スタイル
+_ShadowMaskType.tooltip = シャドウマスクの使用方法を変更します。
+
+_ShiftHue = 色相シフト
+_ShiftHue.tooltip = メインテクスチャとトーンの色相をシフトします。値は色相をシフトする度合いです。
+
+_ShiftSaturation = 彩度シフト
+_ShiftSaturation.tooltip = メインテクスチャとトーンの彩度をシフトし、 それぞれのカラーのバイブランスを鈍らせたり、 高めたりします。
+
+_ShiftValue = 明るさシフト
+_ShiftValue.tooltip = メインテクスチャとトーンの明るさをシフトします。
+
+_Smoothness = 滑らかさ
+_Smoothness.tooltip = マテリアルの滑らかさを設定します。スペキュラマップのアルファチャンネルが使用され、このスライダはその乗数になります。
+
+_SpecGlossMap = スペキュラマップ
+_SpecGlossMap.tooltip = スペキュラマップ（RGBA、RGB：スペキュラ／メタルネス、A：スムースネス
+
+_SpecIridescenceRamp = 虹色ランプ
+_SpecIridescenceRamp.tooltip = 視角に基づいて虹色効果の色の変化を制御します。
+
+_SpecularGlintDensity = グリントの密度
+_SpecularGlintDensity.tooltip = グリント粒子の密度を設定します。値を小さくすると疎らな表現になり、値を大きくするとメタリック塗装のような高密度な質感になります。
+
+_SpecularGlintSize = グリントサイズ
+_SpecularGlintSize.tooltip = 個々の煌めきの鋭さを設定します。値を小さくすると微細な輝きになり、値を大きくすると煌めきが拡散した表現になります。
+
+_SpecularHighlights = スペキュラハイライト
+_SpecularHighlights.tooltip = スペキュラハイライトを切り替えます。Specularが有効な場合にのみ適用されます。
+
+_SpecularType = スペキュラースタイル
+_SpecularType.tooltip = スペキュラに使用するシェーディングモードを設定します。
+
+_SSSAmbient = 散乱環境
+_SSSAmbient.tooltip = 散乱光から受ける環境光の強度をコントロールします。
+
+_SSSCol = 色を散らす
+_SSSCol.tooltip = サブサーフェイス・スキャッタリング効果に使用される色です。
+
+_SSSDist = 散乱歪み
+_SSSDist.tooltip = 光が素材を通過する際に受ける歪みの度合いを調整します。
+
+_SSSIntensity = 散乱強度
+_SSSIntensity.tooltip = 表面下の散乱効果の強さ。
+
+_SSSPow = 散乱パワー
+_SSSPow.tooltip = 散乱効果のパワーをコントロールします。
+
+_Stencil = ステンシルテスト
+_Stencil.tooltip = これを上げると、ステンシルの読み取りまたは書き込みが可能になります。セットされていると、比較するためのカルー（比較がAlways以外の場合）や、バッファに書き込む値（Pass、Fail、ZFailのいずれかがReplaceに設定されている場合）が含まれます。
+
+_StencilComp = 比較
+_StencilComp.tooltip = ステンシル値の読み出し時に行う操作です。
+
+_StencilFail = 失敗
+_StencilFail.tooltip = ステンシルテストが失敗したときに実行する操作です。
+
+_StencilOp = 操作方法
+_StencilOp.tooltip = ステンシルテストに合格したときに行う操作です。
+
+_StencilZFail = ZFail
+_StencilZFail.tooltip = ステンシルテストに合格したものの、ジオメトリがオクルージョンした場合に実行される操作。
+
+_ThicknessMap = 厚みマップ
+_ThicknessMap.tooltip = シックネスマップ(RGB)
+
+_ThicknessMapInvert = 厚みの反転
+_ThicknessMapInvert.tooltip = 厚みに使われているマップを、1で効果が出るスケールから、0で効果が出るスケールに反転させます。
+
+_ThicknessMapPower = パワー
+_ThicknessMapPower.tooltip = 厚みマップの強度を上げます。
+
+_TotalFrames = 合計フレーム数
+_TotalFrames.tooltip = アニメーションで再生されるフレームの最大数。
+
+_UseAdvancedEmission = アドバンスト・エミッション
+_UseAdvancedEmission.tooltip = エミッションマップに追加エフェクトをかけます。
+
+_UseAlphaFresnel = リム透過
+_UseAlphaFresnel.tooltip = 視線に対して正面を向いている部分の透明度を上げ、アルファフレネル効果を有効にします。タイツなど、厚みのある透ける素材の表現に有用です。
+
+_UseAnimation = アニメーション
+_UseAnimation.tooltip = スプライトシートシステムを有効にします。シェーダーに提供されたテクスチャをセクションに分けて、時間の経過とともに別々に表示します。
+
+_UseBackfaceTexture = バックフェイステクスチャ
+_UseBackfaceTexture.tooltip = マテリアルのバックフェイスには、別のアルベドテクスチャを使用します。
+
+_UseContactShadows = 接触影
+_UseContactShadows.tooltip = スクリーンの深度バッファを通じてレイをマーチングすることで計算される接触影を適用します。これにより、通常のUnityの影よりも鮮明でクリーンな影が得られますが、近接するとパフォーマンスのペナルティが発生する可能性があります。
+
+_UseDetailMaps = 詳細マップ
+_UseDetailMaps.tooltip = 詳細マップの使用を切り替えます。
+
+_UseEmissiveAudiolink = AudioLinkエミッション
+_UseEmissiveAudiolink.tooltip = AudioLink効果を有効にし、利用可能な場 合は音楽に合わせてパルスを出力します。
+
+_UseEmissiveLightSense = 光感度
+_UseEmissiveLightSense.tooltip = 発光の光感度を有効にすると、入射光に応じて発光の強度が変化します。これを利用して、暗闇でのみ光る発光パターンや、光の強さに応じて変化する発光パターンを作ることができます。
+
+_UseEnergyConservation = 省エネルギーの保存
+_UseEnergyConservation.tooltip = スペキュラ領域のディフューズの強度を下げ、リアルにエネルギーを節約します。
+
+_UseFresnel = リムライトスタイル
+_UseFresnel.tooltip = カスタマイズ可能なリム・ライティング効果を適用します。
+
+_UseFresnelLightMask = ライトディレクションマスクの使用
+_UseFresnelLightMask.tooltip = 光の方向性を利用して、リムライトを2つに分割。リムライトの裏側を個別に調整できます。
+
+_UseHatching = ハッチング
+_UseHatching.tooltip = マテリアルにスタイライズされたクロスハッチパターンを適用するハッチング効果を切り替えます。
+
+_UseInventory = インベントリー
+_UseInventory.tooltip = インベントリシステムを有効にします。有効にすると、モデルの UV 座標がメッシュの一部を隠すために使用されます。X単位ごと（Xはインベントリのストライド）に、そのUV座標が割り当てられた頂点が別のアイテムスロットに配置され、トグルを使って有効または無効にすることができます。最初のスロットは、0-1の範囲を含み、常に表示されます。
+
+_UseIridescenceRamp = 虹色スペキュラ
+_UseIridescenceRamp.tooltip = スペキュラ反射に虹色効果を適用します。
+
+_UseMatcap = マットキャップスタイル
+_UseMatcap.tooltip = マテリアル・キャプチャー・テクスチャーの使用を可能にします。
+
+_UseMetallic = メタルネスとして使用
+_UseMetallic.tooltip = メタルネスマップは、サーフェスのメタルネスを含むグレースケールのマップです。これは、表面の鏡面部分を含むRGB（カラー）マップであるスペキュラマップとは異なります。この設定を有効にすると、スペキュラマップとアルベドを掛け合わせて、最終的なスペキュラカラーを導き出します。
+
+_UseProximityShadow = プロキシミティシャドウ
+_UseProximityShadow.tooltip = カメラが一定距離以上近づいたときに、素材に余計な影をつける設定です。
+
+_UseSubsurfaceScattering = サブサーフェイス・スキャッタリング
+_UseSubsurfaceScattering.tooltip = 布や肌に有効な光の散乱効果が得られます。
+
+_UseVanishing = バニシング
+_UseVanishing.tooltip = バニシング効果を有効にすると、設定した開始点と終了点でマテリアルがフェードアウトします。不透明なブレンドモードでは効果がありません。
+
+_VanishingEnd = エンドバニシング
+_VanishingEnd.tooltip = バニシング効果の外枠。この値が高いほど、素材が消え始める範囲が広くなります。End」が「Start」よりも高い場合、素材は近くでは見えなくなります。
+
+_VanishingStart = バニシング開始
+_VanishingStart.tooltip = バニシング効果の内側の境界線です。この値が高いほど、マテリアルが消失し終わるまでの距離が長くなります。StartがEndよりも高い場合、マテリアルは遠くから見えなくなります。
+
+_VertexColorAType = Alpha Type
+_VertexColorAType.tooltip = バーテックスアルファの使用方法を設定します。
+
+_VertexColorBType = Blue Type
+_VertexColorBType.tooltip = このバーテックスの赤チャンネルの使用方法を設定します。
+
+_VertexColorGType = Green Type
+_VertexColorGType.tooltip = このバーテックスの赤チャンネルの使用方法を設定します。
+
+_VertexColorRType = Red Type
+_VertexColorRType.tooltip = このバーテックスの赤チャンネルの使用方法を設定します。
+
+_VertexColorType = バーテックス・カラー・タイプ
+_VertexColorType.tooltip = 頂点の色をどのように使用するかを設定します。Outline カラー/幅はアウトラインにのみ影響します。カスタムデータを使用すると、各チャンネルの用途を指定できます。
+
+ge_addButton = グラデーションの追加
+
+ge_basicHelp = 一番上のスロットを選択すると、グラデーションエディターが開きます。これを変更して、マテリアルがどのように反応するかをリアルタイムで確認することができます。注意：ライティングランプを保存しないと、古いランプに戻ってしまい、変更した内容が失われてしまいます。保存するには「Save Ramp」を使います。
+
+ge_gradientEditorTitle = 現在の素材。
+
+ge_helpCheckbox = ヘルプを表示する
+
+ge_linearCheckbox = Non-sRGBとして扱う
+
+ge_materialCheckbox = 素材セレクタの表示
+
+ge_multiGradientPreset = マルチグラデーション・プリセット
+
+ge_multiRampHelp = ボタンでランプレベルを追加します。頂点の色で設定される「ソフトネス」に基づいてブレンドされます。
+
+ge_noAssetPathError = アセットパスがNullになっています。Clampタイリングモードを設定できません！ \nRampはこの問題を解決しないと正しく表示されません。
+
+ge_rampPropertyError = ランプのプロパティが見つかりません。
+
+ge_rampPropertyField = ランプのプロパティ名
+
+ge_removeButton = グラデーションの除去
+
+ge_reorderButton = 再注文
+ge_reorderButton.tooltip = 並び替える前に、元に戻したくないことを確認してください。
+
+ge_resolutionTitle = 解決。
+
+ge_saveMultiGradient = マルチグラデーションの保存
+
+ge_saveNewButton = 新規保存
+
+ge_saveRampButton = セーブランプ
+
+s_advancedOptions = システムオプション
+s_advancedOptions.tooltip = シェーディングの計算方法に大きな影響を与える、システムの特定のパラメータを制御する設定。
+
+s_bakeButton = 素材設定のベーク
+s_bakeButton.tooltip = マテリアル・プロパティがあらかじめ適用され、フラット化されたシェーダのコピーを作成します。これにより、最終的なビルドでのシェーダーのサイズが小さくなり、パフォーマンスが向上しますが、アンベイクするまでシェーダーのプロパティを変更することはできません。
+
+s_bakeButtonPlural = {0}の素材設定のベーク
+s_bakeButtonPlural.tooltip = マテリアル・プロパティが事前に適用され、各マテリアルに対してフラット化されたシェーダのコピーを作成します。これにより、最終的なビルドでのシェーダーのサイズが小さくなり、パフォーマンスが向上しますが、アンベイクするまでシェーダーのプロパティを変更することはできません。
+
+s_bakeButtonRevert = ベークの元に戻す
+s_bakeButtonRevert.tooltip = このマテリアルはベイクされており、マテリアルのプロパティは変更できません。このオプションを選択すると、ベイク処理を元に戻し、このマテリアルを通常バージョンのシェーダーを使用するようにします。
+
+s_bakeDepreciateWarning = 現在のマテリアルはベイクされたシェーダーを使用していますが、これは現在サポートされていません。修正したい場合は、上のシェーダーピッカーを使用して、通常のCrosstone/Lightrampシェーダーに戻してください。
+s_bakeDepreciateWarning.tooltip = 警告
+
+s_detailOptions = 詳細オプション
+s_detailOptions.tooltip = 基本的なライティングやシェーディングに加え、ディテールをコントロールする設定。
+
+s_EmissionDetailPhase = フェーズ/パルス
+s_EmissionDetailPhase.tooltip = エミッション詳細テクスチャーの位相を設定します。X はパルスの速度を、Y は位相を制御します。位相を高くすると、繰り返しの間隔が短くなります。
+
+s_EmissionDetailScroll = スクロール
+s_EmissionDetailScroll.tooltip = エミッション・ディテール・テクスチャのスクロール速度を設定します。
+
+s_emissionOptions = 発光オプション
+s_emissionOptions.tooltip = マテリアルから放射される加法的な光を制御するための設定。
+
+s_fanboxButton = Fanbox
+s_fanboxButton.tooltip = シェーダーが気に入ったら、Fanboxにアクセスしてください！ FANになって特製サポーターカードをゲットしましょう！
+
+s_fullComplexity = すべてのオプションを表示します。(コンプレックスモード)
+s_fullComplexity.tooltip = すべてのオプションを表示します。(コンプレックスモード)
+
+s_gradientEditorButton = グラデーションエディタを開く
+s_gradientEditorButton.tooltip = 現在のマテリアルに焦点を当てたグラデーションエディタウィンドウを開きます。これにより、新しい照明ランプを作成し、その結果をこのマテリアル上でリアルタイムに確認することができます。
+
+s_helpArea = 私たちのリソースをチェックしてください
+s_helpArea.tooltip = ボタンにカーソルを合わせると詳細が表示されます。
+
+s_inventoryOptions = シンプルな在庫オプション
+s_inventoryOptions.tooltip = 入力されたUV座標に基づいて、簡易在庫システムを制御する設定。
+
+s_langButton = 言語
+s_langButton.tooltip = マテリアルエディターの言語を選択します。
+
+s_mainOptions = 主要オプション
+s_mainOptions.tooltip = シェーダーの基本的な外観を制御する設定で、後続のすべての設定に影響します。
+
+s_manualButton = マニュアル
+s_manualButton.tooltip = 新機能や旧機能、シェーダーの使い方などについては、シェーダーのウィキにあるマニュアルをご覧ください。
+
+s_miscOptions = その他のオプション
+s_miscOptions.tooltip = 照明とは関係のない特定の効果をコントロールする設定。
+
+s_normalComplexity = ニッチなオプションを隠す。(ノーマルモード)
+s_normalComplexity.tooltip = ニッチなオプションを隠す。(ノーマルモード)
+
+s_renderingOptions = レンダリングオプション
+s_renderingOptions.tooltip = メインシェーディングの後にレンダリングされる追加エフェクトを制御する設定です。これらの設定は、これらのエフェクトに固有のものです。(一部のスペキュラ設定はベースアルベドに影響し、他のエフェクトの表示方法に影響します)。
+
+s_shadingOptions = シェーディングオプション
+s_shadingOptions.tooltip = 主なライトシェーディングの計算を制御する設定。ただし、ほとんどの場合、他の設定には影響しません。
+
+s_simpleComplexity = メインのオプションのみを表示します。(シンプルモード)
+s_simpleComplexity.tooltip = メインのオプションのみを表示します。(シンプルモード)
+
+s_socialButton = Discord
+s_socialButton.tooltip = サポート、フィードバック、新バージョンのアップデートについては、Secret Shader FacilityのDiscordにご参加ください。

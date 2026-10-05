@@ -17,8 +17,12 @@ namespace SilentCelShading.Unity
 		private static void OnPostprocessAllAssets(string[] importedAssets, string[] deletedAssets, string[] movedAssets,
 			string[] movedFromAssetPaths)
 		{
-			var isUpdated = importedAssets.Any(path => path.StartsWith("Packages/")) &&
-			                importedAssets.Any(path => path.Contains("SCSS_InspectorData"));
+			// Check if any inspector data files were added, modified, removed, or moved
+			bool IsInspectorData(string path) => path.Contains("SCSS_InspectorData");
+
+			bool isUpdated = importedAssets.Any(IsInspectorData) ||
+			                deletedAssets.Any(IsInspectorData) ||
+			                movedAssets.Any(IsInspectorData);
 
 			if (isUpdated)
 			{
@@ -48,15 +52,14 @@ namespace SilentCelShading.Unity
 		private static void UpdateInspectorLanguageSetting()
 		{
 			string inspectorLanguageSetting = EditorUserSettings.GetConfigValue("scss_editor_language");
-			// Initial setup of editor language
-			if (inspectorLanguageSetting == null)
+			if (string.IsNullOrEmpty(inspectorLanguageSetting))
 			{
 				inspectorLanguage = Application.systemLanguage;
 			}
 			// Load editor language
 			else
 			{
-				inspectorLanguage = (SystemLanguage) Enum.Parse(typeof(SystemLanguage), inspectorLanguageSetting);
+				inspectorLanguage = (SystemLanguage)Enum.Parse(typeof(SystemLanguage), inspectorLanguageSetting);
 			}
 		}
 
@@ -64,31 +67,66 @@ namespace SilentCelShading.Unity
 		{
 			UpdateInspectorLanguageSetting();
 
-			char[] recordSep = new char[] {'\n'};
-			char[] fieldSep = new char[] {'\t'};
-			//if (styles.Count == 0)
+			string[] guids = AssetDatabase.FindAssets("t:TextAsset SCSS_InspectorData." + inspectorLanguage);
+			if (guids.Length == 0)
 			{
-				string[] guids = AssetDatabase.FindAssets("t:TextAsset SCSS_InspectorData." + inspectorLanguage);
-				if (guids.Length == 0)
+				guids = AssetDatabase.FindAssets("t:TextAsset SCSS_InspectorData.English");
+				if (guids.Length == 0) return;
+			}
+
+			string assetPath = AssetDatabase.GUIDToAssetPath(guids[0]);
+			inspectorData = !string.IsNullOrEmpty(assetPath) ? AssetDatabase.LoadAssetAtPath<TextAsset>(assetPath) : null;
+			if (inspectorData == null) return;
+
+			styles.Clear(); // Clean state before reloading
+
+			// Split on CRLF, CR, and LF line endings
+			string[] lines = inspectorData.text.Split(new[] { "\r\n", "\r", "\n" }, StringSplitOptions.RemoveEmptyEntries);
+			foreach (string line in lines)
+			{
+				string trimmedLine = line.Trim();
+
+				// Skip empty lines and comment lines
+				if (string.IsNullOrEmpty(trimmedLine) || trimmedLine.StartsWith("#") || trimmedLine.StartsWith(";"))
 				{
-					guids = AssetDatabase.FindAssets("t:TextAsset SCSS_InspectorData.English");
+					continue;
 				}
-    			string assetPath = guids.Length > 0 ? AssetDatabase.GUIDToAssetPath(guids[0]) : null;
-				inspectorData = assetPath != null ? (TextAsset)AssetDatabase.LoadAssetAtPath(assetPath, typeof(TextAsset)) : null;
-				if (inspectorData == null) return;
 
-				string[] records = inspectorData.text.Split(recordSep, System.StringSplitOptions.RemoveEmptyEntries);
-				foreach (string record in records)
+				int eqIndex = trimmedLine.IndexOf('=');
+				if (eqIndex == -1)
 				{
-					string[] fields = record.Split(fieldSep, 3, System.StringSplitOptions.None);
-					if (fields.Length != 3) {Debug.LogWarning("Field " + fields[0] + " only has " + fields.Length + " fields!");};
-					if (fields[0] != null) styles[fields[0]] = new GUIContent(fields[1], fields[2]);
+					continue;
+				}
 
+				string rawKey = trimmedLine.Substring(0, eqIndex).Trim();
+				string value = trimmedLine.Substring(eqIndex + 1).Trim();
+
+				if (rawKey.EndsWith(".tooltip", StringComparison.OrdinalIgnoreCase))
+				{
+					string baseKey = rawKey.Substring(0, rawKey.Length - 8).Trim();
+					if (styles.TryGetValue(baseKey, out GUIContent content))
+					{
+						content.tooltip = value;
+					}
+					else
+					{
+						styles[baseKey] = new GUIContent(string.Empty, value);
+					}
+				}
+				else
+				{
+					if (styles.TryGetValue(rawKey, out GUIContent content))
+					{
+						content.text = value;
+					}
+					else
+					{
+						styles[rawKey] = new GUIContent(value);
+					}
 				}
 			}
 		}
 
-		
 		public static SystemLanguage GetInspectorLanguage()
 		{
 			return inspectorLanguage;
