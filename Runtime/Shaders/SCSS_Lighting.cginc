@@ -422,26 +422,36 @@ void getDirectIndirectLighting(half3 normal, half3 worldPos, SHdata sh,
 	switch (_LightingCalculationType)
 	{
 	case 0: // Unbiased
+	{
 		directLighting   = GetSHMaxL1(sh);
 		indirectLighting = sh.L0;
-	break;
+		break;
+	}
 	case 1: // Standard
+	{
 		directLighting =
 		indirectLighting = baseIrradiance;
-	break;
+		break;
+	}
 	case 2: // Cubed
+	{
 		directLighting   = SampleIrradianceSimple(half4(0.0,  1.0, 0.0, 1.0), sh);
 		indirectLighting = SampleIrradianceSimple(half4(0.0, -1.0, 0.0, 1.0), sh);
-	break;
+		break;
+	}
 	case 3: // True Directional
+	{
 		half4 ambientDir = half4(Unity_SafeNormalize(sh.L1r.xyz + sh.L1g.xyz + sh.L1b.xyz), 1.0);
 		directLighting   = SampleIrradianceSimple( ambientDir, sh);
 		indirectLighting = SampleIrradianceSimple(-ambientDir, sh);
-	break;
+		break;
+	}
 	case 4: // Biased
+	{
 		directLighting   = GetSHMaxL1(sh);
 		indirectLighting = SampleIrradiance(half4(0.0, 0.0, 0.0, 1.0), sh, dominantDirection);
-	break;
+		break;
+	}
 	}
 
 	directLighting   += FLT_EPS;
@@ -468,17 +478,25 @@ half3 sampleRampWithOptions(half rampPosition, half softness)
     switch (_LightRampType)
     {
         case 3: // No sampling; smooth NdotL
+        {
             return saturate(rampPosition*2-1);
+        }
         case 2: // No texture, sharp sampling
+        {
             half shadeWidth = 0.0002 * (1+softness*100);
             const half shadeOffset = 0.5;
             half lightContribution = simpleSharpen(rampPosition, shadeWidth, shadeOffset);
             return saturate(lightContribution);
+        }
         case 1: // Vertical
+        {
             rampUV = half2(softness, rampPosition);
             return _Ramp.Sample(_RampLinearClampSampler, saturate(rampUV));
+        }
         default: // Horizontal
+        {
             return _Ramp.Sample(_RampLinearClampSampler, saturate(rampUV));
+        }
     }
 	#endif
 }

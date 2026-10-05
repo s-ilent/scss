@@ -176,38 +176,44 @@ VertexOutput vert(appdata_full_local v) {
 	switch (_VertexColorType)
 	{
 		case 1: // Outline colour
-		o.color = v.color;
-		o.color.a = variousData[5] * variousData[6]; // Can only be one at a time.
-		break;
-
+		{
+    		o.color = v.color;
+    		o.color.a = variousData[5] * variousData[6]; // Can only be one at a time.
+    		break;
+		}
 		case 2: // Additional data
-		o.color = 1.0; // Reset
-		variousData[_VertexColorRType] *= v.color.r;
-		variousData[_VertexColorGType] *= v.color.g;
-		variousData[_VertexColorBType] *= v.color.b;
-		o.color.a = variousData[5];
-		o.color.r = variousData[6];
-		break;
-
+		{
+    		o.color = 1.0; // Reset
+    		variousData[_VertexColorRType] *= v.color.r;
+    		variousData[_VertexColorGType] *= v.color.g;
+    		variousData[_VertexColorBType] *= v.color.b;
+    		o.color.a = variousData[5];
+    		o.color.r = variousData[6];
+    		break;
+		}
 		case 3: // Ignore
-		o.color = 1.0;  // Reset
-		o.color.a = variousData[5] * variousData[6]; // Can only be one at a time.
-		break;
-
+		{
+    		o.color = 1.0;  // Reset
+    		o.color.a = variousData[5] * variousData[6]; // Can only be one at a time.
+    		break;
+		}
 		case 4: // Outline direction + width
-		o.color = 1.0; // Handled above
-		o.color.a = variousData[5] * variousData[6]; // Can only be one at a time.
-
-		// Outline direction needs to be transformed from tangent space to object space.
-		float3 bitangentDirOS = cross(v.normal.xyz, v.tangent.xyz) * tangentSign;
-		const float3x3 tangentToObject = float3x3(v.tangent.xyz, bitangentDirOS, v.normal.xyz);
-		outlineDir = mul((2.0 * v.color.xyz - 1.0), tangentToObject);
-		break;
-
+		{
+    		o.color = 1.0; // Handled above
+    		o.color.a = variousData[5] * variousData[6]; // Can only be one at a time.
+    
+    		// Outline direction needs to be transformed from tangent space to object space.
+    		float3 bitangentDirOS = cross(v.normal.xyz, v.tangent.xyz) * tangentSign;
+    		const float3x3 tangentToObject = float3x3(v.tangent.xyz, bitangentDirOS, v.normal.xyz);
+    		outlineDir = mul((2.0 * v.color.xyz - 1.0), tangentToObject);
+    		break;
+		}
 		default: // Colour
-		o.color = v.color;
-		o.color.a = variousData[5] * variousData[6]; // Can only be one at a time.
-		break;
+		{
+    		o.color = v.color;
+    		o.color.a = variousData[5] * variousData[6]; // Can only be one at a time.
+    		break;
+		}
 	}
 
 	o.extraData = float4(
@@ -397,6 +403,12 @@ float4 ApplyOutlineZBias (float4 clipPos, float bias ) {
 [maxvertexcount(6)]
 void geom(triangle VertexOutput IN[3], inout TriangleStream<VertexOutput> tristream)
 {
+	#if defined(UNITY_COMPILER_DXC) && defined(SHADER_API_VULKAN)
+       IN[0].pos.y = -IN[0].pos.y;
+       IN[1].pos.y = -IN[1].pos.y;
+       IN[2].pos.y = -IN[2].pos.y;
+   #endif
+   
 	if ((IN[0].color.a + IN[1].color.a + IN[2].color.a) >= 0)
 	{
 		#if !defined(USING_ALPHA_BLENDING)
@@ -499,6 +511,13 @@ inline VertexOutput CalculateFurPosition(VertexOutput v, float furLength, int la
 void geom_fur(triangle VertexOutput IN[3], inout TriangleStream<VertexOutput> tristream, uint instanceID : SV_GSInstanceID)
 {
 	if ((IN[0].color.a + IN[1].color.a + IN[2].color.a) < 0) return;
+	
+	#if defined(UNITY_COMPILER_DXC) && defined(SHADER_API_VULKAN)
+        IN[0].pos.y = -IN[0].pos.y;
+        IN[1].pos.y = -IN[1].pos.y;
+        IN[2].pos.y = -IN[2].pos.y;
+    #endif
+    
 	// LOD scaling
 	const float lodScale = 1.0;
 	float layerCountScale = saturate(lodScale / (distance(IN[0].worldPos,_WorldSpaceCameraPos) ));
@@ -507,12 +526,12 @@ void geom_fur(triangle VertexOutput IN[3], inout TriangleStream<VertexOutput> tr
 
 	layerCountScale *= fovScale;
 
-	int maxLayers =  max(_FurLayerCount * layerCountScale, 1);
+	uint maxLayers =  max(_FurLayerCount * layerCountScale, 1);
 
-	#ifdef SCSS_HLSL_COMPAT
+	#if defined(SCSS_HLSL_COMPAT) || defined(BASIS_DXC_SUPPORT)
 	if(instanceID > maxLayers) return;
 	#else
-	if(instanceID > 1) return; // For now, disable the additional layers on non-HLSL platforms.
+	if(instanceID > 1) return; // For now, skip additional layers if not HLSL or DXC. 
 	#endif
 
 	// Generate base vertex

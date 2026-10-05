@@ -20,7 +20,7 @@
     #define USING_ALPHA_BLENDING
 #endif
 
-#if defined (SCSS_COVERAGE_OUTPUT) && defined (_ALPHATEST_ON) && !defined(SHADER_API_GLES3)
+#if defined (SCSS_COVERAGE_OUTPUT) && defined (_ALPHATEST_ON) && !defined(SHADER_API_GLES3) && !defined(SHADER_API_VULKAN)
     #define USING_COVERAGE_OUTPUT
 #endif
 

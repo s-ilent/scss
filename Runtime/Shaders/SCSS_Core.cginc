@@ -234,7 +234,7 @@ half3 getDirectSpecular(SCSS_Input c, SCSS_ShadingParam p, SCSS_LightParam d, Co
         }
 
         specularTerm = V * D * UNITY_PI; // Torrance-Sparrow
-        specularTerm = max(0, specularTerm * d.NdotL);
+        specularTerm = max(FLT_EPS, specularTerm * d.NdotL);
 
         return specularTerm * l.color * attenuation * FresnelTerm(c.specColor, d.LdotH) * _SpecularHighlights;
     #endif // _METALLICGLOSSMAP
